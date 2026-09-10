@@ -1,0 +1,17 @@
+{
+  "@critical": {
+    "area": "Critical customer journey",
+    "impact": "A critical business journey has at least one final failed automated scenario.",
+    "priority": "HIGH"
+  },
+  "@payment": {
+    "area": "Payments",
+    "impact": "A payment-related automated scenario has a final failure and requires business/engineering review.",
+    "priority": "HIGH"
+  },
+  "@login": {
+    "area": "Authentication",
+    "impact": "A login/authentication automated scenario has a final failure and may affect access journeys.",
+    "priority": "HIGH"
+  }
+}

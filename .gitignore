@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.env
+.auth/
+reports/
+test-results/
+blob-report/
+playwright-report/
+.healing/
+*.log
+.DS_Store
+.runtime/
+.report-history/
+
+# Local learned application evidence; export approved bundles separately when sharing.
+.application-knowledge/
+
+# Local rollback copies created by explicit generated-proposal promotion.
+.proposal-backups/
+
+.upgrade-backup/
+*.bak
+*.before-*
+
+# Tool-specific Playwright Test Agent definitions are generated per user/loop.
+.claude/
+.codex/
+.opencode/
+opencode.json

@@ -1,0 +1,169 @@
+# Generic multi-project Azure Pipelines template.
+# Secrets must be supplied through protected pipeline variables / variable groups / Key Vault.
+trigger: none
+
+parameters:
+- name: app
+  type: string
+  default: demo
+- name: environment
+  type: string
+  default: qa
+- name: shards
+  type: number
+  default: 2
+
+variables:
+  NODE_VERSION: '22.x'
+  APP: ${{ parameters.app }}
+  ENV: ${{ parameters.environment }}
+  BUSINESS_EMAIL_ENABLED: 'false'
+  # AI is opt-in. Override these through protected variables / variable groups.
+  AI_ENABLED: 'false'
+  HEALING_AI_ENABLED: 'false'
+  HEALING_MODE: 'suggest'
+  AI_AUDIT_ENABLED: 'true'
+  AI_RUNTIME_LOGGING: 'true'
+  AI_PROVIDER_MODE: 'single'
+  AI_PROVIDER: ''
+  AI_PROVIDER_ORDER: ''
+  AI_ALLOW_CLOUD_EGRESS: 'false'
+  GEMINI_MODEL: ''
+  OPENAI_MODEL: ''
+  AZURE_OPENAI_ENDPOINT: ''
+  AZURE_OPENAI_MODEL: ''
+  ANTHROPIC_MODEL: ''
+  AI_COMPAT_BASE_URL: ''
+  AI_COMPAT_MODEL: ''
+  AI_ENDPOINT: ''
+  AI_MODEL: ''
+
+stages:
+- stage: Validate
+  displayName: Validate reusable framework
+  jobs:
+  - job: Framework
+    pool: { vmImage: ubuntu-latest }
+    steps:
+    - task: NodeTool@0
+      inputs: { versionSpec: '$(NODE_VERSION)' }
+    - script: npm ci
+      displayName: Install locked dependencies
+    - script: npx playwright install --with-deps chromium
+      displayName: Install Chromium
+    - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run validate:final
+      displayName: Architecture, health, type and framework regression
+    - script: npm run security:check
+      displayName: HIGH/CRITICAL dependency security gate
+
+- stage: Test
+  displayName: Run selected project
+  dependsOn: Validate
+  jobs:
+  - job: PlaywrightShard
+    pool: { vmImage: ubuntu-latest }
+    strategy:
+      parallel: ${{ parameters.shards }}
+    steps:
+    - task: NodeTool@0
+      inputs: { versionSpec: '$(NODE_VERSION)' }
+    - script: npm ci
+      displayName: Install locked dependencies
+    - script: npx playwright install --with-deps chromium
+      displayName: Install Chromium
+    - bash: |
+        set -euo pipefail
+        SHARD_INDEX="$(System.JobPositionInPhase)"
+        SHARD_TOTAL="$(System.TotalJobsInPhase)"
+        APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
+          npm run test:project -- --project=chromium --shard="${SHARD_INDEX}/${SHARD_TOTAL}"
+      displayName: Run project shard
+      env:
+        # For auth-required projects, create the configured storage-state file before this step
+        # from an approved Secure File / Key Vault backed process. Never commit auth state.
+        AI_ENABLED: $(AI_ENABLED)
+        HEALING_AI_ENABLED: $(HEALING_AI_ENABLED)
+        HEALING_MODE: $(HEALING_MODE)
+        AI_AUDIT_ENABLED: $(AI_AUDIT_ENABLED)
+        AI_RUNTIME_LOGGING: $(AI_RUNTIME_LOGGING)
+        AI_PROVIDER_MODE: $(AI_PROVIDER_MODE)
+        AI_PROVIDER: $(AI_PROVIDER)
+        AI_PROVIDER_ORDER: $(AI_PROVIDER_ORDER)
+        AI_ALLOW_CLOUD_EGRESS: $(AI_ALLOW_CLOUD_EGRESS)
+        GEMINI_MODEL: $(GEMINI_MODEL)
+        GEMINI_API_KEY: $(GEMINI_API_KEY)
+        OPENAI_MODEL: $(OPENAI_MODEL)
+        OPENAI_API_KEY: $(OPENAI_API_KEY)
+        AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
+        AZURE_OPENAI_MODEL: $(AZURE_OPENAI_MODEL)
+        AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+        ANTHROPIC_MODEL: $(ANTHROPIC_MODEL)
+        ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+        AI_COMPAT_BASE_URL: $(AI_COMPAT_BASE_URL)
+        AI_COMPAT_MODEL: $(AI_COMPAT_MODEL)
+        AI_COMPAT_API_KEY: $(AI_COMPAT_API_KEY)
+        AI_ENDPOINT: $(AI_ENDPOINT)
+        AI_MODEL: $(AI_MODEL)
+        AI_API_KEY: $(AI_API_KEY)
+    - task: PublishPipelineArtifact@1
+      condition: always()
+      inputs:
+        targetPath: 'reports/$(APP)/blob-report'
+        artifact: 'blob-$(APP)-$(System.JobPositionInPhase)-$(Build.BuildId)'
+      displayName: Publish technical blob
+    - task: PublishPipelineArtifact@1
+      condition: always()
+      inputs:
+        targetPath: 'reports/$(APP)/business'
+        artifact: 'business-$(APP)-$(System.JobPositionInPhase)-$(Build.BuildId)'
+      displayName: Publish business shard bundle
+
+- stage: Merge
+  displayName: Merge and publish reports
+  dependsOn: Test
+  condition: always()
+  jobs:
+  - job: MergeReports
+    pool: { vmImage: ubuntu-latest }
+    steps:
+    - task: NodeTool@0
+      inputs: { versionSpec: '$(NODE_VERSION)' }
+    - script: npm ci
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        patterns: '**/blob-$(APP)-*'
+        path: '$(Pipeline.Workspace)/all-blob-reports'
+      displayName: Download technical shard artifacts
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        patterns: '**/business-$(APP)-*'
+        path: '$(Pipeline.Workspace)/all-business-reports'
+      displayName: Download business shard artifacts
+    - bash: |
+        set -euo pipefail
+        mkdir -p all-blob-reports all-business-reports
+        find "$(Pipeline.Workspace)/all-blob-reports" -type f -name '*.zip' -exec cp {} all-blob-reports/ \;
+        find "$(Pipeline.Workspace)/all-business-reports" -type f -exec cp --parents {} all-business-reports/ \; || true
+        APP="$(APP)" npm run report:merge:technical
+        APP="$(APP)" RUN_ID="$(Build.BuildId)" npm run report:merge:business -- all-business-reports
+        APP="$(APP)" npm run ci:business:finalize
+        APP="$(APP)" AI_ENABLED=false npm run report:business
+        APP="$(APP)" npm run ci:business:validate
+      displayName: Merge and validate project reports
+    - task: PublishPipelineArtifact@1
+      condition: always()
+      inputs:
+        targetPath: 'reports/$(APP)'
+        artifact: 'reports-$(APP)-$(Build.BuildId)'
+      displayName: Publish final project reports
+    - bash: APP="$(APP)" npm run ci:mail
+      condition: eq(variables['BUSINESS_EMAIL_ENABLED'], 'true')
+      displayName: Optional one-time stakeholder notification
+      env:
+        BUSINESS_EMAIL_ENABLED: $(BUSINESS_EMAIL_ENABLED)
+        MAIL_FROM: $(MAIL_FROM)
+        MAIL_TO: $(MAIL_TO)
+        SMTP_HOST: $(SMTP_HOST)
+        SMTP_PORT: $(SMTP_PORT)
+        SMTP_USER: $(SMTP_USER)
+        SMTP_PASS: $(SMTP_PASS)

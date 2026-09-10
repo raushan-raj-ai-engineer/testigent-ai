@@ -1,0 +1,4 @@
+{
+  "validUser": { "username": "demo.user", "password": "replace-from-secret-store", "role": "standard" },
+  "invalidUser": { "username": "invalid.user", "password": "invalid", "role": "standard" }
+}

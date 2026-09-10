@@ -1,0 +1,3 @@
+username,password,role
+user01,replace-from-secret-store,standard
+user02,replace-from-secret-store,admin

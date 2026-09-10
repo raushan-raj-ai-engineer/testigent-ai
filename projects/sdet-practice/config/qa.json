@@ -1,0 +1,13 @@
+{
+  "environment": "qa",
+  "application": {
+    "name": "SDET Practice User Management",
+    "uiBaseUrl": "https://sdet-practice-app.onrender.com",
+    "apiBaseUrl": "https://sdet-practice-app.onrender.com"
+  },
+  "auth": {
+    "strategy": "storageState",
+    "storageStatePath": ".auth/sdet-practice.exploration.json",
+    "required": true
+  }
+}

@@ -1,0 +1,143 @@
+name: Enterprise Playwright Multi-Project CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Project folder under projects/
+        required: true
+        default: demo
+      environment:
+        description: Project environment config
+        required: true
+        default: qa
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NODE_VERSION: '22'
+  APP: ${{ inputs.app || vars.APP || 'demo' }}
+  ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
+  # AI is off unless repository/environment variables explicitly enable it.
+  AI_ENABLED: ${{ vars.AI_ENABLED || 'false' }}
+  HEALING_AI_ENABLED: ${{ vars.HEALING_AI_ENABLED || 'false' }}
+  HEALING_MODE: ${{ vars.HEALING_MODE || 'suggest' }}
+  AI_AUDIT_ENABLED: ${{ vars.AI_AUDIT_ENABLED || 'true' }}
+  AI_RUNTIME_LOGGING: ${{ vars.AI_RUNTIME_LOGGING || 'true' }}
+  AI_PROVIDER_MODE: ${{ vars.AI_PROVIDER_MODE || 'single' }}
+  AI_PROVIDER: ${{ vars.AI_PROVIDER || '' }}
+  AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
+  AI_ALLOW_CLOUD_EGRESS: ${{ vars.AI_ALLOW_CLOUD_EGRESS || 'false' }}
+  GEMINI_MODEL: ${{ vars.GEMINI_MODEL || '' }}
+  OPENAI_MODEL: ${{ vars.OPENAI_MODEL || '' }}
+  AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT || '' }}
+  AZURE_OPENAI_MODEL: ${{ vars.AZURE_OPENAI_MODEL || '' }}
+  ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || '' }}
+  AI_COMPAT_BASE_URL: ${{ vars.AI_COMPAT_BASE_URL || '' }}
+  AI_COMPAT_MODEL: ${{ vars.AI_COMPAT_MODEL || '' }}
+  AI_ENDPOINT: ${{ vars.AI_ENDPOINT || '' }}
+  AI_MODEL: ${{ vars.AI_MODEL || '' }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: AI_ENABLED=false HEALING_AI_ENABLED=false npm run validate:final
+      - run: npm run security:check
+
+  test:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/2', '2/2']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run selected project shard
+        run: npm run test:project -- --project=chromium --shard=${{ matrix.shard }}
+        env:
+          CI: 'true'
+          RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          # Auth-required projects should create the configured storage-state file
+          # from an environment secret or another approved login/setup mechanism.
+      - name: Upload technical blob
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: blob-${{ env.APP }}-${{ strategy.job-index }}
+          path: reports/${{ env.APP }}/blob-report
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload business shard
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: business-${{ env.APP }}-${{ strategy.job-index }}
+          path: reports/${{ env.APP }}/business
+          if-no-files-found: warn
+          retention-days: 7
+
+  merge:
+    needs: test
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: npm }
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: blob-${{ env.APP }}-*
+          path: all-blob-reports
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: business-${{ env.APP }}-*
+          path: all-business-reports
+      - run: npm run report:merge:technical
+      - run: npm run report:merge:business -- all-business-reports
+        env:
+          RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      - run: npm run ci:business:finalize
+      - run: AI_ENABLED=false npm run report:business
+      - run: npm run ci:business:validate
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: reports-${{ env.APP }}-${{ github.run_id }}
+          path: reports/${{ env.APP }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Optional one-time stakeholder email
+        if: ${{ github.event_name != 'pull_request' && vars.BUSINESS_EMAIL_ENABLED == 'true' }}
+        run: npm run ci:mail
+        env:
+          BUSINESS_EMAIL_ENABLED: 'true'
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}

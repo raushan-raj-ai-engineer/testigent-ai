@@ -1,0 +1,7 @@
+orders:
+  - scenario: standard-order
+    product: enterprise-plan
+    expectedStatus: COMPLETED
+  - scenario: cancelled-order
+    product: enterprise-plan
+    expectedStatus: CANCELLED

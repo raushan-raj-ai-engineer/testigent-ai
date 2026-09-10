@@ -1,0 +1,11 @@
+{
+  "environment": "uat",
+  "application": {
+    "name": "Playwright TodoMVC Demo",
+    "uiBaseUrl": "https://demo.playwright.dev/todomvc",
+    "apiBaseUrl": "https://jsonplaceholder.typicode.com"
+  },
+  "auth": {
+    "strategy": "none"
+  }
+}

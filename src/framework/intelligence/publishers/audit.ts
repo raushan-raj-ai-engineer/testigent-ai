@@ -1,0 +1,3 @@
+/** External write-back audit log. Author: Raushan Raj */
+import { appendFile, mkdir } from 'node:fs/promises'; import { dirname, join } from 'node:path'; import type { ExecutionPublishRequest, PublishResult } from '../core/models.js';
+export async function auditPublish(root:string,request:ExecutionPublishRequest,result:PublishResult){const p=join(root,'reports','integrations','execution-publish-audit.jsonl');await mkdir(dirname(p),{recursive:true});await appendFile(p,JSON.stringify({timestamp:new Date().toISOString(),runId:request.runId,target:result.target,requirement:request.requirementId,action:result.action,success:result.success,message:result.message})+'\n');return p;}

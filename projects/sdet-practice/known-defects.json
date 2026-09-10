@@ -1,0 +1,9 @@
+[
+  {
+    "id": "SDET-DEL-001",
+    "title": "Delete action does not remove selected user",
+    "status": "OPEN",
+    "scope": "User Management > Delete",
+    "note": "Observed in QA. Create and update succeed; delete action leaves the user row present. Remove/resolve this entry when the AUT defect is fixed."
+  }
+]

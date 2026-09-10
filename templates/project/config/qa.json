@@ -1,0 +1,11 @@
+{
+  "environment": "qa",
+  "application": {
+    "name": "__PROJECT__",
+    "uiBaseUrl": "https://replace-with-qa-url.example.com",
+    "apiBaseUrl": "https://replace-with-qa-api.example.com"
+  },
+  "auth": {
+    "strategy": "none"
+  }
+}
