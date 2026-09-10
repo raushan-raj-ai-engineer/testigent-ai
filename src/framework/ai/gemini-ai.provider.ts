@@ -8,11 +8,13 @@ import {
 } from './ai-provider.utils';
 import { AiProviderError } from './ai-provider.error';
 
-interface GeminiInteractionResponse {
-  model?: string;
-  status?: string;
-  output_text?: string;
-  steps?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
+interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    finishReason?: string;
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
 }
 
 interface GeminiErrorResponse {
@@ -26,6 +28,11 @@ interface GeminiErrorResponse {
  * Business Use: Governed Google Gemini provider for TestigentAI.
  * How to use: AI_PROVIDER=gemini plus GEMINI_API_KEY and GEMINI_MODEL.
  * Benefit: Low-latency structured locator recovery without coupling tests to the Google SDK.
+ *
+ * Transport choice:
+ * TestigentAI uses Gemini generateContent for locator healing because healing is a
+ * small, synchronous text-to-JSON task. Provider/model selection remains explicit;
+ * there is no hidden provider fallback.
  */
 export class GeminiAiProvider implements AiProvider {
   private readonly apiKey = process.env.GEMINI_API_KEY ?? '';
@@ -33,13 +40,14 @@ export class GeminiAiProvider implements AiProvider {
   private readonly baseUrl = (process.env.GEMINI_BASE_URL ?? 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
   private readonly timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 30_000);
   private readonly thinkingLevel = (process.env.GEMINI_THINKING_LEVEL ?? 'low').toLowerCase();
+  private readonly maxOutputTokens = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS ?? 512);
 
   async proposeLocator(request: AiHealingRequest): Promise<AiHealingResponse | undefined> {
     if (!this.apiKey || !this.model) return undefined;
 
     const prompt = buildHealingPrompt(request);
     const started = Date.now();
-    const content = await this.interact(prompt.system, prompt.user, HEALING_OUTPUT_SCHEMA);
+    const content = await this.generateContent(prompt.system, prompt.user, HEALING_OUTPUT_SCHEMA);
     const result = parseHealingJson(content, {
       provider: 'gemini',
       model: this.model,
@@ -61,7 +69,7 @@ export class GeminiAiProvider implements AiProvider {
   async summarizeFailures(payload: unknown): Promise<string | undefined> {
     if (!this.apiKey || !this.model) return undefined;
     const prompt = buildSummaryPrompt(payload);
-    return this.interact(prompt.system, prompt.user);
+    return this.generateContent(prompt.system, prompt.user);
   }
 
   async healthCheck(): Promise<AiProviderHealth> {
@@ -77,6 +85,14 @@ export class GeminiAiProvider implements AiProvider {
         provider: 'gemini',
         model: this.model,
         message: `Unsupported GEMINI_THINKING_LEVEL='${this.thinkingLevel}'. Use low, medium or high.`
+      };
+    }
+    if (!Number.isFinite(this.maxOutputTokens) || this.maxOutputTokens < 64) {
+      return {
+        ok: false,
+        provider: 'gemini',
+        model: this.model,
+        message: 'GEMINI_MAX_OUTPUT_TOKENS must be a number >= 64.'
       };
     }
 
@@ -112,7 +128,11 @@ export class GeminiAiProvider implements AiProvider {
     }
   }
 
-  private async interact(systemInstruction: string, input: string, schema?: object): Promise<string | undefined> {
+  private async generateContent(
+    systemInstruction: string,
+    input: string,
+    schema?: object
+  ): Promise<string | undefined> {
     if (!this.isSupportedThinkingLevel()) {
       throw new AiProviderError(
         'gemini',
@@ -122,30 +142,44 @@ export class GeminiAiProvider implements AiProvider {
       );
     }
 
+    if (!Number.isFinite(this.maxOutputTokens) || this.maxOutputTokens < 64) {
+      throw new AiProviderError(
+        'gemini',
+        this.model,
+        'configuration',
+        'GEMINI_MAX_OUTPUT_TOKENS must be a number >= 64.'
+      );
+    }
+
     const modelId = this.model.replace(/^models\//, '');
+    const endpoint = `${this.baseUrl}/models/${encodeURIComponent(modelId)}:generateContent`;
 
     try {
-      const response = await fetchWithTimeout(`${this.baseUrl}/interactions`, {
+      const response = await fetchWithTimeout(endpoint, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
           'x-goog-api-key': this.apiKey
         },
         body: JSON.stringify({
-          model: modelId,
-          input,
-          system_instruction: systemInstruction,
-          store: false,
-          generation_config: {
-            thinking_level: this.thinkingLevel
+          system_instruction: {
+            parts: [{ text: systemInstruction }]
           },
-          ...(schema ? {
-            response_format: {
-              type: 'text',
-              mime_type: 'application/json',
-              schema
-            }
-          } : {})
+          contents: [{
+            role: 'user',
+            parts: [{ text: input }]
+          }],
+          generationConfig: {
+            thinkingConfig: {
+              thinkingLevel: this.thinkingLevel
+            },
+            maxOutputTokens: this.maxOutputTokens,
+            ...(schema ? {
+              responseMimeType: 'application/json',
+              responseJsonSchema: schema
+            } : {})
+          },
+          store: false
         })
       }, this.timeoutMs);
 
@@ -155,21 +189,22 @@ export class GeminiAiProvider implements AiProvider {
           'gemini',
           this.model,
           'http-error',
-          `Gemini request failed with HTTP ${response.status}${providerCode ? ` (${providerCode})` : ''}.`,
+          `Gemini generateContent failed with HTTP ${response.status}${providerCode ? ` (${providerCode})` : ''}.`,
           response.status,
           providerCode
         );
       }
 
-      const body = await response.json() as GeminiInteractionResponse;
+      const body = await response.json() as GeminiGenerateContentResponse;
       const text = this.extractText(body);
       if (text) return text;
 
+      const finishReason = body.candidates?.[0]?.finishReason ?? 'unknown';
       throw new AiProviderError(
         'gemini',
         this.model,
         'invalid-response',
-        `Gemini returned no usable model text (status=${body.status ?? 'unknown'}).`
+        `Gemini generateContent returned no usable text (finishReason=${finishReason}).`
       );
     } catch (error) {
       if (error instanceof AiProviderError) throw error;
@@ -179,7 +214,7 @@ export class GeminiAiProvider implements AiProvider {
           'gemini',
           this.model,
           'timeout',
-          `Gemini request exceeded AI_TIMEOUT_MS=${this.timeoutMs}.`
+          `Gemini generateContent exceeded AI_TIMEOUT_MS=${this.timeoutMs}.`
         );
       }
 
@@ -187,22 +222,17 @@ export class GeminiAiProvider implements AiProvider {
         'gemini',
         this.model,
         'network-error',
-        `Gemini network request failed (${error instanceof Error ? error.name : 'UnknownError'}).`
+        `Gemini generateContent network request failed (${error instanceof Error ? error.name : 'UnknownError'}).`
       );
     }
   }
 
-  private extractText(body: GeminiInteractionResponse): string | undefined {
-    if (typeof body.output_text === 'string' && body.output_text.trim()) return body.output_text.trim();
-
-    for (const step of body.steps ?? []) {
-      if (step.type !== 'model_output') continue;
-      const text = step.content?.find(
-        item => item.type === 'text' && typeof item.text === 'string' && item.text.trim()
-      )?.text;
-      if (text?.trim()) return text.trim();
+  private extractText(body: GeminiGenerateContentResponse): string | undefined {
+    for (const candidate of body.candidates ?? []) {
+      for (const part of candidate.content?.parts ?? []) {
+        if (typeof part.text === 'string' && part.text.trim()) return part.text.trim();
+      }
     }
-
     return undefined;
   }
 
