@@ -144,7 +144,10 @@ jobs:
       ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
-      AI_ENABLED: 'true'
+      GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'low' }}
+      AI_HEALING_SNAPSHOT_MAX_CHARS: ${{ vars.AI_HEALING_SNAPSHOT_MAX_CHARS || '6000' }}
+
+      AI_ENABLED: 'false'
       AI_PROVIDER_MODE: ${{ vars.AI_PROVIDER_MODE || 'single' }}
       AI_PROVIDER: ${{ vars.AI_PROVIDER || '' }}
       AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
