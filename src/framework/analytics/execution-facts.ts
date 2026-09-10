@@ -12,6 +12,7 @@ import { buildFailureClusters } from './failure.clusterer';
 import { buildFlakySummary } from './flaky.analyzer';
 import { buildBusinessImpacts } from './business-impact';
 import { classifyTestLayers } from './test-layer.classifier';
+import { buildSkipSummary } from '../reporting/skip-reason.classifier';
 
 /**
  * Author: Raushan Raj
@@ -40,6 +41,10 @@ export function buildExecutionFacts(input: {
   const failed = normalizedResults.filter(result => result.status === 'failed').length;
   const skipped = normalizedResults.filter(result => result.status === 'skipped').length;
   const total = normalizedResults.length;
+  const executed = passed + failed;
+  const executionRate = total ? Number(((executed / total) * 100).toFixed(2)) : 0;
+  const executedPassRate = executed ? Number(((passed / executed) * 100).toFixed(2)) : 0;
+  const skipBreakdown = buildSkipSummary(normalizedResults);
   const failureClusters = buildFailureClusters(normalizedResults);
   const businessImpacts = buildBusinessImpacts(normalizedResults);
   const failureCategoryCounts: Record<string, number> = {};
@@ -72,7 +77,8 @@ export function buildExecutionFacts(input: {
     .filter(impact => impact.priority === 'HIGH')
     .reduce((sum, impact) => sum + impact.affectedTests, 0);
   const reasons: string[] = [];
-  if (passRate < passThreshold) reasons.push(`Pass rate ${passRate}% is below configured threshold ${passThreshold}%.`);
+  if (executed === 0 && total > 0) reasons.push('No business scenarios executed; all included scenarios were skipped.');
+  if (executed > 0 && executedPassRate < passThreshold) reasons.push(`Executed pass rate ${executedPassRate}% is below configured threshold ${passThreshold}%.`);
   if (highImpactFailures > 0) reasons.push(`${highImpactFailures} high-impact failed scenario(s) require attention.`);
   const qualityGate = {
     status: reasons.length ? 'ATTENTION_REQUIRED' as const : 'PASSED' as const,
@@ -90,7 +96,11 @@ export function buildExecutionFacts(input: {
     passed,
     failed,
     skipped,
+    executed,
+    executionRate,
+    executedPassRate,
     passRate,
+    skipBreakdown,
     durationMs: normalizedResults.reduce((sum, result) => sum + result.totalDurationMs, 0),
     healing: input.healing,
     aiUsage: input.aiUsage ?? { calls: 0, healingCalls: 0, reportingCalls: 0, successfulCalls: 0, noResultCalls: 0, errorCalls: 0, budgetBlockedCalls: 0, averageLatencyMs: 0, providers: [], records: [] },

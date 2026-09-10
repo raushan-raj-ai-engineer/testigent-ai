@@ -59,7 +59,9 @@ test('business email preview contains deterministic summary and V3-safe attachme
 function sampleFacts(): ExecutionFacts {
   return {
     runId: 'mail-test', environment: 'qa', application: 'Order Portal', generatedAt: new Date().toISOString(),
-    total: 30, passed: 29, failed: 0, skipped: 1, passRate: 96.67, durationMs: 1000,
+    total: 30, passed: 29, failed: 0, skipped: 1, executed: 29, executionRate: 96.67, executedPassRate: 100, passRate: 96.67,
+    skipBreakdown: { count: 1, categories: [{ category: 'OTHER', label: 'Other / conditional skip', count: 1, testTitles: ['Not applicable scenario'], reasons: ['Not applicable in this configuration.'] }] },
+    durationMs: 1000,
     healing: { count: 1, fallback: 0, cache: 0, ai: 1, affectedTests: 1, records: [] },
     flakiness: { flakyTests: 1, retryRecovered: 1, totalRetryAttempts: 1, tests: [] },
     failureClusters: [], failureCategoryCounts: {}, businessImpacts: [],

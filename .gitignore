@@ -27,3 +27,8 @@ playwright-report/
 .codex/
 .opencode/
 opencode.json
+
+# Ephemeral CI/report merge working directories
+all-blob-reports/
+all-business-reports/
+coverage/

@@ -18,6 +18,27 @@ export type TestType =
   | 'UI_API_DATABASE'
   | 'OTHER';
 
+export type SkipCategory =
+  | 'OPTIONAL_DEMO_DISABLED'
+  | 'DATABASE_NOT_CONFIGURED'
+  | 'HUMAN_REVIEW_PENDING'
+  | 'AUTH_NOT_CONFIGURED'
+  | 'DEPENDENCY_NOT_CONFIGURED'
+  | 'OTHER';
+
+export interface SkipCategoryFact {
+  category: SkipCategory;
+  label: string;
+  count: number;
+  testTitles: string[];
+  reasons: string[];
+}
+
+export interface SkipSummary {
+  count: number;
+  categories: SkipCategoryFact[];
+}
+
 export interface BusinessAttempt {
   retry: number;
   status: string;
@@ -61,6 +82,8 @@ export interface BusinessTestResult {
   attachments?: BusinessAttachment[];
   error?: string;
   failureCategory?: FailureCategory;
+  skipReason?: string;
+  skipCategory?: SkipCategory;
   attempts: BusinessAttempt[];
   sourceFile?: string;
   layers?: TestLayer[];
@@ -181,7 +204,11 @@ export interface ExecutionFacts {
   passed: number;
   failed: number;
   skipped: number;
+  executed: number;
+  executionRate: number;
+  executedPassRate: number;
   passRate: number;
+  skipBreakdown: SkipSummary;
   durationMs: number;
   healing: HealingSummary;
   aiUsage?: AiRuntimeUsageSummary;

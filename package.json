@@ -102,7 +102,10 @@
     "authoring:start": "tsx scripts/authoring-productivity.ts start",
     "authoring:complete": "tsx scripts/authoring-productivity.ts complete",
     "authoring:report": "tsx scripts/authoring-productivity.ts report",
-    "agents:policy": "tsx scripts/harden-agent-definitions.ts"
+    "agents:policy": "tsx scripts/harden-agent-definitions.ts",
+    "clean:runtime:dry": "node scripts/cleanup-runtime.cjs",
+    "clean:runtime": "node scripts/cleanup-runtime.cjs --apply",
+    "clean:review": "node scripts/cleanup-runtime.cjs --review"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

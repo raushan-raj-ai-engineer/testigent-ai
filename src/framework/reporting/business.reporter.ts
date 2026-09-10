@@ -10,6 +10,7 @@ import { ProjectPaths } from '../core/config/project.paths';
 import { shouldIncludeInBusinessReport } from './business-report-scope';
 import { writeBusinessDashboard } from './business-dashboard.writer';
 import { ReportHistoryStore } from './report-history.store';
+import { classifySkipReason } from './skip-reason.classifier';
 
 interface MutableBusinessTest {
   testId: string;
@@ -22,6 +23,7 @@ interface MutableBusinessTest {
   lastStepDetails: BusinessStepDetail[];
   lastAttachments: BusinessAttachment[];
   lastError?: string;
+  annotations: Array<{ type: string; description?: string }>;
 }
 
 /**
@@ -64,7 +66,8 @@ export default class BusinessReporter implements Reporter {
       attempts: [],
       lastSteps: [],
       lastStepDetails: [],
-      lastAttachments: []
+      lastAttachments: [],
+      annotations: readAnnotations(test, result)
     };
 
     existing.attempts.push({
@@ -80,6 +83,7 @@ export default class BusinessReporter implements Reporter {
       .filter(item => Boolean(item.path))
       .map(item => ({ name: item.name, contentType: item.contentType, sourcePath: item.path }));
     existing.lastError = error;
+    existing.annotations = readAnnotations(test, result);
     this.attempts.set(key, existing);
   }
 
@@ -224,6 +228,18 @@ function toFinalBusinessResult(item: MutableBusinessTest): BusinessTestResult {
   const previousFailure = [...attempts].reverse().find(attempt => attempt.failureCategory);
   const flaky = finalStatus === 'passed' && attempts.slice(0, -1).some(attempt => attempt.status !== 'passed' && attempt.status !== 'skipped');
   const classification = classifyTestLayers(item.tags, item.sourceFile);
+  const skipAnnotation = finalStatus === 'skipped'
+    ? item.annotations.find(annotation => annotation.type === 'skip' || annotation.type === 'fixme')
+    : undefined;
+  const skipReason = finalStatus === 'skipped' ? sanitizeError(skipAnnotation?.description) : undefined;
+  const skipClassification = finalStatus === 'skipped'
+    ? classifySkipReason(skipReason, {
+        annotationType: skipAnnotation?.type,
+        tags: item.tags,
+        sourceFile: item.sourceFile,
+        title: item.title
+      })
+    : undefined;
   return {
     testId: item.testId,
     title: item.title,
@@ -240,11 +256,25 @@ function toFinalBusinessResult(item: MutableBusinessTest): BusinessTestResult {
     attachments: item.lastAttachments,
     error: finalStatus === 'failed' ? finalAttempt.error ?? item.lastError : undefined,
     failureCategory: finalStatus === 'failed' ? finalAttempt.failureCategory ?? previousFailure?.failureCategory : undefined,
+    skipReason,
+    skipCategory: skipClassification?.category,
     attempts,
     sourceFile: item.sourceFile,
     layers: classification.layers,
     testType: classification.testType
   };
+}
+
+function readAnnotations(test: TestCase, result: TestResult): Array<{ type: string; description?: string }> {
+  const runtime = result.annotations ?? [];
+  const declared = test.annotations ?? [];
+  const annotations = runtime.length ? runtime : declared;
+  return annotations
+    .filter(annotation => typeof annotation.type === 'string')
+    .map(annotation => ({
+      type: String(annotation.type),
+      description: sanitizeError(annotation.description)
+    }));
 }
 
 function readTags(test: TestCase): string[] {

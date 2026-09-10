@@ -59,7 +59,7 @@ function uniquePath(candidate: string): string {
 }
 
 function toCsv(facts: ExecutionFacts): string {
-  const rows: string[][] = [['Scenario', 'Status', 'Test Type', 'Layers', 'Project', 'Tags', 'Duration ms', 'Retries', 'Flaky', 'Self Healed', 'Failure Category', 'Source File']];
+  const rows: string[][] = [['Scenario', 'Status', 'Test Type', 'Layers', 'Project', 'Tags', 'Duration ms', 'Retries', 'Flaky', 'Self Healed', 'Failure Category', 'Skip Category', 'Skip Reason', 'Source File']];
   const healed = new Set(facts.healing.records.map(record => record.testId).filter(Boolean));
   for (const result of facts.results) rows.push([
     result.title,
@@ -73,6 +73,8 @@ function toCsv(facts: ExecutionFacts): string {
     String(result.flaky),
     String(healed.has(result.testId)),
     result.failureCategory ?? '',
+    result.skipCategory ?? '',
+    result.skipReason ?? '',
     result.sourceFile ?? ''
   ]);
   return rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
