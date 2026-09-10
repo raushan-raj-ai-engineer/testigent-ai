@@ -150,10 +150,16 @@ jobs:
       AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
       AI_ALLOW_CLOUD_EGRESS: ${{ vars.AI_ALLOW_CLOUD_EGRESS || 'false' }}
       AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '60000' }}
+      AI_TOTAL_TIMEOUT_MS: ${{ vars.AI_TOTAL_TIMEOUT_MS || '90000' }}
+      AI_RETRY_MAX_ATTEMPTS: ${{ vars.AI_RETRY_MAX_ATTEMPTS || '3' }}
+      AI_RETRY_BASE_DELAY_MS: ${{ vars.AI_RETRY_BASE_DELAY_MS || '1000' }}
+      AI_RETRY_MAX_DELAY_MS: ${{ vars.AI_RETRY_MAX_DELAY_MS || '8000' }}
+      AI_RETRY_JITTER_MS: ${{ vars.AI_RETRY_JITTER_MS || '250' }}
+      AI_RETRY_ON_TIMEOUT: ${{ vars.AI_RETRY_ON_TIMEOUT || 'false' }}
       AI_MAX_CALLS_PER_TEST: ${{ vars.AI_MAX_CALLS_PER_TEST || '2' }}
       AI_PROVIDER_GENERATION_CHECK: ${{ vars.AI_PROVIDER_GENERATION_CHECK || 'true' }}
 
-      TEST_TIMEOUT_MS: ${{ vars.AI_TEST_TIMEOUT_MS || '120000' }}
+      TEST_TIMEOUT_MS: ${{ vars.AI_TEST_TIMEOUT_MS || '180000' }}
       NAVIGATION_TIMEOUT_MS: ${{ vars.AI_NAVIGATION_TIMEOUT_MS || '60000' }}
       PW_RETRIES: '0'
 
@@ -238,6 +244,12 @@ jobs:
           echo "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}"
           echo "AI_ALLOW_CLOUD_EGRESS=${AI_ALLOW_CLOUD_EGRESS}"
           echo "AI_TIMEOUT_MS=${AI_TIMEOUT_MS}"
+          echo "AI_TOTAL_TIMEOUT_MS=${AI_TOTAL_TIMEOUT_MS}"
+          echo "AI_RETRY_MAX_ATTEMPTS=${AI_RETRY_MAX_ATTEMPTS}"
+          echo "AI_RETRY_BASE_DELAY_MS=${AI_RETRY_BASE_DELAY_MS}"
+          echo "AI_RETRY_MAX_DELAY_MS=${AI_RETRY_MAX_DELAY_MS}"
+          echo "AI_RETRY_JITTER_MS=${AI_RETRY_JITTER_MS}"
+          echo "AI_RETRY_ON_TIMEOUT=${AI_RETRY_ON_TIMEOUT}"
           echo "TEST_TIMEOUT_MS=${TEST_TIMEOUT_MS}"
           echo "NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS}"
           echo "PW_RETRIES=${PW_RETRIES}"
@@ -254,6 +266,22 @@ jobs:
 
           [[ "${AI_ENABLED}" == "true" ]] || fail "AI_ENABLED must be true in the AI job."
           [[ "${HEALING_AI_ENABLED}" == "true" ]] || fail "HEALING_AI_ENABLED must be true in the AI job."
+
+          [[ "${AI_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TIMEOUT_MS must be numeric."
+          [[ "${AI_TOTAL_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TOTAL_TIMEOUT_MS must be numeric."
+          [[ "${AI_TOTAL_TIMEOUT_MS}" -ge "${AI_TIMEOUT_MS}" ]] || fail "AI_TOTAL_TIMEOUT_MS must be >= AI_TIMEOUT_MS."
+          [[ "${AI_RETRY_MAX_ATTEMPTS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_MAX_ATTEMPTS must be numeric."
+          [[ "${AI_RETRY_MAX_ATTEMPTS}" -ge 1 && "${AI_RETRY_MAX_ATTEMPTS}" -le 5 ]] || fail "AI_RETRY_MAX_ATTEMPTS must be between 1 and 5."
+          [[ "${AI_RETRY_BASE_DELAY_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_BASE_DELAY_MS must be numeric."
+          [[ "${AI_RETRY_MAX_DELAY_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_MAX_DELAY_MS must be numeric."
+          [[ "${AI_RETRY_MAX_DELAY_MS}" -ge "${AI_RETRY_BASE_DELAY_MS}" ]] || fail "AI_RETRY_MAX_DELAY_MS must be >= AI_RETRY_BASE_DELAY_MS."
+          [[ "${AI_RETRY_JITTER_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_JITTER_MS must be numeric."
+          case "${AI_RETRY_ON_TIMEOUT}" in
+            true|false) ;;
+            *) fail "AI_RETRY_ON_TIMEOUT must be true or false." ;;
+          esac
+          [[ "${TEST_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "TEST_TIMEOUT_MS must be numeric."
+          [[ "${TEST_TIMEOUT_MS}" -gt "${AI_TOTAL_TIMEOUT_MS}" ]] || fail "AI_TEST_TIMEOUT_MS/TEST_TIMEOUT_MS must be greater than AI_TOTAL_TIMEOUT_MS."
 
           case "${AI_PROVIDER_MODE}" in
             single)

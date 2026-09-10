@@ -2,8 +2,7 @@
  * Vendor-neutral provider failure metadata.
  *
  * Provider adapters may throw this error so the gateway can preserve safe
- * operational metadata (provider/model/error kind) without importing any
- * vendor-specific implementation.
+ * operational metadata without importing any vendor-specific implementation.
  */
 export type AiProviderErrorKind =
   | 'configuration'
@@ -19,7 +18,8 @@ export class AiProviderError extends Error {
     public readonly kind: AiProviderErrorKind,
     message: string,
     public readonly statusCode?: number,
-    public readonly providerCode?: string
+    public readonly providerCode?: string,
+    public readonly attempts?: number
   ) {
     super(message);
     this.name = 'AiProviderError';

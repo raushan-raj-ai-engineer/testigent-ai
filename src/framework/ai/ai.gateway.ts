@@ -60,7 +60,7 @@ export class AiGateway {
           error.kind,
           error.statusCode === undefined ? undefined : `HTTP_${error.statusCode}`,
           error.providerCode
-        ].filter(Boolean).join(':');
+        ].filter(Boolean).join(':') + (error.attempts ? `:attempts=${error.attempts}` : '');
 
         this.audit.record({
           purpose: 'healing',
@@ -113,7 +113,7 @@ export class AiGateway {
           provider: error.provider,
           model: error.model,
           latencyMs: Date.now() - started,
-          message: error.kind
+          message: error.kind + (error.attempts ? `:attempts=${error.attempts}` : '')
         });
       } else {
         this.audit.record({
