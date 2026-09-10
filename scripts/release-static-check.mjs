@@ -79,7 +79,7 @@ if (fs.existsSync(githubAgents)) {
   for (const file of walk(githubAgents).filter(f => f.endsWith('.md'))) {
     const text = fs.readFileSync(file, 'utf8');
     if (/^model:\s*.+$/m.test(text)) issues.push(`repository agent pins a model instead of user/client choice: ${path.relative(root, file)}`);
-    if (!text.includes('ENTERPRISE PLAYWRIGHT FRAMEWORK OVERLAY')) issues.push(`repository agent missing enterprise overlay: ${path.relative(root, file)}`);
+    if (!text.includes('TESTIGENTAI ENTERPRISE QUALITY OVERLAY')) issues.push(`repository agent missing enterprise overlay: ${path.relative(root, file)}`);
   }
 }
 

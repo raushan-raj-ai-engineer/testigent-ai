@@ -1,4 +1,4 @@
-# Enterprise Playwright Framework
+# TestigentAI — Intelligent Quality Engineering Platform
 
 A clean multi-project Playwright + TypeScript quality platform for UI, API, database and data-driven automation with project-scoped reporting, guarded self-healing, optional AI/MCP tooling, requirement intelligence and CI/CD support.
 

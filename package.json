@@ -1,8 +1,8 @@
 {
-  "name": "enterprise-playwright-framework",
+  "name": "testigent-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Enterprise Playwright + TypeScript reference framework for UI, API, Database, data-driven testing, reporting, AI and guarded self-healing.",
+  "description": "TestigentAI - Intelligent Quality Engineering Platform",
   "author": "Raushan Raj",
   "scripts": {
     "typecheck": "tsc --noEmit",

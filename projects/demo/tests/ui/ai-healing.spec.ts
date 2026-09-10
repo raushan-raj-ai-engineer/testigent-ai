@@ -1,8 +1,8 @@
-import { test, expect } from '../../fixtures/test.fixture';
+import { createAiGateway } from '../../../../src/framework/ai/ai-provider.factory';
+import { ApplicationRegistry } from '../../../../src/framework/core/config/application.registry';
 import { HealingOrchestrator } from '../../../../src/framework/healing/healing.orchestrator';
 import type { LocatorPlan } from '../../../../src/framework/healing/healing.types';
-import { ApplicationRegistry } from '../../../../src/framework/core/config/application.registry';
-import { createAiGateway } from '../../../../src/framework/ai/ai-provider.factory';
+import { expect, test } from '../../fixtures/test.fixture';
 
 const aiOnlyTodoInput: LocatorPlan = {
   id: 'demo.ai-healing.todo.new',
@@ -30,7 +30,11 @@ test.describe('AI self-healing demonstration', () => {
     const workItem = `AI healing ${process.env.AI_PROVIDER ?? 'configured-provider'} ${Date.now()}`;
 
     await test.step('Open the work management application', async () => {
-      await page.goto(ApplicationRegistry.get('demo').uiBaseUrl);
+      await page.goto(ApplicationRegistry.get('demo').uiBaseUrl,
+        {
+          waitUntil: 'domcontentloaded',
+        }
+      );
     });
 
     await test.step('Use the configured guarded AI provider to recover the changed work item locator', async () => {

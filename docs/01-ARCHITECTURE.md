@@ -3,7 +3,7 @@
 ## Ownership model
 
 ```text
-enterprise-playwright-framework/
+testigent-ai/
 ├── src/framework/                 reusable platform only
 │   ├── core/                      config, fixtures, setup, paths, known defects
 │   ├── api/                       generic API client/auth/schema utilities

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const marker = 'ENTERPRISE PLAYWRIGHT FRAMEWORK OVERLAY';
+const marker = 'TESTIGENTAI ENTERPRISE QUALITY OVERLAY';
 const overlay = `\n\n# ${marker}\n- Treat the repository's generated PLAYWRIGHT_AUTHORING_PROMPT.md and agent-prompts/framework-test-generation.md as mandatory architecture policy.\n- Application UI mechanics belong in projects/<project>/src/pages and must use LocatorPlan + HealingOrchestrator; do not put raw page.click/fill/locator actions in business specs.\n- Business journeys belong in projects/<project>/src/workflows; tests express business intent and test.step() evidence.\n- Never import another project's code. Reusable-only capability belongs in src/framework.\n- Never hide a product defect by weakening assertions or silently adding test.fixme/skip. Use the project's known-defect governance only after human confirmation.\n- Generated code remains a proposal until proposal validation and human approval/promotion complete.\n- Finish by running typecheck, test:authoring:contract and proposal:validate for the requirement.\n`;
 
 const roots = ['.github/agents', '.claude/agents', '.opencode/prompts', '.codex/agents'];

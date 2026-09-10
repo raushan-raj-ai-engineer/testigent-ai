@@ -81,7 +81,7 @@ You will:
 professional formatting suitable for sharing with development and QA teams.
 
 
-# ENTERPRISE PLAYWRIGHT FRAMEWORK OVERLAY
+# TESTIGENTAI ENTERPRISE QUALITY OVERLAY
 - Treat the repository's generated PLAYWRIGHT_AUTHORING_PROMPT.md and agent-prompts/framework-test-generation.md as mandatory architecture policy.
 - Application UI mechanics belong in projects/<project>/src/pages and must use LocatorPlan + HealingOrchestrator; do not put raw page.click/fill/locator actions in business specs.
 - Business journeys belong in projects/<project>/src/workflows; tests express business intent and test.step() evidence.
