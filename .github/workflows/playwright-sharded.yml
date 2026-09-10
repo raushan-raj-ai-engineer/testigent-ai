@@ -7,12 +7,10 @@ on:
         description: Project folder under projects/
         required: true
         default: demo
-
       environment:
         description: Project environment config
         required: true
         default: qa
-
       run_ai:
         description: Run configured AI provider validation
         required: false
@@ -20,8 +18,7 @@ on:
         default: false
 
   push:
-    branches:
-      - main
+    branches: [main]
 
   pull_request:
 
@@ -33,35 +30,20 @@ concurrency:
   group: testigent-ai-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
-# ==========================================================
-# GLOBAL PROJECT SELECTION
-# ==========================================================
-
 env:
   APP: ${{ inputs.app || vars.APP || 'demo' }}
   ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
 
-
 jobs:
-
-  # ========================================================
-  # 1. FRAMEWORK VALIDATION
-  # ========================================================
-  #
-  # Core framework validation is always deterministic.
-  # No Gemini/OpenAI/Ollama dependency is introduced here.
-  #
   validate:
     name: Framework Validation
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
     env:
       AI_ENABLED: 'false'
       HEALING_AI_ENABLED: 'false'
 
     steps:
-
       - name: Checkout TestigentAI
         uses: actions/checkout@v7
 
@@ -80,53 +62,28 @@ jobs:
       - name: Validate TestigentAI
         run: npm run validate:final
 
-
-  # ========================================================
-  # 2. NORMAL PROJECT TESTS
-  # ========================================================
-  #
-  # Dedicated @ai validation tests are excluded here.
-  #
-  # Reason:
-  # They run in the AI job and are later merged back into the
-  # same final report.
-  #
-  # This prevents:
-  #
-  #   @ai test appearing as normal skipped test
-  #   +
-  #   same @ai test appearing again from AI job
-  #
   test:
     name: Project Tests - Shard ${{ matrix.index }}
-
-    needs:
-      - validate
-
+    needs: [validate]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     env:
       AI_ENABLED: 'false'
       HEALING_AI_ENABLED: 'false'
-
       CI: 'true'
-
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
     strategy:
       fail-fast: false
-
       matrix:
         include:
-
           - shard: '1/2'
             index: 1
-
           - shard: '2/2'
             index: 2
 
     steps:
-
       - name: Checkout TestigentAI
         uses: actions/checkout@v7
 
@@ -142,74 +99,34 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-
-      # ----------------------------------------------------
-      # Run normal tests only.
-      #
-      # Dedicated @ai tests run separately.
-      # ----------------------------------------------------
-
-      - name: Run project tests - shard ${{ matrix.index }}
+      - name: Run non-AI project tests - shard ${{ matrix.index }}
         run: >
           npm run test:project --
           --project=chromium
           --shard=${{ matrix.shard }}
           --grep-invert="@ai"
 
-
-      # ----------------------------------------------------
-      # Technical Playwright blob
-      # ----------------------------------------------------
-
       - name: Upload technical blob
-        if: ${{ !cancelled() }}
-
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
-
         with:
           name: blob-${{ env.APP }}-${{ matrix.index }}
-
           path: reports/${{ env.APP }}/blob-report
-
           if-no-files-found: warn
-
           retention-days: 7
-
-
-      # ----------------------------------------------------
-      # TestigentAI business data
-      # ----------------------------------------------------
 
       - name: Upload business shard
-        if: ${{ !cancelled() }}
-
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
-
         with:
           name: business-${{ env.APP }}-${{ matrix.index }}
-
           path: reports/${{ env.APP }}/business
-
           if-no-files-found: warn
-
           retention-days: 7
 
-
-  # ========================================================
-  # 3. AI PROVIDER / HEALING VALIDATION
-  # ========================================================
-  #
-  # This remains an independent execution.
-  #
-  # But its reports use the SAME naming convention as
-  # regular shards, allowing the merge job to combine them.
-  #
   ai-smoke:
     name: AI Healing Validation
-
-    needs:
-      - validate
-
+    needs: [validate]
     if: >-
       ${{
         github.event_name != 'pull_request' &&
@@ -218,113 +135,46 @@ jobs:
           vars.AI_CI_ENABLED == 'true'
         )
       }}
-
     runs-on: ubuntu-latest
-
-
-    # ------------------------------------------------------
-    # Makes Playwright use the CI blob reporter.
-    # ------------------------------------------------------
+    timeout-minutes: 30
 
     env:
       CI: 'true'
-
       APP: ${{ inputs.app || vars.APP || 'demo' }}
       ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
-
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
-
-      # ----------------------------------------------------
-      # AI
-      # ----------------------------------------------------
-
       AI_ENABLED: 'true'
-
       AI_PROVIDER_MODE: ${{ vars.AI_PROVIDER_MODE || 'single' }}
-
       AI_PROVIDER: ${{ vars.AI_PROVIDER || '' }}
-
       AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
-
       AI_ALLOW_CLOUD_EGRESS: ${{ vars.AI_ALLOW_CLOUD_EGRESS || 'false' }}
 
+      AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '60000' }}
+      AI_MAX_CALLS_PER_TEST: ${{ vars.AI_MAX_CALLS_PER_TEST || '2' }}
 
-      # ----------------------------------------------------
-      # Healing
-      # ----------------------------------------------------
+      TEST_TIMEOUT_MS: ${{ vars.AI_TEST_TIMEOUT_MS || '120000' }}
+      NAVIGATION_TIMEOUT_MS: ${{ vars.AI_NAVIGATION_TIMEOUT_MS || '60000' }}
 
       HEALING_AI_ENABLED: 'true'
-
       HEALING_MODE: runtime
-
-
-      # ----------------------------------------------------
-      # AI evidence
-      # ----------------------------------------------------
-
       AI_AUDIT_ENABLED: 'true'
-
       AI_RUNTIME_LOGGING: 'true'
 
-
-      # ----------------------------------------------------
-      # Gemini
-      # ----------------------------------------------------
-
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || '' }}
-
-
-      # ----------------------------------------------------
-      # OpenAI
-      # ----------------------------------------------------
-
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || '' }}
-
-
-      # ----------------------------------------------------
-      # Azure OpenAI
-      # ----------------------------------------------------
-
       AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT || '' }}
-
       AZURE_OPENAI_MODEL: ${{ vars.AZURE_OPENAI_MODEL || '' }}
-
-
-      # ----------------------------------------------------
-      # Anthropic
-      # ----------------------------------------------------
-
       ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || '' }}
-
-
-      # ----------------------------------------------------
-      # OpenAI-compatible provider
-      # ----------------------------------------------------
-
       AI_COMPAT_BASE_URL: ${{ vars.AI_COMPAT_BASE_URL || '' }}
-
       AI_COMPAT_MODEL: ${{ vars.AI_COMPAT_MODEL || '' }}
-
-
-      # ----------------------------------------------------
-      # Generic HTTP AI provider
-      # ----------------------------------------------------
-
       AI_ENDPOINT: ${{ vars.AI_ENDPOINT || '' }}
-
       AI_MODEL: ${{ vars.AI_MODEL || '' }}
-
-
-    # Allows merge job to know whether current project
-    # actually contained @ai tests.
 
     outputs:
       has_ai_tests: ${{ steps.detect-ai.outputs.has_ai_tests }}
 
-
     steps:
-
       - name: Checkout TestigentAI
         uses: actions/checkout@v7
 
@@ -340,24 +190,22 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-
-      # ----------------------------------------------------
-      # Does selected project actually contain an @ai test?
-      #
-      # This keeps multi-project behavior clean.
-      # ----------------------------------------------------
-
       - name: Detect AI tests
         id: detect-ai
         shell: bash
-
         run: |
+          set -euo pipefail
+
+          if [[ ! -d "projects/${APP}/tests" ]]; then
+            echo "[ai] Project test directory not found: projects/${APP}/tests"
+            exit 1
+          fi
+
           if grep -RIl \
             --include='*.spec.ts' \
             --include='*.test.ts' \
             '@ai' \
-            "projects/${APP}/tests" 2>/dev/null | grep -q .;
-          then
+            "projects/${APP}/tests" 2>/dev/null | grep -q .; then
             echo "has_ai_tests=true" >> "$GITHUB_OUTPUT"
             echo "[ai] @ai tests found for project '${APP}'."
           else
@@ -365,194 +213,104 @@ jobs:
             echo "[ai] No @ai tests found for project '${APP}'."
           fi
 
-
-      # ----------------------------------------------------
-      # Validate provider/key/model before using AI.
-      # ----------------------------------------------------
+      - name: Show safe AI runtime configuration
+        if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
+        shell: bash
+        run: |
+          echo "APP=${APP}"
+          echo "ENV=${ENV}"
+          echo "AI_PROVIDER_MODE=${AI_PROVIDER_MODE}"
+          echo "AI_PROVIDER=${AI_PROVIDER}"
+          echo "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}"
+          echo "AI_ALLOW_CLOUD_EGRESS=${AI_ALLOW_CLOUD_EGRESS}"
+          echo "AI_TIMEOUT_MS=${AI_TIMEOUT_MS}"
+          echo "AI_MAX_CALLS_PER_TEST=${AI_MAX_CALLS_PER_TEST}"
+          echo "TEST_TIMEOUT_MS=${TEST_TIMEOUT_MS}"
+          echo "NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS}"
+          echo "HEALING_MODE=${HEALING_MODE}"
+          echo "GEMINI_MODEL=${GEMINI_MODEL}"
 
       - name: Check configured AI provider
-
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
-
         run: npm run ai:check
-
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
           AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
-
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
 
-
-      # ----------------------------------------------------
-      # Run only @ai tests.
-      #
-      # APP / ENV come from CI, not hardcoded demo.
-      # ----------------------------------------------------
-
       - name: Run AI healing tests
-
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
-
         run: >
           npm run test:project --
           --project=chromium
           --grep="@ai"
-
         env:
-          AI_HEALING_DEMO: 'true'
-
+          AI_HEALING_DEMO: ${{ env.APP == 'demo' && 'true' || 'false' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
           AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
-
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
 
-
-      # ----------------------------------------------------
-      # AI Playwright blob
-      #
-      # SAME artifact naming family as normal test shards.
-      # ----------------------------------------------------
-
       - name: Upload AI technical blob
-
-        if: >-
-          ${{
-            !cancelled() &&
-            steps.detect-ai.outputs.has_ai_tests == 'true'
-          }}
-
+        if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
         uses: actions/upload-artifact@v7
-
         with:
           name: blob-${{ env.APP }}-ai
-
           path: reports/${{ env.APP }}/blob-report
-
           if-no-files-found: warn
-
           retention-days: 7
-
-
-      # ----------------------------------------------------
-      # AI business execution facts
-      # ----------------------------------------------------
 
       - name: Upload AI business report
-
-        if: >-
-          ${{
-            !cancelled() &&
-            steps.detect-ai.outputs.has_ai_tests == 'true'
-          }}
-
+        if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
         uses: actions/upload-artifact@v7
-
         with:
           name: business-${{ env.APP }}-ai
-
           path: reports/${{ env.APP }}/business
-
           if-no-files-found: warn
-
           retention-days: 7
-
-
-      # ----------------------------------------------------
-      # AI audit
-      #
-      # Actual provider/model/status/latency evidence.
-      # ----------------------------------------------------
 
       - name: Upload AI audit
-
-        if: >-
-          ${{
-            !cancelled() &&
-            steps.detect-ai.outputs.has_ai_tests == 'true'
-          }}
-
+        if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
         uses: actions/upload-artifact@v7
-
         with:
           name: ai-audit-${{ env.APP }}
-
           path: reports/${{ env.APP }}/ai
-
           if-no-files-found: warn
-
           retention-days: 7
 
-
-  # ========================================================
-  # 4. SINGLE FINAL REPORT MERGE
-  # ========================================================
-  #
-  # Wait for:
-  #
-  #   Normal tests
-  #   +
-  #   AI tests
-  #
-  # Even if AI test FAILS, report generation should continue
-  # so management can see that failure.
-  #
   merge:
     name: Merge TestigentAI Reports
-
-    needs:
-      - test
-      - ai-smoke
-
-
-    # ------------------------------------------------------
-    # Run even when tests fail.
-    #
-    # Don't run if normal tests never started.
-    # ------------------------------------------------------
-
+    needs: [test, ai-smoke]
     if: >-
       ${{
         always() &&
         !cancelled() &&
         needs.test.result != 'skipped'
       }}
-
-
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
+    permissions:
+      contents: read
+      actions: write
 
     env:
       AI_ENABLED: 'false'
-
       APP: ${{ inputs.app || vars.APP || 'demo' }}
-
       ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
-
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
-
     steps:
-
       - name: Checkout TestigentAI
         uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v7
-
         with:
           node-version-file: '.nvmrc'
           cache: npm
@@ -560,178 +318,108 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-
-      # ====================================================
-      # TECHNICAL REPORT INPUTS
-      # ====================================================
-      #
-      # Pattern matches:
-      #
-      #   blob-demo-1
-      #   blob-demo-2
-      #   blob-demo-ai
-      #
-      # Therefore normal + AI go to one Playwright report.
-      # ====================================================
-
       - name: Download all technical blobs
-
         uses: actions/download-artifact@v8
-
         with:
           pattern: blob-${{ env.APP }}-*
-
           path: all-blob-reports
-
           merge-multiple: true
-
-
-      # ====================================================
-      # BUSINESS REPORT INPUTS
-      # ====================================================
-      #
-      # Pattern matches:
-      #
-      #   business-demo-1
-      #   business-demo-2
-      #   business-demo-ai
-      #
-      # ====================================================
 
       - name: Download all business reports
-
         uses: actions/download-artifact@v8
-
         with:
           pattern: business-${{ env.APP }}-*
-
           path: all-business-reports
 
-
-      # ====================================================
-      # AI AUDIT
-      # ====================================================
-
       - name: Download AI audit
-
-        if: >-
-          ${{
-            needs.ai-smoke.result != 'skipped' &&
-            needs.ai-smoke.outputs.has_ai_tests == 'true'
-          }}
-
+        if: ${{ needs.ai-smoke.result != 'skipped' }}
         continue-on-error: true
-
         uses: actions/download-artifact@v8
-
         with:
           pattern: ai-audit-${{ env.APP }}
-
           path: reports/${{ env.APP }}/ai
-
           merge-multiple: true
-
-
-      # ====================================================
-      # MERGE PLAYWRIGHT
-      # ====================================================
 
       - name: Merge Playwright technical report
         run: npm run report:merge:technical
 
-
-      # ====================================================
-      # MERGE BUSINESS FACTS
-      # ====================================================
-
       - name: Merge business reports
-
-        run: >
-          npm run report:merge:business --
-          all-business-reports
-
+        run: npm run report:merge:business -- all-business-reports
         env:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-
-
-      # ====================================================
-      # FINALIZE FACTS
-      # ====================================================
 
       - name: Finalize business execution facts
         run: npm run ci:business:finalize
 
-
-      # ====================================================
-      # GENERATE ONE BUSINESS DASHBOARD
-      #
-      # AI_ENABLED=false is intentional.
-      #
-      # Dashboard reads previously-generated AI audit data.
-      # It must NOT call Gemini during report rendering.
-      # ====================================================
-
       - name: Generate TestigentAI business dashboard
-
         run: npm run report:business
-
         env:
           AI_ENABLED: 'false'
-
-
-      # ====================================================
-      # VALIDATE FINAL REPORT BUNDLE
-      # ====================================================
 
       - name: Validate final business bundle
         run: npm run ci:business:validate
 
-
-      # ====================================================
-      # ONE FINAL MANAGEMENT / TECHNICAL ARTIFACT
-      # ====================================================
-
       - name: Upload final TestigentAI report
-
+        id: final-upload
         if: ${{ always() }}
-
         uses: actions/upload-artifact@v7
-
         with:
           name: testigent-ai-report-${{ env.APP }}-${{ github.run_id }}
-
           path: reports/${{ env.APP }}
-
           if-no-files-found: error
-
           retention-days: 14
 
-
-      # ====================================================
-      # OPTIONAL STAKEHOLDER EMAIL
-      # ====================================================
-
       - name: Optional stakeholder email
-
         if: >-
           ${{
             github.event_name != 'pull_request' &&
             vars.BUSINESS_EMAIL_ENABLED == 'true'
           }}
-
+        continue-on-error: true
         run: npm run ci:mail
-
         env:
           BUSINESS_EMAIL_ENABLED: 'true'
-
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
-
           MAIL_TO: ${{ secrets.MAIL_TO }}
-
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
-
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
-
           SMTP_USER: ${{ secrets.SMTP_USER }}
-
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+
+      - name: Remove intermediate CI artifacts
+        if: >-
+          ${{
+            always() &&
+            !cancelled() &&
+            steps.final-upload.outcome == 'success' &&
+            github.event_name != 'pull_request'
+          }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          artifact_ids="$({
+            gh api \
+              "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(
+                (.name | startswith("blob-")) or
+                (.name | startswith("business-")) or
+                (.name | startswith("ai-audit-"))
+              ) | .id'
+          } || true)"
+
+          if [[ -z "${artifact_ids}" ]]; then
+            echo "No intermediate artifacts to remove."
+            exit 0
+          fi
+
+          while IFS= read -r artifact_id; do
+            [[ -z "${artifact_id}" ]] && continue
+            echo "Removing intermediate artifact ${artifact_id}"
+            gh api \
+              --method DELETE \
+              "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+          done <<< "${artifact_ids}"
