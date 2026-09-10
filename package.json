@@ -28,7 +28,7 @@
     "test:healing": "cross-env APP=demo ENV=qa HEALING_MODE=runtime HEALING_DEMO=true tsx scripts/test-project.ts --project=chromium --grep @healing --grep-invert @ai",
     "ai:ollama:check": "tsx scripts/check-ollama.ts",
     "ai:ollama:demo": "cross-env AI_ENABLED=true AI_PROVIDER_MODE=single AI_PROVIDER=ollama HEALING_AI_ENABLED=true tsx scripts/ollama-ai-demo.ts",
-    "test:ai-healing": "cross-env APP=demo ENV=qa AI_ENABLED=true HEALING_MODE=runtime HEALING_AI_ENABLED=true AI_HEALING_DEMO=true tsx scripts/test-project.ts --project=chromium --grep @ai",
+    "test:ai-healing": "cross-env AI_ENABLED=true HEALING_MODE=runtime HEALING_AI_ENABLED=true AI_HEALING_DEMO=true tsx scripts/test-project.ts --project=chromium --grep @ai",
     "ai:check": "cross-env AI_ENABLED=true tsx scripts/ai-provider-check.ts",
     "ai:demo": "cross-env AI_ENABLED=true HEALING_AI_ENABLED=true tsx scripts/ai-provider-demo.ts",
     "intelligence:demo": "tsx scripts/report-intelligence-demo.ts",

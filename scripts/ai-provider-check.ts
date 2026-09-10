@@ -3,9 +3,11 @@ import { createAiProvider, resolveProviderOrder } from '../src/framework/ai/ai-p
 
 /**
  * Author: Raushan Raj
- * Business Use: Validates the explicitly selected AI provider configuration independently of Playwright/browser execution.
- * How to use: Configure AI_ENABLED, AI_PROVIDER_MODE and provider settings, then run npm run ai:check.
- * Benefit: Separates provider/network/key problems from test automation failures without printing secrets.
+ * Business Use: Validates configured AI provider health independently of browser execution.
+ *
+ * AI_PROVIDER_GENERATION_CHECK=true additionally performs one tiny real generation
+ * request through the same governed locator contract. This catches cases where
+ * key/model metadata validation passes but the generation endpoint is unavailable.
  */
 async function main(): Promise<void> {
   if (process.env.AI_ENABLED !== 'true') {
@@ -24,13 +26,36 @@ async function main(): Promise<void> {
 
   const provider = createAiProvider();
   if (!provider) throw new Error('AI provider was not created.');
-  if (!provider.healthCheck) {
+
+  if (provider.healthCheck) {
+    const health = await provider.healthCheck();
+    console.log(`[health] ${health.message}`);
+    if (!health.ok) process.exit(1);
+  } else {
     console.log(`[health] Provider chain '${names.join(' -> ')}' is configured but has no health-check implementation.`);
-    return;
   }
-  const health = await provider.healthCheck();
-  console.log(`[health] ${health.message}`);
-  if (!health.ok) process.exit(1);
+
+  if ((process.env.AI_PROVIDER_GENERATION_CHECK ?? 'false').toLowerCase() !== 'true') return;
+
+  const started = Date.now();
+  const result = await provider.proposeLocator({
+    planId: 'provider-generation-smoke',
+    businessName: 'Search input',
+    accessibilitySnapshot: '- textbox "Search"',
+    allowedDescriptorTypes: ['role', 'label', 'testId', 'placeholder', 'text']
+  });
+
+  if (!result) {
+    throw new Error('AI provider generation check returned no governed locator response.');
+  }
+
+  console.log(
+    `[generation] status=success provider=${result.provider ?? names[0]} ` +
+    `model=${result.model ?? 'n/a'} latencyMs=${result.latencyMs ?? Date.now() - started}`
+  );
 }
 
-main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
+main().catch(error => {
+  console.error(`[ai:check] ${error instanceof Error ? error.message : String(error)}`);
+  process.exitCode = 1;
+});

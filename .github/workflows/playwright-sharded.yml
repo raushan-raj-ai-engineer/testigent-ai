@@ -131,12 +131,12 @@ jobs:
       ${{
         github.event_name != 'pull_request' &&
         (
-          inputs.run_ai == true ||
-          vars.AI_CI_ENABLED == 'true'
+          (github.event_name == 'workflow_dispatch' && inputs.run_ai == true) ||
+          (github.event_name == 'push' && vars.AI_CI_ENABLED == 'true')
         )
       }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     env:
       CI: 'true'
@@ -144,27 +144,28 @@ jobs:
       ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
-      GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'low' }}
-      AI_HEALING_SNAPSHOT_MAX_CHARS: ${{ vars.AI_HEALING_SNAPSHOT_MAX_CHARS || '6000' }}
-
-      AI_ENABLED: 'false'
+      AI_ENABLED: 'true'
       AI_PROVIDER_MODE: ${{ vars.AI_PROVIDER_MODE || 'single' }}
       AI_PROVIDER: ${{ vars.AI_PROVIDER || '' }}
       AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
       AI_ALLOW_CLOUD_EGRESS: ${{ vars.AI_ALLOW_CLOUD_EGRESS || 'false' }}
-
       AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '60000' }}
       AI_MAX_CALLS_PER_TEST: ${{ vars.AI_MAX_CALLS_PER_TEST || '2' }}
+      AI_PROVIDER_GENERATION_CHECK: ${{ vars.AI_PROVIDER_GENERATION_CHECK || 'true' }}
 
       TEST_TIMEOUT_MS: ${{ vars.AI_TEST_TIMEOUT_MS || '120000' }}
       NAVIGATION_TIMEOUT_MS: ${{ vars.AI_NAVIGATION_TIMEOUT_MS || '60000' }}
+      PW_RETRIES: '0'
 
       HEALING_AI_ENABLED: 'true'
       HEALING_MODE: runtime
+      AI_HEALING_SNAPSHOT_MAX_CHARS: ${{ vars.AI_HEALING_SNAPSHOT_MAX_CHARS || '6000' }}
       AI_AUDIT_ENABLED: 'true'
       AI_RUNTIME_LOGGING: 'true'
 
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || '' }}
+      GEMINI_THINKING_LEVEL: ${{ vars.GEMINI_THINKING_LEVEL || 'low' }}
+
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || '' }}
       AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT || '' }}
       AZURE_OPENAI_MODEL: ${{ vars.AZURE_OPENAI_MODEL || '' }}
@@ -200,7 +201,7 @@ jobs:
           set -euo pipefail
 
           if [[ ! -d "projects/${APP}/tests" ]]; then
-            echo "[ai] Project test directory not found: projects/${APP}/tests"
+            echo "::error::Project test directory not found: projects/${APP}/tests"
             exit 1
           fi
 
@@ -213,13 +214,22 @@ jobs:
             echo "[ai] @ai tests found for project '${APP}'."
           else
             echo "has_ai_tests=false" >> "$GITHUB_OUTPUT"
-            echo "[ai] No @ai tests found for project '${APP}'."
+            echo "[ai] No @ai tests found for project '${APP}'. AI job will finish without provider calls."
           fi
 
-      - name: Show safe AI runtime configuration
+      - name: Validate AI CI configuration
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
         shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
         run: |
+          set -euo pipefail
+
           echo "APP=${APP}"
           echo "ENV=${ENV}"
           echo "AI_PROVIDER_MODE=${AI_PROVIDER_MODE}"
@@ -227,13 +237,48 @@ jobs:
           echo "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}"
           echo "AI_ALLOW_CLOUD_EGRESS=${AI_ALLOW_CLOUD_EGRESS}"
           echo "AI_TIMEOUT_MS=${AI_TIMEOUT_MS}"
-          echo "AI_MAX_CALLS_PER_TEST=${AI_MAX_CALLS_PER_TEST}"
           echo "TEST_TIMEOUT_MS=${TEST_TIMEOUT_MS}"
           echo "NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS}"
-          echo "HEALING_MODE=${HEALING_MODE}"
+          echo "PW_RETRIES=${PW_RETRIES}"
+          echo "AI_HEALING_SNAPSHOT_MAX_CHARS=${AI_HEALING_SNAPSHOT_MAX_CHARS}"
+          echo "AI_PROVIDER_GENERATION_CHECK=${AI_PROVIDER_GENERATION_CHECK}"
           echo "GEMINI_MODEL=${GEMINI_MODEL}"
+          echo "GEMINI_THINKING_LEVEL=${GEMINI_THINKING_LEVEL}"
 
-      - name: Check configured AI provider
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          [[ "${AI_ENABLED}" == "true" ]] || fail "AI_ENABLED must be true in the AI job."
+          [[ "${HEALING_AI_ENABLED}" == "true" ]] || fail "HEALING_AI_ENABLED must be true in the AI job."
+
+          case "${AI_PROVIDER_MODE}" in
+            single)
+              [[ -n "${AI_PROVIDER}" ]] || fail "AI_PROVIDER is required when AI_PROVIDER_MODE=single. Create GitHub Actions Repository Variable AI_PROVIDER."
+              ;;
+            failover)
+              [[ -n "${AI_PROVIDER_ORDER}" ]] || fail "AI_PROVIDER_ORDER is required when AI_PROVIDER_MODE=failover."
+              ;;
+            *)
+              fail "AI_PROVIDER_MODE must be 'single' or 'failover'."
+              ;;
+          esac
+
+          if [[ "${AI_PROVIDER_MODE}" == "single" && "${AI_PROVIDER}" == "gemini" ]]; then
+            [[ "${AI_ALLOW_CLOUD_EGRESS}" == "true" ]] || fail "Gemini requires AI_ALLOW_CLOUD_EGRESS=true."
+            [[ -n "${GEMINI_MODEL}" ]] || fail "GEMINI_MODEL is required for Gemini."
+            [[ -n "${GEMINI_API_KEY:-}" ]] || fail "GitHub Actions Repository Secret GEMINI_API_KEY is missing."
+            case "${GEMINI_THINKING_LEVEL}" in
+              low|medium|high) ;;
+              *) fail "GEMINI_THINKING_LEVEL must be low, medium or high." ;;
+            esac
+            echo "Gemini API key configured: YES"
+          fi
+
+          echo "AI CI preflight validation: PASSED"
+
+      - name: Check configured AI provider and generation endpoint
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
         run: npm run ai:check
         env:

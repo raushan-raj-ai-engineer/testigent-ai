@@ -61,6 +61,7 @@ export class HealingOrchestrator {
 
   async resolveWithin(root: LocatorRoot, plan: LocatorPlan, skipPrimary = false): Promise<Locator> {
     const scopedRoot = plan.scope ? await this.resolveScope(root, plan.scope) : root;
+
     if (!skipPrimary) {
       const primary = resolveLocator(scopedRoot, plan.primary);
       if (await this.isUsable(primary)) return primary;
@@ -75,10 +76,18 @@ export class HealingOrchestrator {
       if (skipPrimary && this.sameDescriptor(fallback, plan.primary)) continue;
       const locator = resolveLocator(scopedRoot, fallback);
       if (await this.isUsable(locator)) {
-        const decision: HealingDecision = { descriptor: fallback, source: 'fallback', confidence: 0.98, reason: 'Configured deterministic fallback is visible and unique.' };
+        const decision: HealingDecision = {
+          descriptor: fallback,
+          source: 'fallback',
+          confidence: 0.98,
+          reason: 'Configured deterministic fallback is visible and unique.'
+        };
         this.audit.record(plan, decision, this.page.url(), this.testId);
         this.logger.warn('SELF_HEALING_FALLBACK_FOUND', { planId: plan.id, decision });
-        if (mode === 'runtime') { this.cache.set(plan.id, decision); return locator; }
+        if (mode === 'runtime') {
+          this.cache.set(plan.id, decision);
+          return locator;
+        }
         throw new Error(`Healing suggestion found for ${plan.businessName}; HEALING_MODE=suggest prevents automatic use.`);
       }
     }
@@ -87,14 +96,22 @@ export class HealingOrchestrator {
     if (cached && this.isAllowedDescriptor(cached.descriptor) && !this.sameDescriptor(cached.descriptor, plan.primary)) {
       const locator = resolveLocator(scopedRoot, cached.descriptor);
       if (await this.isUsable(locator)) {
-        const decision: HealingDecision = { descriptor: cached.descriptor, source: 'cache', confidence: cached.confidence, reason: 'Previously validated locator recovery.' };
+        const decision: HealingDecision = {
+          descriptor: cached.descriptor,
+          source: 'cache',
+          confidence: cached.confidence,
+          reason: 'Previously validated locator recovery.'
+        };
         this.audit.record(plan, decision, this.page.url(), this.testId);
         this.logger.warn('SELF_HEALING_CACHE_HIT', { planId: plan.id, decision });
         if (mode === 'runtime') return locator;
         throw new Error(`Cached healing suggestion exists for ${plan.businessName}; HEALING_MODE=suggest prevents automatic use.`);
       }
       this.cache.delete(plan.id);
-      this.logger.warn('SELF_HEALING_CACHE_EVICTED', { planId: plan.id, reason: 'Cached locator is no longer visible and unique.' });
+      this.logger.warn('SELF_HEALING_CACHE_EVICTED', {
+        planId: plan.id,
+        reason: 'Cached locator is no longer visible and unique.'
+      });
     }
 
     const aiDecision = await this.askAi(plan, scopedRoot);
@@ -104,7 +121,10 @@ export class HealingOrchestrator {
       const minConfidence = Number(process.env.HEALING_MIN_CONFIDENCE ?? 0.95);
       if (mode === 'runtime' && aiDecision.confidence >= minConfidence) {
         const locator = resolveLocator(scopedRoot, aiDecision.descriptor);
-        if (await this.isUsable(locator)) { this.cache.set(plan.id, aiDecision); return locator; }
+        if (await this.isUsable(locator)) {
+          this.cache.set(plan.id, aiDecision);
+          return locator;
+        }
       }
     }
 
@@ -114,10 +134,12 @@ export class HealingOrchestrator {
   private async resolveScope(root: LocatorRoot, scope: LocatorScopePlan): Promise<Locator> {
     const primary = resolveLocator(root, scope.primary);
     if (await this.isUsable(primary)) return primary;
+
     for (const fallback of scope.fallbacks ?? []) {
       const locator = resolveLocator(root, fallback);
       if (await this.isUsable(locator)) return locator;
     }
+
     throw new Error(`Unable to safely resolve UI scope for ${scope.businessName}`);
   }
 
@@ -126,19 +148,26 @@ export class HealingOrchestrator {
       if (await locator.count() !== 1) return false;
       await locator.waitFor({ state: 'visible', timeout: 1_500 });
       return true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 
   private async askAi(plan: LocatorPlan, root: LocatorRoot): Promise<HealingDecision | undefined> {
     if (!this.ai || (process.env.HEALING_AI_ENABLED ?? 'false').toLowerCase() !== 'true') return undefined;
+
     const snapshot = await (root === this.page ? this.page.locator('body') : root as Locator).ariaSnapshot();
+    const maxSnapshotChars = this.positiveInteger(process.env.AI_HEALING_SNAPSHOT_MAX_CHARS, 6_000);
+
     const response = await this.ai.proposeLocator({
       planId: plan.id,
       businessName: plan.businessName,
-      accessibilitySnapshot: snapshot.slice(0, 12_000),
+      accessibilitySnapshot: snapshot.slice(0, maxSnapshotChars),
       allowedDescriptorTypes: ['role', 'label', 'testId', 'placeholder', 'text']
     });
+
     if (!response || !this.isAllowedDescriptor(response.descriptor)) return undefined;
+
     return {
       descriptor: response.descriptor,
       source: 'ai',
@@ -160,5 +189,10 @@ export class HealingOrchestrator {
     if (d.type === 'role') return typeof d.role === 'string' && (d.name === undefined || typeof d.name === 'string');
     if (['label', 'testId', 'placeholder', 'text'].includes(String(d.type))) return typeof d.value === 'string' && d.value.length > 0;
     return false;
+  }
+
+  private positiveInteger(raw: string | undefined, fallback: number): number {
+    const value = Number(raw ?? fallback);
+    return Number.isInteger(value) && value > 0 ? value : fallback;
   }
 }
