@@ -50,10 +50,10 @@ for action, entry in plan:
     else:
         dst.unlink(); changed+=1
 
-# Generated release/upgrade metadata cannot hash itself into the manifest without a cycle.
-# Sync those bundle-owned files after the conflict-safe content plan, then VERIFY_UPGRADE compares them byte-for-byte.
+# Generated/bundle-owned release metadata must not participate in baseline conflict checks.
+# Sync these files after the conflict-safe content plan; VERIFY_UPGRADE compares them byte-for-byte.
 metadata_synced=0
-for rel in ['upgrade/v6-manifest.json', 'release/RELEASE-MANIFEST.sha256']:
+for rel in ['upgrade/v6-manifest.json', 'release/SBOM.cdx.json', 'release/RELEASE-MANIFEST.sha256']:
     src=bundle/rel; dst=target/rel
     if not src.exists():
         continue

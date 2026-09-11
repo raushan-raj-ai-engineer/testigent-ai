@@ -95,12 +95,6 @@
       "desiredSha256": "10b58a0b068aaffb742dedd4fdcacb426fa66e1341a311a3122f3c187e94a2f1"
     },
     {
-      "path": "release/SBOM.cdx.json",
-      "operation": "copy",
-      "baselineSha256": "995046e4ae79a3d744ee39b56e9808bc076619c53e4ededd1d5acc31693546d4",
-      "desiredSha256": "ad5e1c81b973b2d45ddae3cd3f141aa390dce2b13e9b470926e88719100e18ee"
-    },
-    {
       "path": "release/VERIFICATION-REPORT.md",
       "operation": "copy",
       "baselineSha256": null,

@@ -12,7 +12,7 @@ for e in data['entries']:
     checked+=1; cur=sha(target/e['path'])
     if e['operation']=='copy' and cur!=e.get('desiredSha256'): problems.append(f"{e['path']}: desired hash mismatch")
     if e['operation']=='delete' and cur is not None: problems.append(f"{e['path']}: should be absent")
-for rel in ['upgrade/v6-manifest.json', 'release/RELEASE-MANIFEST.sha256']:
+for rel in ['upgrade/v6-manifest.json', 'release/SBOM.cdx.json', 'release/RELEASE-MANIFEST.sha256']:
     src=bundle/rel
     if src.exists():
         checked+=1
