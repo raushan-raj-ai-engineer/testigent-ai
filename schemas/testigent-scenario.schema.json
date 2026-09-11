@@ -1,0 +1,2574 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://testigent.ai/schemas/declarative-scenario-v1.json",
+  "title": "TestigentAI Declarative UI Scenario",
+  "description": "Schema-driven, governed low-code UI scenario executed by Playwright. Use TypeScript for complex control flow or cross-layer orchestration.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "default": 1
+    },
+    "kind": {
+      "const": "ui",
+      "default": "ui"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Stable lower-kebab-case scenario identifier used in reporting and @scenario:<id> selection."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tags": {
+      "type": "array",
+      "default": [],
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^@[A-Za-z0-9:_-]+$"
+      },
+      "description": "Execution/profile tags such as @smoke or @regression. @declarative, @ui, and @lane:ui are injected by the runner spec."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "title": "Navigate",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "goto"
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Application-relative path (recommended) or an http(s) URL. External origins are blocked by default.",
+                "pattern": "^(?:https?://|/|\\./)",
+                "examples": [
+                  "/",
+                  "/orders",
+                  "https://example.test/app"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "url"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "click"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "fill"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "description": "Text to enter. Empty string is allowed."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "check"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "uncheck"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "select"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "option": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "option"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "press"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "examples": [
+                  "Enter",
+                  "Tab",
+                  "Escape"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectVisible"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectHidden"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectText"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string"
+              },
+              "match": {
+                "enum": [
+                  "contains",
+                  "exact"
+                ],
+                "default": "contains"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "role",
+                "description": "Preferred semantic locator using Playwright getByRole()."
+              },
+              "role": {
+                "enum": [
+                  "alert",
+                  "button",
+                  "checkbox",
+                  "combobox",
+                  "dialog",
+                  "heading",
+                  "link",
+                  "listbox",
+                  "menuitem",
+                  "option",
+                  "radio",
+                  "tab",
+                  "textbox"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "role",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "label",
+                "description": "Form control located by associated label."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "text",
+                "description": "Element located by visible text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "testId",
+                "description": "Stable explicit test contract using getByTestId()."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "placeholder",
+                "description": "Input located by placeholder text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "altText",
+                "description": "Element located by alternative text."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "title",
+                "description": "Element located by title attribute."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exact": {
+                "type": "boolean",
+                "description": "Use exact text/name matching when supported."
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "const": "expectValue"
+              },
+              "by": {
+                "const": "css",
+                "description": "Advanced fallback CSS selector. Prefer semantic locators."
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "by",
+              "value",
+              "expected"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "steps"
+  ],
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "kind": "ui",
+      "id": "login-valid-user",
+      "title": "Valid user can sign in",
+      "tags": [
+        "@smoke"
+      ],
+      "steps": [
+        {
+          "action": "goto",
+          "url": "/login"
+        },
+        {
+          "action": "fill",
+          "by": "label",
+          "value": "Email",
+          "text": "qa@example.com"
+        },
+        {
+          "action": "click",
+          "by": "role",
+          "role": "button",
+          "name": "Sign in"
+        },
+        {
+          "action": "expectVisible",
+          "by": "text",
+          "value": "Welcome"
+        }
+      ]
+    }
+  ],
+  "x-testigent-locator-strategies": [
+    "role",
+    "label",
+    "text",
+    "testId",
+    "placeholder",
+    "altText",
+    "title",
+    "css"
+  ]
+}

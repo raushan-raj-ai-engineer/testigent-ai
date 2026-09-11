@@ -47,3 +47,18 @@ The architecture and operational recommendations were checked against current fi
 - DeepEval AI Agent Evaluation Metrics: https://deepeval.com/guides/guides-ai-agent-evaluation-metrics
 - LangSmith Evaluation: https://docs.langchain.com/langsmith/evaluation
 - LangSmith trajectory evaluation: https://docs.langchain.com/langsmith/trajectory-evals
+
+## Declarative / Low-Code Authoring Research (v1.2.0)
+- JSON Schema Draft 2020-12: https://json-schema.org/draft/2020-12
+- Red Hat YAML Language Server schema association/autocomplete: https://github.com/redhat-developer/yaml-language-server
+- Red Hat VS Code YAML extension: https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
+- Zod JSON Schema (Zod 4): https://zod.dev/json-schema
+- Zod metadata/registries: https://zod.dev/metadata
+- Playwright locators: https://playwright.dev/docs/locators
+- Playwright test generator: https://playwright.dev/docs/codegen
+- BrowserStack Low Code Automation overview: https://www.browserstack.com/docs/low-code-automation/overview/introduction
+- BrowserStack supported recorder actions: https://www.browserstack.com/docs/low-code-automation/test-recording/record-actions
+- BrowserStack agentic low-code testing: https://www.browserstack.com/docs/low-code-automation/test-recording/browserstack-ai/agentic-testing
+- Katalon Manual view: https://docs.katalon.com/katalon-studio/create-test-cases/generate-test-steps-in-katalon-studio-manual-view
+- Katalon Script view: https://docs.katalon.com/katalon-studio/create-test-cases/generate-test-steps-in-katalon-studio-script-view
+- Tricentis Tosca Agentic Test Automation: https://docs.tricentis.com/tosca-2026.1/en-us/content/agentic_ai/landing_page.htm

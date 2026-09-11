@@ -49,6 +49,20 @@ for action, entry in plan:
         dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst); changed+=1
     else:
         dst.unlink(); changed+=1
-print(json.dumps({'ok':True,'changed':changed,'skipped':skipped,'backup':str(backup_root) if backup_root.exists() else None},indent=2))
+
+# Generated release/upgrade metadata cannot hash itself into the manifest without a cycle.
+# Sync those bundle-owned files after the conflict-safe content plan, then VERIFY_UPGRADE compares them byte-for-byte.
+metadata_synced=0
+for rel in ['upgrade/v6-manifest.json', 'release/RELEASE-MANIFEST.sha256']:
+    src=bundle/rel; dst=target/rel
+    if not src.exists():
+        continue
+    if sha(dst)==sha(src):
+        continue
+    if dst.exists():
+        b=backup_root/rel; b.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(dst,b)
+    dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst); metadata_synced+=1
+
+print(json.dumps({'ok':True,'changed':changed,'skipped':skipped,'metadataSynced':metadata_synced,'backup':str(backup_root) if backup_root.exists() else None},indent=2))
 PY
 "$BUNDLE_ROOT/VERIFY_UPGRADE.sh" "$TARGET_ROOT"

@@ -78,6 +78,13 @@ for (const required of [
   'src/framework/execution/duration-history.store.ts',
   'src/framework/evaluation/evaluation.runner.ts',
   'src/framework/declarative/scenario.runner.ts',
+  'src/framework/declarative/scenario.schema.ts',
+  'src/framework/declarative/scenario.json-schema.ts',
+  'src/framework/declarative/scenario.capabilities.ts',
+  'schemas/testigent-scenario.schema.json',
+  'scripts/scenario-authoring.ts',
+  'docs/23-DECLARATIVE-AUTHORING-DEEP-RESEARCH.md',
+  'docs/24-DECLARATIVE-AUTOMATION-GUIDE.md',
   'docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md',
   'docs/20-V6-DATA-PARALLEL-EXECUTION.md',
   'docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md',
@@ -98,6 +105,10 @@ try {
   if (!pkg.scripts?.['agents:policy']) issues.push('missing agent enterprise-policy script');
   if (!pkg.scripts?.['authoring:report']) issues.push('missing authoring productivity report script');
   if (!pkg.scripts?.['comments:audit']?.includes('docs:comment-audit')) issues.push('comments:audit must alias docs:comment-audit for CLI compatibility');
+  for (const scenarioScript of ['scenario:help', 'scenario:list', 'scenario:validate', 'scenario:new', 'scenario:run', 'scenario:doctor', 'scenario:schema', 'scenario:schema:check']) {
+    if (!pkg.scripts?.[scenarioScript]) issues.push(`missing declarative authoring script: ${scenarioScript}`);
+  }
+  if (!pkg.scripts?.['validate:final']?.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);

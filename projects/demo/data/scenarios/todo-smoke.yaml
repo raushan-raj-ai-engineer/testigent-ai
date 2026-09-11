@@ -1,12 +1,22 @@
+# yaml-language-server: $schema=../../../../schemas/testigent-scenario.schema.json
+schemaVersion: 1
+kind: ui
 id: todo-low-code-001
 title: Create one todo using declarative scenario
+description: Demonstrates the governed low-code UI path without custom TypeScript logic.
+tags:
+  - "@smoke"
 steps:
   - action: goto
-    url: /todomvc/
+    url: /
   - action: fill
     by: placeholder
     value: What needs to be done?
     text: TestigentAI declarative flow
-  - action: expectVisible
+  - action: press
     by: placeholder
     value: What needs to be done?
+    key: Enter
+  - action: expectVisible
+    by: text
+    value: TestigentAI declarative flow
