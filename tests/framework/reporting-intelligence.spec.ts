@@ -45,5 +45,5 @@ function result(testId: string, title: string, status: 'passed' | 'failed', erro
 }
 
 function noHealing(): HealingSummary {
-  return { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [] };
+  return { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [], attempts: [], attemptCount: 0, rejected: 0, suggested: 0, unverified: 0 };
 }

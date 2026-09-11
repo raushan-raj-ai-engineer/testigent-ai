@@ -60,7 +60,7 @@ test.describe('Business dashboard runtime', () => {
     await expect(page.locator('#dashboardJsStatus')).toHaveText('Interactive controls ready');
     await expect(page.locator('#statusDonut .status-donut-svg')).toBeVisible();
     await expect(page.locator('#statusDonut .donut-segment')).toHaveCount(3);
-    await expect(page.locator('#donutPassRate')).toHaveText('33.3%');
+    await expect(page.locator('#donutPassRate')).toHaveText('50%');
     await expect(page.locator('#layerBars .bar-row')).toHaveCount(4);
     await expect(page.locator('#trendChart')).toBeVisible();
     await expect(page.locator('.test-row:not([hidden])')).toHaveCount(3);
@@ -117,5 +117,5 @@ function sample(
 }
 
 function noHealing(): HealingSummary {
-  return { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [] };
+  return { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [], attempts: [], attemptCount: 0, rejected: 0, suggested: 0, unverified: 0 };
 }

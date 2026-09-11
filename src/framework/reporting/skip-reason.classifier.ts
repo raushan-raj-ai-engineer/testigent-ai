@@ -1,4 +1,4 @@
-import type { BusinessTestResult, SkipCategory, SkipSummary } from '../analytics/report.types';
+import type { BusinessTestResult, SkipCategory, SkipDisposition, SkipSummary } from '../analytics/report.types';
 
 export interface SkipClassificationContext {
   annotationType?: string;
@@ -14,6 +14,15 @@ const LABELS: Record<SkipCategory, string> = {
   AUTH_NOT_CONFIGURED: 'Authentication not configured',
   DEPENDENCY_NOT_CONFIGURED: 'Dependency not configured',
   OTHER: 'Other / conditional skip'
+};
+
+const DISPOSITIONS: Record<SkipCategory, SkipDisposition> = {
+  OPTIONAL_DEMO_DISABLED: 'NOT_APPLICABLE',
+  DATABASE_NOT_CONFIGURED: 'NOT_APPLICABLE',
+  HUMAN_REVIEW_PENDING: 'BLOCKED',
+  AUTH_NOT_CONFIGURED: 'BLOCKED',
+  DEPENDENCY_NOT_CONFIGURED: 'BLOCKED',
+  OTHER: 'BLOCKED'
 };
 
 /**
@@ -111,6 +120,7 @@ export function buildSkipSummary(results: BusinessTestResult[]): SkipSummary {
         return {
           category,
           label: item.label,
+          disposition: DISPOSITIONS[category],
           count: item.testIds.size,
           testTitles: [...item.titles].sort(),
           reasons: [...item.reasons].sort()

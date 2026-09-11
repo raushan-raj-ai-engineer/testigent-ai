@@ -3,56 +3,73 @@
 ## Ownership model
 
 ```text
-testigent-ai/
-├── src/framework/                 reusable platform only
-│   ├── core/                      config, fixtures, setup, paths, known defects
-│   ├── api/                       generic API client/auth/schema utilities
-│   ├── database/                  generic DB clients/factory
-│   ├── data/                      JSON/CSV/XLSX/YAML readers and factories
-│   ├── reporting/                 Playwright/business dashboard/report writers
-│   ├── analytics/                 execution facts, clustering, flakiness
-│   ├── logging/                   structured logging/redaction
-│   ├── notifications/             email/report notification infrastructure
-│   ├── healing/                   guarded deterministic-first healing
-│   ├── ai/                        provider abstraction/governance
-│   └── intelligence/              requirements, application knowledge, connectors
-├── projects/
-│   ├── demo/
-│   └── sdet-practice/
-│       ├── config/<env>.json
-│       ├── fixtures/test.fixture.ts
-│       ├── requirements/
-│       ├── data/
-│       ├── src/pages/
-│       ├── src/workflows/
-│       ├── src/api/
-│       ├── src/database/
-│       ├── tests/
-│       └── known-defects.json
-├── templates/project/             clean onboarding skeleton
-├── tests/framework/               framework-only regression
-├── scripts/                       generic operational CLIs
-└── docs/
+src/framework/                    reusable platform only
+  core/config                     workspace + runtime configuration
+  core/fixtures                   reusable Playwright dependency injection
+  api / database / data           generic engines
+  reporting / logging             shared observability
+  healing / ai                    governed recovery/provider abstractions
+  intelligence                    requirement/knowledge/agent support
+
+projects/<project>/               application-owned automation only
+  config/<env>.json               URLs, auth strategy, env-specific non-secrets
+  project.json                    project policy overrides
+  fixtures/test.fixture.ts        project dependency boundary
+  src/app.facade.ts               discoverable business entry point
+  src/pages/                      UI mechanics + LocatorPlan
+  src/workflows/                  business journeys
+  src/api/                        domain API services/facade
+  src/database/                   domain repositories/facade
+  data/                           project test data
+  tests/_agent/seed.spec.ts       Playwright-agent setup/fixture seed
+  tests/                          business and governed capability specs
 ```
 
-The reusable framework must never import a concrete project. Project fixtures extend the reusable fixture and inject project facades. This inversion keeps Team A and Team B isolated while sharing the same tested engines.
-
-## Test dependency direction
+## Dependency direction
 
 ```text
-project test
-  -> project fixture/facade
-  -> project workflow / API service / DB repository
-  -> project page objects
-  -> src/framework reusable utilities
+business spec
+  -> project fixture
+  -> app/api/repository facade
+  -> workflow/domain service
+  -> page/repository
+  -> src/framework reusable engines
 ```
 
-Project-to-project imports are prohibited. `npm run architecture:check` enforces this contract.
+Reusable framework code never imports a project. Projects never import sibling projects. `npm run architecture:check` enforces these boundaries and also rejects raw UI actions, direct framework-service construction, direct APP/ENV reads, absolute URLs, and credential-like literals in ordinary project specs.
 
-## Configuration
+## Configuration resolution
 
-`APP=<name>` selects `projects/<name>`. `ENV=<name>` selects `projects/<name>/config/<env>.json`. The project config owns UI/API endpoints and auth strategy. `APP_BASE_URL` may override the configured UI URL for temporary execution; it should not become the normal configuration mechanism.
+All runtime consumers use the same target resolution:
 
-## Framework validation vs application validation
+```text
+explicit APP/ENV (CI or one-off command)
+             ↓
+.runtime/workspace.json (local qa:use selection)
+             ↓
+single-environment inference where unambiguous
+             ↓
+clear error — never demo/qa fallback
+```
 
-`npm run validate:final` validates framework health, architecture, TypeScript, and framework contracts against the deterministic `demo` project. Real AUT suites run separately through `test:project`. Known application defects are tracked project-side and never converted into framework bugs.
+Runtime policy is then layered:
+
+```text
+config/organization.json
+  -> projects/<project>/project.json
+  -> projects/<project>/config/<env>.json
+  -> environment-variable overrides
+  -> command/CLI overrides
+```
+
+`playwright.config.ts` is a thin adapter over `RuntimeConfig`. Organization config owns default browsers/artifact policy; project/environment layers override only where needed. Secrets stay in local `.env` or CI secret stores, never project JSON.
+
+## What “no hardcoding” means
+
+Environment-dependent values must be configurable: URLs, credentials/tokens, DB settings, auth state, browsers, timeouts, retries/workers, artifacts, AI/healing policy, external integrations and feature flags.
+
+Project business knowledge belongs in project code. A semantic `LocatorPlan` such as “Create User button” is valid project knowledge; moving every selector string to JSON would reduce type safety and maintainability.
+
+## Healing ownership
+
+Runtime healing recovers a locator during execution and records evidence; it does not edit source. `qa:heal` turns repeated recovery evidence into a review-only source-maintenance proposal. Source healing must never weaken business/API/DB/security expectations or hide defects with skip/fixme.

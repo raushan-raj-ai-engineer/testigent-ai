@@ -1,5 +1,4 @@
 import { createAiGateway } from '../../../../src/framework/ai/ai-provider.factory';
-import { ApplicationRegistry } from '../../../../src/framework/core/config/application.registry';
 import { HealingOrchestrator } from '../../../../src/framework/healing/healing.orchestrator';
 import type { LocatorPlan } from '../../../../src/framework/healing/healing.types';
 import { expect, test } from '../../fixtures/test.fixture';
@@ -19,7 +18,7 @@ const aiOnlyTodoInput: LocatorPlan = {
 test.describe('AI self-healing demonstration', () => {
   test.skip(process.env.AI_HEALING_DEMO !== 'true', 'Run through npm run test:ai-healing only.');
 
-  test('configured AI provider proposes and validates a replacement locator @ai @healing @ui', async ({ page, logger }, testInfo) => {
+  test('configured AI provider proposes and validates a replacement locator @ai @healing @ui', async ({ page, logger, runtime }, testInfo) => {
     const gateway = createAiGateway(testInfo.testId);
     if (!gateway) {
       throw new Error(
@@ -30,7 +29,7 @@ test.describe('AI self-healing demonstration', () => {
     const workItem = `AI healing ${process.env.AI_PROVIDER ?? 'configured-provider'} ${Date.now()}`;
 
     await test.step('Open the work management application', async () => {
-      await page.goto(ApplicationRegistry.get('demo').uiBaseUrl,
+      await page.goto(runtime.application.uiBaseUrl,
         {
           waitUntil: 'domcontentloaded',
         }
@@ -38,7 +37,12 @@ test.describe('AI self-healing demonstration', () => {
     });
 
     await test.step('Use the configured guarded AI provider to recover the changed work item locator', async () => {
-      await healer.fillAndPress(aiOnlyTodoInput, workItem, 'Enter');
+      await healer.fillAndPress(aiOnlyTodoInput, workItem, 'Enter', {
+        postCondition: {
+          description: 'New work item becomes visible after pressing Enter',
+          verify: () => page.getByText(workItem, { exact: true }).isVisible()
+        }
+      });
     });
 
     await test.step('Verify the business action completed successfully', async () => {

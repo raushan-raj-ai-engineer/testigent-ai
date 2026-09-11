@@ -12,7 +12,9 @@
       "workers": "50%",
       "retries": 1,
       "maxFailures": 10,
-      "includeTags": ["@smoke"],
+      "includeTags": [
+        "@smoke"
+      ],
       "allowAi": false,
       "allowGenerated": false,
       "allowManual": false
@@ -21,7 +23,9 @@
       "workers": "50%",
       "retries": 1,
       "maxFailures": 10,
-      "includeTags": ["@smoke"],
+      "includeTags": [
+        "@smoke"
+      ],
       "allowAi": false,
       "allowGenerated": false,
       "allowManual": false
@@ -30,7 +34,9 @@
       "workers": "50%",
       "retries": 1,
       "maxFailures": 50,
-      "excludeTags": ["@manual"],
+      "excludeTags": [
+        "@manual"
+      ],
       "allowAi": false,
       "allowGenerated": false,
       "allowManual": false
@@ -57,5 +63,17 @@
       "allowGenerated": false,
       "allowManual": false
     }
+  },
+  "playwright": {
+    "browsers": [
+      "chromium",
+      "firefox"
+    ],
+    "trace": "retain-on-failure",
+    "screenshot": "only-on-failure",
+    "video": "retain-on-failure",
+    "visualMaxDiffPixelRatio": 0.01,
+    "ignoreHTTPSErrors": false,
+    "wsConnectTimeoutMs": 30000
   }
 }

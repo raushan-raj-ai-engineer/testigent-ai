@@ -17,11 +17,6 @@ const exists = async (path: string): Promise<boolean> => {
 const kebab = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'generated-feature';
 const pascal = (value: string): string => value.replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(/\s+/).map(part => part[0]?.toUpperCase() + part.slice(1)).join('').replace(/^\d+/, '') || 'GeneratedFeature';
 
-async function pick(root: string, choices: string[], fallback: string): Promise<string> {
-  for (const choice of choices) if (await exists(join(root, choice))) return join(root, choice);
-  return join(root, fallback);
-}
-
 function header(requirementId: string): string {
   return `/**\n * GENERATED PROPOSAL - REVIEW_REQUIRED\n * Requirement: ${requirementId}\n * Do not merge before human review.\n * Author: Raushan Raj\n */\n`;
 }
@@ -122,10 +117,10 @@ export async function generateFrameworkProposal(root: string, analysis: Requirem
   const knowledgeEvidence = (analysis.applicationKnowledge ?? []).filter(item => item.status === 'APPROVED');
   const pendingKnowledge = (analysis.applicationKnowledge ?? []).filter(item => item.status === 'REVIEW_REQUIRED');
   const resolution = analysis.applicationResolution ?? await resolveApplicationTarget(root, requirement, analysis.reusableCandidates);
-  if (!resolution.app && analysis.suggestedLayers.includes('UI')) {
+  if (!resolution.app) {
     throw new Error(`Generation blocked: ${resolution.reason}`);
   }
-  const app = resolution.app ?? process.env.APP?.trim() ?? 'shared';
+  const app = resolution.app;
   const candidateApp = (candidate: ReusableCandidate): string | undefined => /(?:^|\/)projects\/([^/]+)\//i.exec(candidate.path.replace(/\\/g, '/'))?.[1];
   const reusableKinds = new Set<ReusableCandidate['kind']>(['page', 'component', 'workflow', 'api-service', 'db-repository']);
   // Supporting app-scoped candidates are only reusable inside the resolved application.
@@ -144,12 +139,12 @@ export async function generateFrameworkProposal(root: string, analysis: Requirem
   const testDir = join(projectRoot, 'tests', 'e2e');
 
   const projectFixture = join(projectRoot, 'fixtures', 'test.fixture.ts');
-  const enterpriseFixture = (await exists(projectFixture)) ? projectFixture : join(root, 'src/framework/core/fixtures/enterprise.fixture.ts');
+  if (!(await exists(projectFixture))) {
+    throw new Error(`Generation blocked: project '${app}' is not initialized with a project fixture. Run npm run project:new -- ${app} first.`);
+  }
   const basePage = join(root, 'src/framework/core/ui/base.page.ts');
   const healingOrchestrator = join(root, 'src/framework/healing/healing.orchestrator.ts');
-  const aiFactory = join(root, 'src/framework/ai/ai-provider.factory.ts');
   const baseApiClient = join(root, 'src/framework/api/base-api.client.ts');
-  const applicationRegistry = join(root, 'src/framework/core/config/application.registry.ts');
   const databaseClient = join(root, 'src/framework/database/database.client.ts');
 
   const isFeatureReuse = (candidate: ReusableCandidate): boolean => candidate.role === 'feature' && candidate.score >= 0.55;
@@ -229,21 +224,13 @@ export async function generateFrameworkProposal(root: string, analysis: Requirem
       knowledgeEvidence,
       root,
       testDir,
-      enterpriseFixture: await exists(enterpriseFixture) ? enterpriseFixture : undefined,
+      projectFixture,
       pagePath: pageOwned ? pagePath : undefined,
       workflowPath: workflowOwned ? workflowPath : undefined,
       apiPath: apiOwned ? apiPath : undefined,
       dbPath: dbOwned ? dbPath : undefined,
       className,
       targetApplication: app,
-      frameworkWiring: {
-        basePage: await exists(basePage),
-        healing: await exists(healingOrchestrator),
-        aiFactory: await exists(aiFactory),
-        baseApiClient: await exists(baseApiClient),
-        applicationRegistry: await exists(applicationRegistry),
-        databaseClient: await exists(databaseClient)
-      }
     }),
     requirement.sourceId
   );
@@ -312,7 +299,7 @@ function pageTemplate(requirementId: string, className: string, pageDir: string,
     const basePageImport = relImport(pageDir, join(root, 'src/framework/core/ui/base.page.ts'));
     const healerImport = relImport(pageDir, join(root, 'src/framework/healing/healing.orchestrator.ts'));
     const typesImport = relImport(pageDir, join(root, 'src/framework/healing/healing.types.ts'));
-    return header(requirementId) + `import type { Page } from '@playwright/test';\nimport { BasePage } from '${basePageImport}';\nimport type { HealingOrchestrator } from '${healerImport}';\nimport type { LocatorPlan } from '${typesImport}';\n\nexport class ${className}Page extends BasePage {\n  constructor(page: Page, healer: HealingOrchestrator) { super(page, healer); }\n\n  private readonly primaryActionPlan: LocatorPlan = {\n    id: '${kebab(className)}.primary-action',\n    businessName: '${className} primary action',\n    primary: { type: 'text', value: 'REVIEW_REQUIRED' }\n  };\n\n  /** REVIEW_REQUIRED: replace only the locator plan metadata from Playwright CLI/MCP evidence; keep healing-aware execution. */\n  async performPrimaryAction(): Promise<void> {\n    await this.healingClick(this.primaryActionPlan);\n  }\n}\n`;
+    return header(requirementId) + `import type { Page } from '@playwright/test';\nimport { BasePage } from '${basePageImport}';\nimport type { HealingOrchestrator } from '${healerImport}';\nimport type { LocatorPlan } from '${typesImport}';\n\nexport class ${className}Page extends BasePage {\n  constructor(page: Page, healer: HealingOrchestrator) { super(page, healer); }\n\n  private readonly primaryActionPlan: LocatorPlan = {\n    id: '${kebab(className)}.primary-action',\n    businessName: '${className} primary action',\n    primary: { type: 'text', value: 'REVIEW_REQUIRED' }\n  };\n\n  /** REVIEW_REQUIRED: replace locator metadata and define the business state that proves the action succeeded. */\n  async performPrimaryAction(): Promise<void> {\n    await this.healingClick(this.primaryActionPlan, {\n      postCondition: {\n        description: 'REVIEW_REQUIRED: describe the expected business/UI state after this action',\n        verify: async () => {\n          throw new Error('REVIEW_REQUIRED: implement semantic post-condition using approved live application evidence.');\n        }\n      }\n    });\n  }\n}\n`;
   }
 
   return header(requirementId) + `import type { Page } from '@playwright/test';\n\nexport class ${className}Page {\n  constructor(private readonly page: Page) {}\n\n  async performPrimaryAction(): Promise<void> {\n    void this.page;\n    throw new Error('REVIEW_REQUIRED: implement ${className}Page.performPrimaryAction using approved application knowledge.');\n  }\n}\n`;
@@ -352,95 +339,50 @@ interface TestTemplateInput {
   knowledgeEvidence: ApplicationKnowledgeMatch[];
   root: string;
   testDir: string;
-  enterpriseFixture?: string;
+  projectFixture: string;
   pagePath?: string;
   workflowPath?: string;
   apiPath?: string;
   dbPath?: string;
   className: string;
   targetApplication: string;
-  frameworkWiring: {
-    basePage: boolean;
-    healing: boolean;
-    aiFactory: boolean;
-    baseApiClient: boolean;
-    applicationRegistry: boolean;
-    databaseClient: boolean;
-  };
 }
 
+/**
+ * Generated specs intentionally depend only on project domain fixtures. The generator may scaffold
+ * Page/Workflow/API/Repository classes, but it never constructs framework internals in a business spec.
+ * Human/agent review wires approved scaffolds into App/API/Repository facades before removing fixme.
+ */
 function testTemplate(input: TestTemplateInput): string {
   const tags = [`@requirement:${input.requirementId}`, `@app:${input.targetApplication}`, '@generated-review', ...input.layers.map(layer => layer === 'DATABASE' ? '@db' : `@${layer.toLowerCase()}`)].join(' ');
-  const imports: string[] = [];
-  const fixtureImport = input.enterpriseFixture ? relImport(input.testDir, input.enterpriseFixture) : undefined;
-  imports.push(fixtureImport ? `import { test } from '${fixtureImport}';` : `import { test } from '@playwright/test';`);
-
-  if (input.pagePath) imports.push(`import { ${input.className}Page } from '${relImport(input.testDir, input.pagePath)}';`);
-  if (input.workflowPath) imports.push(`import { ${input.className}Workflow } from '${relImport(input.testDir, input.workflowPath)}';`);
-  if (input.apiPath) imports.push(`import { ${input.className}Service } from '${relImport(input.testDir, input.apiPath)}';`);
-  if (input.dbPath) imports.push(`import { ${input.className}Repository } from '${relImport(input.testDir, input.dbPath)}';`);
-
-  const enterpriseUiWiring = Boolean(input.enterpriseFixture && input.pagePath && input.frameworkWiring.healing && input.frameworkWiring.aiFactory);
-  const enterpriseApiWiring = Boolean(input.enterpriseFixture && input.apiPath && input.frameworkWiring.baseApiClient && input.frameworkWiring.applicationRegistry);
-
-  if (enterpriseUiWiring) {
-    imports.push(`import { createAiGateway } from '${relImport(input.testDir, join(input.root, 'src/framework/ai/ai-provider.factory.ts'))}';`);
-    imports.push(`import { HealingOrchestrator } from '${relImport(input.testDir, join(input.root, 'src/framework/healing/healing.orchestrator.ts'))}';`);
-  }
-  if (enterpriseApiWiring) {
-    imports.push(`import { BaseApiClient } from '${relImport(input.testDir, join(input.root, 'src/framework/api/base-api.client.ts'))}';`);
-    imports.push(`import { ApplicationRegistry } from '${relImport(input.testDir, join(input.root, 'src/framework/core/config/application.registry.ts'))}';`);
-  }
+  const imports = [`import { test } from '${relImport(input.testDir, input.projectFixture)}';`];
+  const fixtureNames = [
+    input.layers.includes('UI') ? 'app' : undefined,
+    input.layers.includes('API') ? 'api' : undefined,
+    input.layers.includes('DATABASE') ? 'repositories' : undefined,
+  ].filter((value): value is string => Boolean(value));
+  const fixtureArgs = `{ ${fixtureNames.join(', ')} }`;
 
   const reuseComments = input.reused.length
     ? input.reused.map(candidate => `// REUSE_CANDIDATE ${candidate.role ?? 'supporting'} ${candidate.kind}: ${candidate.path} (score ${candidate.score})`).join('\n')
-    : '// No approved reusable abstraction met the threshold; missing abstractions were scaffolded in framework folders.';
+    : '// No approved reusable abstraction met the threshold; missing project abstractions were scaffolded for review.';
   const knowledgeComments = input.knowledgeEvidence.length
     ? input.knowledgeEvidence.map(item => `// APPROVED_APPLICATION_KNOWLEDGE ${item.kind}: ${item.id} (score ${item.score})`).join('\n')
     : '// No approved application knowledge was used; do not invent application details during review.';
+  const scaffoldComments = [
+    input.pagePath ? `// SCAFFOLD_PAGE ${relative(input.root, input.pagePath).replace(/\\/g, '/')}` : undefined,
+    input.workflowPath ? `// SCAFFOLD_WORKFLOW ${relative(input.root, input.workflowPath).replace(/\\/g, '/')}` : undefined,
+    input.apiPath ? `// SCAFFOLD_API ${relative(input.root, input.apiPath).replace(/\\/g, '/')}` : undefined,
+    input.dbPath ? `// SCAFFOLD_REPOSITORY ${relative(input.root, input.dbPath).replace(/\\/g, '/')}` : undefined,
+  ].filter(Boolean).join('\n');
 
   const tests = input.scenarios.map((scenario, scenarioIndex) => {
     const steps = scenarioIndex === 0 && input.manualSteps.length ? input.manualSteps : [scenario];
-    const fixtureArgs = input.enterpriseFixture ? '{ page, request, db, logger }' : '{ page, request }';
-    const setup: string[] = [];
-
-    if (input.pagePath) {
-      if (enterpriseUiWiring) {
-        setup.push(`  const generatedAi = createAiGateway();`);
-        setup.push(`  const generatedHealer = new HealingOrchestrator(page, logger.child({ layer: 'UI_HEALING' }), generatedAi, testInfo.testId);`);
-        setup.push(`  const generatedPage = new ${input.className}Page(page, generatedHealer);`);
-      } else {
-        setup.push(`  const generatedPage = new ${input.className}Page(page);`);
-      }
-    }
-    if (input.workflowPath) {
-      setup.push(input.pagePath
-        ? `  const generatedWorkflow = new ${input.className}Workflow(generatedPage);`
-        : `  const generatedWorkflow = new ${input.className}Workflow(page);`);
-    }
-    if (input.apiPath) {
-      if (enterpriseApiWiring) {
-        setup.push(`  const generatedApiClient = new BaseApiClient(request, ApplicationRegistry.current().apiBaseUrl, logger.child({ layer: 'API' }), testInfo);`);
-        setup.push(`  const generatedApi = new ${input.className}Service(generatedApiClient);`);
-      } else {
-        setup.push(`  const generatedApi = new ${input.className}Service(request);`);
-      }
-    }
-    if (input.dbPath && input.enterpriseFixture) setup.push(`  const generatedRepository = new ${input.className}Repository(db);`);
-    else if (input.dbPath) setup.push(`  const generatedRepository = new ${input.className}Repository();`);
-
-    const voids = [
-      input.workflowPath ? 'generatedWorkflow' : undefined,
-      input.pagePath && !input.workflowPath ? 'generatedPage' : undefined,
-      input.apiPath ? 'generatedApi' : undefined,
-      input.dbPath ? 'generatedRepository' : undefined
-    ].filter(Boolean);
-    if (voids.length) setup.push(`  void ${voids.join('; void ')};`);
-
-    const stepBlocks = steps.map((step, stepIndex) => `  await test.step(${JSON.stringify(step)}, async () => {\n    // REVIEW_REQUIRED step ${stepIndex + 1}: wire the approved workflow/service/repository method.\n  });`).join('\n\n');
-
-    return `test(${JSON.stringify(`${input.title} - ${scenario} ${tags}`)}, async (${fixtureArgs}, testInfo) => {\n  test.fixme(true, 'REVIEW_REQUIRED: generated from requirement; approve mappings before execution.');\n${setup.length ? `\n${setup.join('\n')}\n` : ''}\n${stepBlocks}\n});`;
+    const fixtureVoids = fixtureNames.length ? `\n  void ${fixtureNames.join('; void ')};\n` : '';
+    const stepBlocks = steps.map((step, stepIndex) => `  await test.step(${JSON.stringify(step)}, async () => {\n    // REVIEW_REQUIRED step ${stepIndex + 1}: call the approved project facade/workflow/service/repository method.\n  });`).join('\n\n');
+    return `test(${JSON.stringify(`${input.title} - ${scenario} ${tags}`)}, async (${fixtureArgs}) => {\n  test.fixme(true, 'REVIEW_REQUIRED: wire approved project facades using live evidence before execution.');${fixtureVoids}\n${stepBlocks}\n});`;
   }).join('\n\n');
 
-  return header(input.requirementId) + `${imports.join('\n')}\n\n${reuseComments}\n${knowledgeComments}\n\n${tests}\n`;
+  return header(input.requirementId) + `${imports.join('\n')}\n\n${reuseComments}\n${knowledgeComments}${scaffoldComments ? `\n${scaffoldComments}` : ''}\n\n${tests}\n`;
 }
+

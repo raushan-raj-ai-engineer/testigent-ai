@@ -157,8 +157,8 @@ function buildAttachments(payload: BusinessNotificationPayload): Array<{ filenam
 
 function buildSubject(payload: BusinessNotificationPayload): string {
   const prefix = process.env.MAIL_SUBJECT_PREFIX ?? '[Automation]';
-  const gate = payload.facts.qualityGate.status === 'PASSED' ? 'PASS' : 'ATTENTION';
-  return `${prefix} ${gate} - ${payload.facts.application} - ${payload.facts.environment} - ${payload.facts.passRate}%`;
+  const gate = payload.facts.qualityGate.status === 'PASSED' ? 'PASS' : payload.facts.qualityGate.status === 'PASSED_WITH_ACCEPTED_RISK' ? 'RISK' : 'ATTENTION';
+  return `${prefix} ${gate} - ${payload.facts.application} - ${payload.facts.environment} - ${payload.facts.qualityPassRate}% quality pass`;
 }
 function validateSmtp(recipients: string[]): void {
   if (!recipients.length) throw new Error('MAIL_TO is required when MAIL_MODE=smtp.');

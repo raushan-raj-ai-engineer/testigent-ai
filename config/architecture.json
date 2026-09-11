@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "specExceptions": [
+    {
+      "path": "projects/demo/tests/ui/healing.spec.ts",
+      "rules": ["raw-playwright-ui", "direct-healer"],
+      "reason": "Framework capability demonstration intentionally exercises HealingOrchestrator and raw Playwright evidence to prove runtime recovery."
+    },
+    {
+      "path": "projects/demo/tests/ui/ai-healing.spec.ts",
+      "rules": ["raw-playwright-ui", "direct-healer", "direct-ai-gateway"],
+      "reason": "Framework capability demonstration intentionally exercises provider-neutral AI locator recovery end to end."
+    }
+  ]
+}

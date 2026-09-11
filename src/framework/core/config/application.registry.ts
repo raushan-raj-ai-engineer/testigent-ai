@@ -1,46 +1,51 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ApplicationConfig, ProjectEnvironmentConfig, ProjectAuthConfig } from './config.types';
+import { WorkspaceContext } from './workspace.context';
 
 /**
  * Multi-project application registry.
  * Project URLs/auth policy live under projects/<project>/config/<env>.json.
- * Reusable framework code never owns application-specific endpoints.
+ * Reusable framework code never owns application-specific endpoints or hidden project defaults.
  */
 export class ApplicationRegistry {
-  static get(applicationName: string, environment = process.env.ENV ?? 'qa'): ApplicationConfig {
-    return this.projectConfig(applicationName, environment).application;
+  static get(applicationName: string, environment?: string, root = process.cwd()): ApplicationConfig {
+    return this.projectConfig(applicationName, environment, root).application;
   }
 
-  static current(): ApplicationConfig {
-    return this.get(process.env.APP ?? 'demo');
+  static current(root = process.cwd()): ApplicationConfig {
+    const target = WorkspaceContext.resolve({ root });
+    return this.get(target.application, target.environment, root);
   }
 
-  static auth(applicationName = process.env.APP ?? 'demo', environment = process.env.ENV ?? 'qa'): ProjectAuthConfig {
-    return this.projectConfig(applicationName, environment).auth ?? { strategy: 'none' };
+  static auth(applicationName?: string, environment?: string, root = process.cwd()): ProjectAuthConfig {
+    if (!applicationName) {
+      const target = WorkspaceContext.resolve({ root });
+      return this.projectConfig(target.application, target.environment, root).auth ?? { strategy: 'none' };
+    }
+    return this.projectConfig(applicationName, environment, root).auth ?? { strategy: 'none' };
   }
 
-  static projectConfig(applicationName: string, environment = process.env.ENV ?? 'qa'): ProjectEnvironmentConfig {
-    const configPath = path.resolve('projects', applicationName, 'config', `${environment}.json`);
+  static projectConfig(applicationName: string, environment?: string, root = process.cwd()): ProjectEnvironmentConfig {
+    const resolvedEnvironment = WorkspaceContext.resolveEnvironment(applicationName, environment, root);
+    const configPath = path.resolve(root, 'projects', applicationName, 'config', `${resolvedEnvironment}.json`);
     if (!fs.existsSync(configPath)) {
       throw new Error(
         `Project configuration not found: ${configPath}. ` +
-        `Create projects/${applicationName}/config/${environment}.json or run npm run project:new -- ${applicationName}.`,
+        `Create projects/${applicationName}/config/${resolvedEnvironment}.json or run npm run project:new -- ${applicationName}.`,
       );
     }
     const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as ProjectEnvironmentConfig;
     if (!parsed.application?.uiBaseUrl || !parsed.application?.apiBaseUrl) {
       throw new Error(`Invalid project configuration: ${configPath}`);
     }
+    if (parsed.environment && parsed.environment !== resolvedEnvironment) {
+      throw new Error(`Environment mismatch in ${configPath}: expected '${resolvedEnvironment}', found '${parsed.environment}'.`);
+    }
     return parsed;
   }
 
-  static listProjects(): string[] {
-    const projectsRoot = path.resolve('projects');
-    if (!fs.existsSync(projectsRoot)) return [];
-    return fs.readdirSync(projectsRoot, { withFileTypes: true })
-      .filter(entry => entry.isDirectory() && fs.existsSync(path.join(projectsRoot, entry.name, 'config')))
-      .map(entry => entry.name)
-      .sort();
+  static listProjects(root = process.cwd()): string[] {
+    return WorkspaceContext.listProjects(root);
   }
 }

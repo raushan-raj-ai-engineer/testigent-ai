@@ -6,11 +6,9 @@ on:
       app:
         description: Project folder under projects/
         required: true
-        default: demo
       environment:
         description: Project environment config
         required: true
-        default: qa
       run_ai:
         description: Run configured AI provider validation
         required: false
@@ -31,8 +29,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  APP: ${{ inputs.app || vars.APP || 'demo' }}
-  ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
+  APP: ${{ inputs.app || vars.APP }}
+  ENV: ${{ inputs.environment || vars.ENV }}
 
 jobs:
   validate:
@@ -106,6 +104,7 @@ jobs:
           npm run test:project --
           --project=chromium
           --shard=${{ matrix.shard }}
+          --grep-invert="@ai"
 
       - name: Upload technical blob
         if: ${{ always() && !cancelled() }}
@@ -141,8 +140,8 @@ jobs:
 
     env:
       CI: 'true'
-      APP: ${{ inputs.app || vars.APP || 'demo' }}
-      ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
+      APP: ${{ inputs.app || vars.APP }}
+      ENV: ${{ inputs.environment || vars.ENV }}
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
       AI_ENABLED: 'true'
@@ -382,8 +381,8 @@ jobs:
 
     env:
       AI_ENABLED: 'false'
-      APP: ${{ inputs.app || vars.APP || 'demo' }}
-      ENV: ${{ inputs.environment || vars.ENV || 'qa' }}
+      APP: ${{ inputs.app || vars.APP }}
+      ENV: ${{ inputs.environment || vars.ENV }}
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
@@ -398,6 +397,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Restore business report history
+        uses: actions/cache@v4
+        with:
+          path: .report-history/${{ env.APP }}
+          key: testigent-report-history-${{ env.APP }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            testigent-report-history-${{ env.APP }}-
 
       - name: Download all technical blobs
         uses: actions/download-artifact@v8
@@ -439,6 +446,26 @@ jobs:
 
       - name: Validate final business bundle
         run: npm run ci:business:validate
+
+      - name: Publish merged report summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -f "reports/${APP}/business/business-report.json" ]]; then
+            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+            const fs = require('fs');
+            const app = process.env.APP;
+            const f = JSON.parse(fs.readFileSync(`reports/${app}/business/business-report.json`, 'utf8'));
+            console.log(`## TestigentAI merged quality report`);
+            console.log(`- Selected: **${f.total}**`);
+            console.log(`- Applicable: **${f.executionEligible}**`);
+            console.log(`- Executed: **${f.executed}/${f.executionEligible} (${f.executionRate}%)**`);
+            console.log(`- Quality failed: **${f.qualityFailed}** (known ${f.knownDefects}, unexpected ${f.unexpectedFailed})`);
+            console.log(`- CI-blocking issues: **${f.ciBlockingIssues}**`);
+            console.log(`- Self-healed: **${f.healing?.count ?? 0}** · AI calls: **${f.aiUsage?.calls ?? 0}**`);
+            console.log(`- Aggregated bundles: **${f.aggregation?.sourceReports ?? 1}**`);
+            NODE
+          fi
 
       - name: Upload final TestigentAI report
         id: final-upload

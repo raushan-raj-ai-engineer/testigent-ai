@@ -5,9 +5,41 @@
  * Benefit: Business metrics remain deterministic while users can drill from executive KPIs into exact test-step evidence.
  */
 import type { FailureCategory } from '../ai/failure.classifier';
-import type { HealingDecision } from '../healing/healing.types';
+import type { HealingDecision, HealingOutcome, HealingVerificationEvidence } from '../healing/healing.types';
 
 export type TestLayer = 'UI' | 'API' | 'DATABASE';
+
+export type BusinessOutcome =
+  | 'PASSED'
+  | 'PASSED_WITH_HEALING'
+  | 'PASSED_AFTER_RETRY'
+  | 'KNOWN_DEFECT'
+  | 'FAILED'
+  | 'SKIPPED'
+  | 'UNEXPECTED_PASS';
+
+export interface KnownDefectFact {
+  id: string;
+  title: string;
+  scope?: string;
+  note?: string;
+}
+
+export interface BusinessOutcomeSummary {
+  cleanPassed: number;
+  passedWithHealing: number;
+  passedAfterRetry: number;
+  knownDefects: number;
+  unexpectedFailed: number;
+  unexpectedPass: number;
+  skipped: number;
+  qualityPassed: number;
+  qualityFailed: number;
+  ciBlockingIssues: number;
+  acceptedDefectDebt: number;
+  toInvestigate: number;
+  qualityPassRate: number;
+}
 export type TestType =
   | 'UI_ONLY'
   | 'API_ONLY'
@@ -26,9 +58,12 @@ export type SkipCategory =
   | 'DEPENDENCY_NOT_CONFIGURED'
   | 'OTHER';
 
+export type SkipDisposition = 'NOT_APPLICABLE' | 'BLOCKED' | 'INTENTIONAL';
+
 export interface SkipCategoryFact {
   category: SkipCategory;
   label: string;
+  disposition: SkipDisposition;
   count: number;
   testTitles: string[];
   reasons: string[];
@@ -71,6 +106,10 @@ export interface BusinessTestResult {
   project: string;
   status: 'passed' | 'failed' | 'skipped';
   rawStatus: string;
+  outcome?: BusinessOutcome;
+  qualityStatus?: 'PASS' | 'FAIL' | 'NEUTRAL';
+  ciBlocking?: boolean;
+  knownDefect?: KnownDefectFact;
   durationMs: number;
   totalDurationMs: number;
   retriesUsed: number;
@@ -123,16 +162,27 @@ export interface HealingAuditRecord {
   pageUrl: string;
   planId: string;
   businessName: string;
+  /** Missing on pre-v1.2.2 records; reporting treats those historical records as validated. */
+  outcome?: HealingOutcome;
+  verification?: HealingVerificationEvidence;
   decision: HealingDecision;
 }
 
 export interface HealingSummary {
+  /** Semantically validated recoveries only. */
   count: number;
   fallback: number;
   cache: number;
   ai: number;
   affectedTests: number;
+  /** Validated recoveries used for PASSED WITH HEALING and release KPIs. */
   records: HealingAuditRecord[];
+  /** Every audit attempt, including rejected/suggested/unverified evidence. */
+  attempts: HealingAuditRecord[];
+  attemptCount: number;
+  rejected: number;
+  suggested: number;
+  unverified: number;
 }
 
 export interface BusinessImpactFact {
@@ -166,7 +216,7 @@ export interface FlakySummary {
 }
 
 export interface QualityGate {
-  status: 'PASSED' | 'ATTENTION_REQUIRED';
+  status: 'PASSED' | 'PASSED_WITH_ACCEPTED_RISK' | 'ATTENTION_REQUIRED';
   passThreshold: number;
   highImpactFailures: number;
   reasons: string[];
@@ -176,7 +226,15 @@ export interface TestLayerSummary { UI: number; API: number; DATABASE: number; O
 export type TestTypeSummary = Record<TestType, number>;
 
 export interface ReportScope {
+  /** Business scenarios selected by the Playwright run and included in stakeholder reporting. */
   includedTests: number;
+  /** Scenarios that are applicable for the selected project/environment after capability policy. */
+  applicableTests?: number;
+  /** Scenarios intentionally not applicable (for example optional DB capability disabled). */
+  notApplicableTests?: number;
+  /** Applicable scenarios that did not execute because a prerequisite/review/dependency blocked them. */
+  blockedTests?: number;
+  /** Framework/internal checks excluded from stakeholder metrics. */
   excludedInternalTests: number;
   internalTestsIncluded: boolean;
   description: string;
@@ -193,6 +251,23 @@ export interface ReportHistoryPoint {
   passRate: number;
   flaky: number;
   healed: number;
+  qualityPassRate?: number;
+  qualityFailed?: number;
+  knownDefects?: number;
+  unexpectedFailed?: number;
+  executed?: number;
+  applicable?: number;
+  notApplicable?: number;
+  blockedSkipped?: number;
+}
+
+
+
+export interface ReportAggregation {
+  mode: 'single' | 'merged';
+  sourceReports: number;
+  sourceRunIds: string[];
+  sourceDirectories?: string[];
 }
 
 export interface ExecutionFacts {
@@ -204,8 +279,20 @@ export interface ExecutionFacts {
   passed: number;
   failed: number;
   skipped: number;
+  outcomes: BusinessOutcomeSummary;
+  knownDefects: number;
+  unexpectedFailed: number;
+  unexpectedPass: number;
+  qualityFailed: number;
+  ciBlockingIssues: number;
+  qualityPassRate: number;
   executed: number;
+  /** Applicable execution denominator (selected minus not-applicable scenarios). */
+  executionEligible: number;
+  /** Business execution coverage: executed / applicable. */
   executionRate: number;
+  notApplicable: number;
+  blockedSkipped: number;
   executedPassRate: number;
   passRate: number;
   skipBreakdown: SkipSummary;
@@ -221,4 +308,5 @@ export interface ExecutionFacts {
   qualityGate: QualityGate;
   scope?: ReportScope;
   results: BusinessTestResult[];
+  aggregation?: ReportAggregation;
 }

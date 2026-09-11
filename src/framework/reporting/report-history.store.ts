@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ExecutionFacts, ReportHistoryPoint } from '../analytics/report.types';
+import { resolveApplicationScope } from '../core/config/application.scope';
 
 /**
  * Author: Raushan Raj
@@ -12,7 +13,7 @@ export class ReportHistoryStore {
   private readonly file: string;
   private readonly maxRuns: number;
 
-  constructor(file = process.env.REPORT_HISTORY_FILE ?? `.report-history/${process.env.APP ?? 'demo'}/business-history.json`) {
+  constructor(file = process.env.REPORT_HISTORY_FILE ?? path.join('.report-history', resolveApplicationScope(), 'business-history.json')) {
     this.file = path.resolve(file);
     this.maxRuns = Math.max(5, Number(process.env.REPORT_HISTORY_MAX_RUNS ?? 30));
   }
@@ -39,7 +40,15 @@ export class ReportHistoryStore {
       failed: facts.failed,
       passRate: facts.passRate,
       flaky: facts.flakiness.flakyTests,
-      healed: facts.healing.count
+      healed: facts.healing.count,
+      qualityPassRate: facts.qualityPassRate,
+      qualityFailed: facts.qualityFailed,
+      knownDefects: facts.knownDefects,
+      unexpectedFailed: facts.unexpectedFailed,
+      executed: facts.executed,
+      applicable: facts.executionEligible,
+      notApplicable: facts.notApplicable,
+      blockedSkipped: facts.blockedSkipped
     };
     const previous = this.read().filter(point => point.runId !== current.runId);
     const next = [...previous, current].slice(-this.maxRuns);

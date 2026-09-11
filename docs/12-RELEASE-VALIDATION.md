@@ -103,3 +103,32 @@ npm run clean:all
 ```
 
 The archive must not contain `node_modules`, reports, test-results, Playwright reports, auth state, runtime state, healing cache, report history, application knowledge, proposal backups, `.DS_Store`, logs, or backup files. Core integration files are retained (`.github`, `.vscode`, `.mcp.json`, `.mcp`, `agent-prompts`). Tool-specific `.claude`, `.codex`, `.opencode` trees are not shipped; `npm run agents:init` generates and enterprise-hardens only the loop selected by the team.
+
+
+## Authoring architecture gate
+
+Before a PR/release, select the target explicitly (CI uses `APP`/`ENV`; local users use `qa:use`) and run `npm run qa:validate`. `architecture:check` enforces project fixture/facade usage in ordinary specs, rejects raw UI actions/direct framework-service construction, and checks project seed/facade contract files. Review archives must exclude `.auth/`, `.env`, `.runtime/`, `.healing/`, reports, test-results, browser reports, `node_modules`, coverage/build output and local caches.
+
+
+## Database capability policy
+
+Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` selects the database type (`none`, `postgres`, `mysql`, or `mssql`). `DB_TYPE` may override the configured type in CI/local runtime, while database credentials remain secret environment variables.
+
+- optional + unavailable: tests tagged `@db` are skipped automatically with a clear reason; UI/API suites continue
+- configured and ready: `@db` tests execute normally
+- required + unavailable: `qa:doctor`, framework health and project preflight fail before Playwright execution
+
+Business specs must not read `DB_TYPE` or manually decide whether to skip. Tag any scenario that requires database access with `@db`; the framework owns capability gating.
+
+## v1.2.2 healing/report regression gate
+
+Before merge, verify both normal execution and the semantic healing contract:
+
+```bash
+npm run typecheck
+npm run test:authoring:contract
+npm run test:dashboard
+npm run qa:validate -- --with-tests
+```
+
+The healing contract must prove that a wrong actionable locator is rejected, rejected AI output is not cached, a validated AI recovery is cached with semantic-validation metadata, and the next equivalent run can reuse that cache without another AI call. Business reporting must count only validated recoveries as self-healed while still displaying rejected/suggested/unverified audit evidence.

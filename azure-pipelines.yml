@@ -5,13 +5,14 @@ trigger: none
 parameters:
 - name: app
   type: string
-  default: demo
 - name: environment
   type: string
-  default: qa
 - name: shards
   type: number
   default: 2
+- name: runAi
+  type: boolean
+  default: false
 
 variables:
   NODE_VERSION: '22.x'
@@ -76,7 +77,7 @@ stages:
         SHARD_INDEX="$(System.JobPositionInPhase)"
         SHARD_TOTAL="$(System.TotalJobsInPhase)"
         APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
-          npm run test:project -- --project=chromium --shard="${SHARD_INDEX}/${SHARD_TOTAL}"
+          npm run test:project -- --project=chromium --shard="${SHARD_INDEX}/${SHARD_TOTAL}" --grep-invert="@ai"
       displayName: Run project shard
       env:
         # For auth-required projects, create the configured storage-state file before this step
@@ -118,6 +119,63 @@ stages:
         artifact: 'business-$(APP)-$(System.JobPositionInPhase)-$(Build.BuildId)'
       displayName: Publish business shard bundle
 
+  - ${{ if eq(parameters.runAi, true) }}:
+    - job: AIHealing
+      displayName: AI healing validation
+      pool: { vmImage: ubuntu-latest }
+      steps:
+      - task: NodeTool@0
+        inputs: { versionSpec: '$(NODE_VERSION)' }
+      - script: npm ci
+        displayName: Install locked dependencies
+      - script: npx playwright install --with-deps chromium
+        displayName: Install Chromium
+      - bash: |
+          set -euo pipefail
+          APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
+            AI_ENABLED=true HEALING_AI_ENABLED=true HEALING_MODE=runtime \
+            npm run test:project -- --project=chromium --grep="@ai"
+        displayName: Run dedicated AI/healing tests
+        env:
+          AI_PROVIDER_MODE: $(AI_PROVIDER_MODE)
+          AI_PROVIDER: $(AI_PROVIDER)
+          AI_PROVIDER_ORDER: $(AI_PROVIDER_ORDER)
+          AI_ALLOW_CLOUD_EGRESS: $(AI_ALLOW_CLOUD_EGRESS)
+          GEMINI_MODEL: $(GEMINI_MODEL)
+          GEMINI_API_KEY: $(GEMINI_API_KEY)
+          OPENAI_MODEL: $(OPENAI_MODEL)
+          OPENAI_API_KEY: $(OPENAI_API_KEY)
+          AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
+          AZURE_OPENAI_MODEL: $(AZURE_OPENAI_MODEL)
+          AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+          ANTHROPIC_MODEL: $(ANTHROPIC_MODEL)
+          ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+          AI_COMPAT_BASE_URL: $(AI_COMPAT_BASE_URL)
+          AI_COMPAT_MODEL: $(AI_COMPAT_MODEL)
+          AI_COMPAT_API_KEY: $(AI_COMPAT_API_KEY)
+          AI_ENDPOINT: $(AI_ENDPOINT)
+          AI_MODEL: $(AI_MODEL)
+          AI_API_KEY: $(AI_API_KEY)
+      - task: PublishPipelineArtifact@1
+        condition: always()
+        inputs:
+          targetPath: 'reports/$(APP)/blob-report'
+          artifact: 'blob-$(APP)-ai-$(Build.BuildId)'
+        displayName: Publish AI technical blob
+      - task: PublishPipelineArtifact@1
+        condition: always()
+        inputs:
+          targetPath: 'reports/$(APP)/business'
+          artifact: 'business-$(APP)-ai-$(Build.BuildId)'
+        displayName: Publish AI business bundle
+      - task: PublishPipelineArtifact@1
+        condition: always()
+        inputs:
+          targetPath: 'reports/$(APP)/ai'
+          artifact: 'ai-audit-$(APP)-$(Build.BuildId)'
+        displayName: Publish AI audit
+
+
 - stage: Merge
   displayName: Merge and publish reports
   dependsOn: Test
@@ -129,14 +187,23 @@ stages:
     - task: NodeTool@0
       inputs: { versionSpec: '$(NODE_VERSION)' }
     - script: npm ci
+    - task: Cache@2
+      inputs:
+        key: 'testigent-report-history | "$(APP)" | "$(Build.BuildId)"'
+        restoreKeys: |
+          testigent-report-history | "$(APP)"
+        path: '.report-history/$(APP)'
+      displayName: Restore/persist business report history
     - task: DownloadPipelineArtifact@2
       inputs:
-        patterns: '**/blob-$(APP)-*'
+        patterns: |
+          blob-$(APP)-*/**
         path: '$(Pipeline.Workspace)/all-blob-reports'
       displayName: Download technical shard artifacts
     - task: DownloadPipelineArtifact@2
       inputs:
-        patterns: '**/business-$(APP)-*'
+        patterns: |
+          business-$(APP)-*/**
         path: '$(Pipeline.Workspace)/all-business-reports'
       displayName: Download business shard artifacts
     - bash: |

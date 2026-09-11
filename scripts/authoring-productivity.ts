@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
+import { WorkspaceContext } from '../src/framework/core/config/workspace.context';
 
 interface ActiveSession {
   requirementId: string;
@@ -20,7 +21,8 @@ interface CompletedSession extends ActiveSession {
 const command = (process.argv[2] ?? 'report').toLowerCase();
 const requirementId = process.argv[3];
 const mode = (process.argv[4] ?? process.env.AUTHORING_MODE ?? 'agents').toLowerCase();
-const app = process.env.APP ?? 'demo';
+const target = WorkspaceContext.resolve();
+const app = target.application;
 const runtimeDir = path.resolve('.runtime', 'authoring');
 const reportDir = path.resolve('reports', app, 'productivity');
 const eventsFile = path.join(reportDir, 'authoring-events.jsonl');
@@ -28,7 +30,7 @@ const eventsFile = path.join(reportDir, 'authoring-events.jsonl');
 if (command === 'start') {
   if (!requirementId) throw new Error('Usage: npm run authoring:start -- <requirementId> [agents|mcp|cli|manual]');
   fs.mkdirSync(runtimeDir, { recursive: true });
-  const session: ActiveSession = { requirementId, mode, startedAt: new Date().toISOString(), application: app, environment: process.env.ENV ?? 'qa' };
+  const session: ActiveSession = { requirementId, mode, startedAt: new Date().toISOString(), application: app, environment: target.environment };
   fs.writeFileSync(path.join(runtimeDir, `${safe(requirementId)}.json`), JSON.stringify(session, null, 2));
   console.log(`[authoring] started requirement=${requirementId} mode=${mode}`);
 } else if (command === 'complete') {

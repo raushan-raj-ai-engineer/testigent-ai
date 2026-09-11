@@ -32,3 +32,14 @@ A new project should not require any modification to reusable framework source u
 ## Team handoff
 
 Use `15-NEW-PROJECT-HANDOFF.md` as the onboarding checklist. It includes agent/MCP authoring, validation, project ownership boundaries and evidence-based productivity reporting.
+
+
+## Database capability policy
+
+Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` selects the database type (`none`, `postgres`, `mysql`, or `mssql`). `DB_TYPE` may override the configured type in CI/local runtime, while database credentials remain secret environment variables.
+
+- optional + unavailable: tests tagged `@db` are skipped automatically with a clear reason; UI/API suites continue
+- configured and ready: `@db` tests execute normally
+- required + unavailable: `qa:doctor`, framework health and project preflight fail before Playwright execution
+
+Business specs must not read `DB_TYPE` or manually decide whether to skip. Tag any scenario that requires database access with `@db`; the framework owns capability gating.

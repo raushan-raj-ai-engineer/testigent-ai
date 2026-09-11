@@ -89,3 +89,16 @@ professional formatting suitable for sharing with development and QA teams.
 - Never hide a product defect by weakening assertions or silently adding test.fixme/skip. Use the project's known-defect governance only after human confirmation.
 - Generated code remains a proposal until proposal validation and human approval/promotion complete.
 - Finish by running typecheck, test:authoring:contract and proposal:validate for the requirement.
+
+
+# TESTIGENTAI ENTERPRISE QUALITY OVERLAY V2
+- Treat PLAYWRIGHT_AUTHORING_PROMPT.md and agent-prompts/framework-test-generation.md as mandatory repository architecture policy.
+- Start project exploration from projects/<project>/tests/_agent/seed.spec.ts so authentication, fixtures and setup match the selected application.
+- Business specs consume project fixtures/facades (app, api, repositories, data). Never construct HealingOrchestrator, AiGateway, BaseApiClient, ApplicationRegistry or database infrastructure inside normal specs.
+- Application UI mechanics belong in projects/<project>/src/pages and use LocatorPlan + HealingOrchestrator/BasePage helpers; never put raw page.goto/locator/click/fill actions in normal business specs.
+- Business journeys belong in projects/<project>/src/workflows; tests express business intent and test.step() evidence.
+- Never invent URLs, credentials, tokens, environment names, locators or expected results. Resolve runtime values from repository configuration and live browser evidence.
+- Never import another project's code. Reusable-only capability belongs in src/framework.
+- Runtime healing may recover a locator without editing source. Source healing is a reviewed maintenance proposal: never silently change business assertions, API/DB/security expectations, or add test.skip/test.fixme to hide a product defect.
+- Generated code remains a proposal until proposal validation and human approval/promotion complete.
+- Finish by running architecture:check, typecheck, test:authoring:contract and proposal:validate for the requirement.

@@ -1,5 +1,6 @@
 import { buildExecutionFacts } from '../src/framework/analytics/execution-facts';
 import type { BusinessTestResult, HealingSummary } from '../src/framework/analytics/report.types';
+import { WorkspaceContext } from '../src/framework/core/config/workspace.context';
 
 /**
  * Author: Raushan Raj
@@ -22,8 +23,9 @@ const results: BusinessTestResult[] = [
     totalDurationMs: 1900
   }
 ];
-const healing: HealingSummary = { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [] };
-const facts = buildExecutionFacts({ runId: 'intelligence-demo', environment: 'qa', application: 'demo', results, healing });
+const healing: HealingSummary = { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [], attempts: [], attemptCount: 0, rejected: 0, suggested: 0, unverified: 0 };
+const target = WorkspaceContext.resolve();
+const facts = buildExecutionFacts({ runId: 'intelligence-demo', environment: target.environment, application: target.application, results, healing });
 console.log(JSON.stringify({
   totals: { total: facts.total, passed: facts.passed, failed: facts.failed, passRate: facts.passRate },
   failureClusters: facts.failureClusters,

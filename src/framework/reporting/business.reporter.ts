@@ -3,10 +3,11 @@ import path from 'node:path';
 import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult, TestStep } from '@playwright/test/reporter';
 import { classifyFailure } from '../ai/failure.classifier';
 import { buildExecutionFacts } from '../analytics/execution-facts';
-import type { AiRuntimeAuditRecord, AiRuntimeUsageSummary, BusinessAttachment, BusinessAttempt, BusinessStepDetail, BusinessTestResult, HealingAuditRecord, HealingSummary } from '../analytics/report.types';
+import type { AiRuntimeAuditRecord, AiRuntimeUsageSummary, BusinessAttachment, BusinessAttempt, BusinessStepDetail, BusinessTestResult, HealingAuditRecord, HealingSummary, KnownDefectFact } from '../analytics/report.types';
 import { classifyTestLayers } from '../analytics/test-layer.classifier';
 import { RunContext } from '../core/config/run.context';
 import { ProjectPaths } from '../core/config/project.paths';
+import { RuntimeConfig } from '../core/config/runtime.config';
 import { shouldIncludeInBusinessReport } from './business-report-scope';
 import { writeBusinessDashboard } from './business-dashboard.writer';
 import { ReportHistoryStore } from './report-history.store';
@@ -59,7 +60,7 @@ export default class BusinessReporter implements Reporter {
     const error = sanitizeError(result.error?.message?.split('\n').slice(0, 6).join(' '));
     const existing = this.attempts.get(key) ?? {
       testId: test.id,
-      title: test.titlePath().join(' › '),
+      title: businessTitle(test, project),
       project,
       tags,
       sourceFile: test.location.file,
@@ -79,9 +80,12 @@ export default class BusinessReporter implements Reporter {
     });
     existing.lastSteps = flattenBusinessSteps(result.steps);
     existing.lastStepDetails = result.steps.filter(step => step.category === 'test.step').map(toStepDetail);
-    existing.lastAttachments = result.attachments
-      .filter(item => Boolean(item.path))
-      .map(item => ({ name: item.name, contentType: item.contentType, sourcePath: item.path }));
+    const attachmentMap = new Map<string, BusinessAttachment>();
+    for (const item of result.attachments.filter(item => Boolean(item.path))) {
+      const attachment = { name: item.name, contentType: item.contentType, sourcePath: item.path };
+      attachmentMap.set(`${attachment.contentType}:${attachment.sourcePath}`, attachment);
+    }
+    existing.lastAttachments = [...attachmentMap.values()];
     existing.lastError = error;
     existing.annotations = readAnnotations(test, result);
     this.attempts.set(key, existing);
@@ -89,14 +93,15 @@ export default class BusinessReporter implements Reporter {
 
   async onEnd(_result: FullResult): Promise<void> {
     fs.mkdirSync(this.outputDir, { recursive: true });
+    const runtime = RuntimeConfig.resolve();
     const runId = RunContext.get().runId;
     const results = [...this.attempts.values()].map(toFinalBusinessResult);
-    const healing = buildHealingSummary(readHealingRecords(runId));
-    const aiUsage = buildAiUsageSummary(readAiRecords(runId));
+    const healing = buildHealingSummary(readHealingRecords(runId, runtime.applicationName));
+    const aiUsage = buildAiUsageSummary(readAiRecords(runId, runtime.applicationName));
     const internalTestsIncluded = process.env.BUSINESS_REPORT_INCLUDE_INTERNAL === 'true';
 
     if (!results.length && this.excludedInternal.size > 0 && !internalTestsIncluded) {
-      const diagnosticsDir = path.resolve('reports', process.env.APP ?? 'demo', 'framework-validation');
+      const diagnosticsDir = path.resolve('reports', runtime.applicationName, 'framework-validation');
       fs.mkdirSync(diagnosticsDir, { recursive: true });
       fs.writeFileSync(path.join(diagnosticsDir, 'last-run.json'), JSON.stringify({
         runId,
@@ -109,20 +114,27 @@ export default class BusinessReporter implements Reporter {
 
     const facts = buildExecutionFacts({
       runId,
-      environment: process.env.ENV ?? 'qa',
-      application: process.env.APP ?? 'demo',
+      environment: runtime.environment,
+      application: runtime.applicationName,
       results,
       healing,
       aiUsage,
       scope: { excludedInternalTests: this.excludedInternal.size, internalTestsIncluded }
     });
 
+    facts.aggregation = {
+      mode: 'single',
+      sourceReports: 1,
+      sourceRunIds: [facts.runId]
+    };
+
     const historyStore = new ReportHistoryStore();
     const history = process.env.CI ? historyStore.read() : historyStore.append(facts);
     writeBusinessDashboard(this.outputDir, facts, { history, reportUrl: process.env.REPORT_PUBLIC_URL });
+    printBusinessOutcomeSummary(facts);
   }
 
-  printsToStdio(): boolean { return false; }
+  printsToStdio(): boolean { return true; }
 }
 
 function toStepDetail(step: TestStep): BusinessStepDetail {
@@ -152,8 +164,8 @@ function flattenBusinessSteps(steps: TestStep[], prefix = ''): string[] {
   return output;
 }
 
-function readHealingRecords(runId: string): HealingAuditRecord[] {
-  const auditFile = path.resolve('reports', process.env.APP ?? 'demo', 'healing', 'healing-audit.jsonl');
+function readHealingRecords(runId: string, application: string): HealingAuditRecord[] {
+  const auditFile = path.resolve('reports', application, 'healing', 'healing-audit.jsonl');
   if (!fs.existsSync(auditFile)) return [];
   const records: HealingAuditRecord[] = [];
   for (const line of fs.readFileSync(auditFile, 'utf8').split('\n')) {
@@ -166,8 +178,8 @@ function readHealingRecords(runId: string): HealingAuditRecord[] {
   return records;
 }
 
-function readAiRecords(runId: string): AiRuntimeAuditRecord[] {
-  const auditFile = path.resolve('reports', process.env.APP ?? 'demo', 'ai', 'ai-audit.jsonl');
+function readAiRecords(runId: string, application: string): AiRuntimeAuditRecord[] {
+  const auditFile = path.resolve('reports', application, 'ai', 'ai-audit.jsonl');
   if (!fs.existsSync(auditFile)) return [];
   const records: AiRuntimeAuditRecord[] = [];
   for (const line of fs.readFileSync(auditFile, 'utf8').split('\n')) {
@@ -204,14 +216,21 @@ function buildAiUsageSummary(records: AiRuntimeAuditRecord[]): AiRuntimeUsageSum
   };
 }
 
-function buildHealingSummary(records: HealingAuditRecord[]): HealingSummary {
+function buildHealingSummary(attempts: HealingAuditRecord[]): HealingSummary {
+  const outcome = (record: HealingAuditRecord) => record.outcome ?? 'validated';
+  const records = attempts.filter(record => outcome(record) === 'validated');
   return {
     count: records.length,
     fallback: records.filter(record => record.decision.source === 'fallback').length,
     cache: records.filter(record => record.decision.source === 'cache').length,
     ai: records.filter(record => record.decision.source === 'ai').length,
     affectedTests: new Set(records.map(record => record.testId).filter(Boolean)).size,
-    records
+    records,
+    attempts,
+    attemptCount: attempts.length,
+    rejected: attempts.filter(record => outcome(record) === 'rejected').length,
+    suggested: attempts.filter(record => outcome(record) === 'suggested').length,
+    unverified: attempts.filter(record => outcome(record) === 'unverified').length
   };
 }
 
@@ -232,6 +251,7 @@ function toFinalBusinessResult(item: MutableBusinessTest): BusinessTestResult {
     ? item.annotations.find(annotation => annotation.type === 'skip' || annotation.type === 'fixme')
     : undefined;
   const skipReason = finalStatus === 'skipped' ? sanitizeError(skipAnnotation?.description) : undefined;
+  const knownDefect = readKnownDefect(item.annotations);
   const skipClassification = finalStatus === 'skipped'
     ? classifySkipReason(skipReason, {
         annotationType: skipAnnotation?.type,
@@ -246,6 +266,7 @@ function toFinalBusinessResult(item: MutableBusinessTest): BusinessTestResult {
     project: item.project,
     status: finalStatus,
     rawStatus: finalAttempt.status,
+    knownDefect,
     durationMs: finalAttempt.durationMs,
     totalDurationMs: attempts.reduce((sum, attempt) => sum + attempt.durationMs, 0),
     retriesUsed: Math.max(0, attempts.length - 1),
@@ -255,7 +276,7 @@ function toFinalBusinessResult(item: MutableBusinessTest): BusinessTestResult {
     stepDetails: item.lastStepDetails,
     attachments: item.lastAttachments,
     error: finalStatus === 'failed' ? finalAttempt.error ?? item.lastError : undefined,
-    failureCategory: finalStatus === 'failed' ? finalAttempt.failureCategory ?? previousFailure?.failureCategory : undefined,
+    failureCategory: finalStatus === 'failed' ? (knownDefect ? 'PRODUCT_DEFECT' : finalAttempt.failureCategory ?? previousFailure?.failureCategory) : undefined,
     skipReason,
     skipCategory: skipClassification?.category,
     attempts,
@@ -268,13 +289,55 @@ function toFinalBusinessResult(item: MutableBusinessTest): BusinessTestResult {
 function readAnnotations(test: TestCase, result: TestResult): Array<{ type: string; description?: string }> {
   const runtime = result.annotations ?? [];
   const declared = test.annotations ?? [];
-  const annotations = runtime.length ? runtime : declared;
-  return annotations
+  const seen = new Set<string>();
+  return [...declared, ...runtime]
     .filter(annotation => typeof annotation.type === 'string')
     .map(annotation => ({
       type: String(annotation.type),
       description: sanitizeError(annotation.description)
-    }));
+    }))
+    .filter(annotation => {
+      const key = `${annotation.type}:${annotation.description ?? ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function readKnownDefect(annotations: Array<{ type: string; description?: string }>): KnownDefectFact | undefined {
+  const annotation = annotations.find(item => item.type === 'known-defect');
+  if (!annotation?.description) return undefined;
+  try {
+    const parsed = JSON.parse(annotation.description) as KnownDefectFact;
+    if (!parsed.id || !parsed.title) return undefined;
+    return { id: String(parsed.id), title: String(parsed.title), scope: parsed.scope, note: parsed.note };
+  } catch {
+    const match = annotation.description.match(/^([^:]+):\s*(.+)$/);
+    return match ? { id: match[1].trim(), title: match[2].trim() } : undefined;
+  }
+}
+
+function printBusinessOutcomeSummary(facts: ReturnType<typeof buildExecutionFacts>): void {
+  if (process.env.BUSINESS_REPORT_TERMINAL_SUMMARY === 'false') return;
+  const o = facts.outcomes;
+  const gate = facts.qualityGate.status.replaceAll('_', ' ');
+  console.log('');
+  console.log(`[TestigentAI Business] ${gate}`);
+  console.log(`  Selected: ${facts.total} | Applicable: ${facts.executionEligible} | Executed: ${facts.executed}/${facts.executionEligible} (${facts.executionRate}%) | Not applicable: ${facts.notApplicable} | Blocked: ${facts.blockedSkipped}`);
+  console.log(`  Quality pass rate: ${facts.qualityPassRate}% | Quality failed: ${facts.qualityFailed} (known ${facts.knownDefects} + unexpected ${facts.unexpectedFailed}) | CI-blocking issues: ${facts.ciBlockingIssues}`);
+  console.log(`  Clean pass: ${o.cleanPassed} | Healed pass: ${o.passedWithHealing} | Retry pass: ${o.passedAfterRetry} | Known defect: ${o.knownDefects} | Unexpected failed: ${o.unexpectedFailed} | Unexpected pass: ${o.unexpectedPass} | Skipped: ${o.skipped}`);
+  if (o.knownDefects > 0) console.log('  Runner note: Playwright may count expected-failure known defects as expected execution; TestigentAI Quality failed remains the stakeholder quality count.');
+}
+
+function businessTitle(test: TestCase, project: string): string {
+  const source = path.basename(test.location.file);
+  const parts = test.titlePath().filter(part => {
+    const trimmed = part.trim();
+    if (!trimmed || trimmed === project) return false;
+    if (trimmed === source || trimmed.endsWith(`/${source}`) || trimmed.endsWith(`\\${source}`)) return false;
+    return !/\.(spec|test)\.[cm]?[jt]sx?$/.test(trimmed);
+  });
+  return parts.length ? parts.join(' › ') : test.title;
 }
 
 function readTags(test: TestCase): string[] {
@@ -285,7 +348,8 @@ function readTags(test: TestCase): string[] {
 
 function sanitizeError(value?: string): string | undefined {
   return value
-    ?.replace(/(authorization|token|password|api[-_]?key)\s*[:=]\s*[^,;\s]+/gi, '$1=[REDACTED]')
+    ?.replace(/\u001b\[[0-9;]*m/g, '')
+    .replace(/(authorization|token|password|api[-_]?key)\s*[:=]\s*[^,;\s]+/gi, '$1=[REDACTED]')
     .replace(/bearer\s+[a-z0-9._-]+/gi, 'Bearer [REDACTED]');
 }
 

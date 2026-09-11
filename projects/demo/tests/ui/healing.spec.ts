@@ -1,7 +1,6 @@
 import { test, expect } from '../../fixtures/test.fixture';
 import { HealingOrchestrator } from '../../../../src/framework/healing/healing.orchestrator';
 import type { LocatorPlan } from '../../../../src/framework/healing/healing.types';
-import { ApplicationRegistry } from '../../../../src/framework/core/config/application.registry';
 
 const intentionallyChangedTodoInput: LocatorPlan = {
   id: 'demo.healing.todo.new',
@@ -19,16 +18,21 @@ const intentionallyChangedTodoInput: LocatorPlan = {
 test.describe('Self-healing demonstration', () => {
   test.skip(process.env.HEALING_DEMO !== 'true', 'Run through npm run test:healing only.');
 
-  test('framework recovers an intentionally changed locator @healing @ui', async ({ page, logger }) => {
+  test('framework recovers an intentionally changed locator @healing @ui', async ({ page, logger, runtime }) => {
     const healer = new HealingOrchestrator(page, logger.child({ layer: 'UI_HEALING_DEMO' }));
     const workItem = `Healing demo ${Date.now()}`;
 
     await test.step('Open the work management application', async () => {
-      await page.goto(ApplicationRegistry.get('demo').uiBaseUrl);
+      await page.goto(runtime.application.uiBaseUrl);
     });
 
     await test.step('Recover the changed work item locator and create an item', async () => {
-      await healer.fillAndPress(intentionallyChangedTodoInput, workItem, 'Enter');
+      await healer.fillAndPress(intentionallyChangedTodoInput, workItem, 'Enter', {
+        postCondition: {
+          description: 'New work item becomes visible after pressing Enter',
+          verify: () => page.getByText(workItem, { exact: true }).isVisible()
+        }
+      });
     });
 
     await test.step('Verify the business action still completed successfully', async () => {

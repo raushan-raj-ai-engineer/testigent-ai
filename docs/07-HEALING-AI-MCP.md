@@ -7,14 +7,35 @@ The framework always attempts deterministic recovery before AI:
 ```text
 Primary locator
   -> declared deterministic fallbacks
-  -> validated project-scoped healing cache
+  -> semantically validated project-scoped healing cache
   -> configured AI provider(s), only when AI is explicitly enabled
-  -> deterministic safety validation of the AI proposal
-  -> runtime use or suggestion according to HEALING_MODE
-  -> cache only a validated runtime result
+  -> scope / uniqueness / confidence validation
+  -> perform action
+  -> verify declared business post-condition
+  -> only validated recovery is counted/cached
 ```
 
-AI never replaces normal locator engineering. A cached or AI-produced locator must still pass scope, uniqueness and confidence checks before use.
+Visibility and uniqueness prove only that a locator is actionable; they do **not** prove that it is the intended business element. Critical Page Object actions therefore provide a semantic post-condition such as "modal becomes visible", "dialog closes after save" or "expected row appears". Only a recovery whose post-condition passes is a successful self-heal.
+
+Healing audit outcomes are `validated`, `rejected`, `suggested`, or `unverified`. Only `validated` recoveries contribute to the Self-healed KPI and source-maintenance candidates. Rejected attempts remain visible for diagnosis. Unverified runtime actions are never promoted into the reusable cache.
+
+### Visible-match/cardinality policy
+
+Locator safety is evaluated against **visible** matches, not raw DOM count. This matters for applications that keep hidden template or modal copies of controls in the DOM. By default every descriptor still requires exactly one visible match (`match: 'unique'`). A project may explicitly use `match: 'firstVisible'` only when duplicate visible controls are intentionally equivalent (for example two Create User entry points that perform the same action). Critical uses must keep a semantic post-condition so the selected control is trusted only after the intended business state transition occurs.
+
+Do not use `firstVisible` as a generic way to silence strictness problems. If duplicate controls represent different business actions, add a better scope/role/name/test-id contract instead.
+
+AI never replaces normal locator engineering. A cached or AI-produced locator must still pass scope, uniqueness and confidence checks before use. v1.2.2 intentionally ignores legacy cache entries that lack semantic-validation metadata, producing a safe one-time cache cold start after upgrade.
+
+### Healing mode semantics (v1.2.4+)
+
+- `HEALING_MODE=off`: primary locator only. Use this to prove the primary contract independently.
+- `HEALING_MODE=suggest` (default): primary plus **reviewed deterministic fallbacks** may execute. Validated cache and AI remain non-automatic. This gives a fresh checkout resilient source-controlled selectors without requiring any LLM.
+- `HEALING_MODE=runtime`: primary -> deterministic fallbacks -> semantically validated cache -> explicitly configured AI. Dynamic recovery still requires safety checks and critical actions still require the business post-condition before cache/report promotion.
+
+Role descriptors may use `namePattern` / `namePatternFlags` for stable accessible-name families rather than enumerating cosmetic copy variants. Example: a project can treat Create User, Add User and New User as the same semantic entry point while the modal-visible post-condition proves that the selected control is actually correct.
+
+When no safe candidate resolves, the framework emits `LOCATOR_RESOLUTION_FAILED` with a bounded summary of visible buttons/links/tabs/menuitems. This diagnostic is intentionally evidence-only; it does not weaken strictness or auto-click arbitrary controls.
 
 ## 2. AI is opt-in and provider-neutral
 
@@ -235,3 +256,8 @@ PLAYWRIGHT_MCP_OUTPUT_MODE=stdout
 ```
 
 This is separate from the Playwright **Test MCP** server in `.mcp.json`/agent definitions. Use standalone MCP for persistent exploratory browser workflows; Test MCP is the tool surface used by Playwright Test Agents.
+
+
+## Runtime healing vs source healing
+
+Runtime healing is execution resilience only: it validates a replacement locator **and the declared business post-condition** before recording a successful recovery or promoting AI output to cache. Rejected/suggested/unverified attempts remain audit evidence but never become maintenance candidates. Repeated validated recovery evidence is converted into a review-only maintenance candidate with `npm run qa:heal`. Playwright healer/CLI may then verify LocatorPlan/scoping/synchronization changes, but it must never weaken business/API/DB/security expectations or add skip/fixme to hide a defect.

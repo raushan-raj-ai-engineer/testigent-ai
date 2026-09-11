@@ -22,10 +22,17 @@ function main(): void {
   fs.rmSync(target, { recursive: true, force: true });
   fs.renameSync(staging, target);
 
-  const facts = JSON.parse(fs.readFileSync(path.join(target, 'business-report.json'), 'utf8')) as { runId?: string; total?: number; passRate?: number };
+  const facts = JSON.parse(fs.readFileSync(path.join(target, 'business-report.json'), 'utf8')) as { runId?: string; total?: number; executed?: number; executionEligible?: number; executionRate?: number; qualityPassRate?: number; qualityFailed?: number; knownDefects?: number; ciBlockingIssues?: number; passRate?: number };
   fs.writeFileSync(path.join(target, 'ci-publication.json'), JSON.stringify({
     runId: facts.runId,
-    total: facts.total,
+    selected: facts.total,
+    applicable: facts.executionEligible,
+    executed: facts.executed,
+    executionRate: facts.executionRate,
+    qualityPassRate: facts.qualityPassRate,
+    qualityFailed: facts.qualityFailed,
+    knownDefects: facts.knownDefects,
+    ciBlockingIssues: facts.ciBlockingIssues,
     passRate: facts.passRate,
     publishedAt: new Date().toISOString(),
     publicUrl: cleanEnv('REPORT_PUBLIC_URL') ?? null,

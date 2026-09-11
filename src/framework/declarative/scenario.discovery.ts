@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadDeclarativeScenario } from './scenario.loader';
 import type { DeclarativeScenario } from './scenario.schema';
+import { WorkspaceContext } from '../core/config/workspace.context';
 
 export interface DiscoveredScenario {
   filePath: string;
@@ -9,7 +10,7 @@ export interface DiscoveredScenario {
 }
 
 /** Recursively discovers scenario files for one project, optionally narrowed by SCENARIO_FILE. */
-export function discoverDeclarativeScenarios(application = process.env.APP ?? 'demo'): DiscoveredScenario[] {
+export function discoverDeclarativeScenarios(application = WorkspaceContext.resolve().application): DiscoveredScenario[] {
   const explicit = process.env.SCENARIO_FILE?.trim();
   const files = explicit
     ? [path.resolve(explicit)]

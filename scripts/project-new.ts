@@ -28,4 +28,4 @@ function copyTree(from: string, to: string): void {
 }
 copyTree(source, target);
 console.log(`Created projects/${name}`);
-console.log(`Next: update projects/${name}/config/qa.json, then APP=${name} ENV=qa npm run project:check`);
+console.log(`Next: update projects/${name}/config/qa.json, then run npm run qa:use -- ${name} qa && npm run qa:doctor`);

@@ -34,8 +34,39 @@ for (const file of walk(root).filter(f => /\.(?:ts|tsx|js|mjs|cjs)$/.test(f))) {
 }
 
 for (const project of fs.readdirSync(path.join(root, 'projects'), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)) {
-  for (const needed of [`projects/${project}/project.json`, `projects/${project}/config`, `projects/${project}/fixtures/test.fixture.ts`, `projects/${project}/tests`]) {
+  for (const needed of [`projects/${project}/project.json`, `projects/${project}/config`, `projects/${project}/fixtures/test.fixture.ts`, `projects/${project}/src/app.facade.ts`, `projects/${project}/tests/_agent/seed.spec.ts`, `projects/${project}/tests`]) {
     if (!fs.existsSync(path.join(root, needed))) issues.push(`project contract missing: ${needed}`);
+  }
+
+  const projectJsonPath = path.join(root, `projects/${project}/project.json`);
+  if (fs.existsSync(projectJsonPath)) {
+    try {
+      const projectJson = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+      if (typeof projectJson.capabilities?.database?.required !== 'boolean') {
+        issues.push(`project database capability policy missing: projects/${project}/project.json`);
+      }
+    } catch (error) {
+      issues.push(`unable to validate project capability policy for ${project}: ${error.message}`);
+    }
+  }
+  const environmentFiles = fs.existsSync(path.join(root, `projects/${project}/config`))
+    ? fs.readdirSync(path.join(root, `projects/${project}/config`)).filter(file => file.endsWith('.json'))
+    : [];
+  for (const environmentFile of environmentFiles) {
+    try {
+      const environmentJson = JSON.parse(fs.readFileSync(path.join(root, `projects/${project}/config`, environmentFile), 'utf8'));
+      if (!['none', 'postgres', 'mysql', 'mssql'].includes(environmentJson.capabilities?.database?.type)) {
+        issues.push(`project database type missing/invalid: projects/${project}/config/${environmentFile}`);
+      }
+      if (environmentJson.auth?.strategy === 'storageState' && environmentJson.auth?.required !== false) {
+        const verification = environmentJson.auth?.verification;
+        if (!verification || (!verification.stateKey && !verification.unauthenticatedControl && !verification.authenticatedControl && !verification.unauthenticatedUrlPattern && !verification.authenticatedUrlPattern)) {
+          issues.push(`required storageState auth verification missing: projects/${project}/config/${environmentFile}`);
+        }
+      }
+    } catch (error) {
+      issues.push(`unable to validate project environment capability for ${project}/${environmentFile}: ${error.message}`);
+    }
   }
 }
 
@@ -65,10 +96,22 @@ try {
 
 
 for (const required of [
+  'config/architecture.json',
   'docs/14-ROOT-FOLDERS-AND-LOCAL-STATE.md',
   'docs/15-NEW-PROJECT-HANDOFF.md',
   'docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md',
   'docs/17-DEEP-REVIEW-2026.md',
+  'docs/25-AUTHORING-ARCHITECTURE-REFACTOR.md',
+  'src/framework/core/config/workspace.context.ts',
+  'src/framework/core/config/application.scope.ts',
+  'src/framework/core/config/runtime.config.ts',
+  'src/framework/core/config/capability.policy.ts',
+  'src/framework/core/auth.state.ts',
+  'src/framework/core/auth.verifier.ts',
+  'scripts/qa.ts',
+  'scripts/healing-maintenance.ts',
+  'templates/project/src/app.facade.ts',
+  'templates/project/tests/_agent/seed.spec.ts',
   'scripts/harden-agent-definitions.ts',
   'scripts/authoring-productivity.ts',
   'src/framework/ai/ai.audit.ts',
@@ -119,7 +162,7 @@ if (fs.existsSync(githubAgents)) {
   for (const file of walk(githubAgents).filter(f => f.endsWith('.md'))) {
     const text = fs.readFileSync(file, 'utf8');
     if (/^model:\s*.+$/m.test(text)) issues.push(`repository agent pins a model instead of user/client choice: ${path.relative(root, file)}`);
-    if (!text.includes('TESTIGENTAI ENTERPRISE QUALITY OVERLAY')) issues.push(`repository agent missing enterprise overlay: ${path.relative(root, file)}`);
+    if (!text.includes('TESTIGENTAI ENTERPRISE QUALITY OVERLAY V2')) issues.push(`repository agent missing enterprise overlay V2: ${path.relative(root, file)}`);
   }
 }
 
@@ -128,12 +171,106 @@ if (fs.existsSync(envExamplePath)) {
   const envExample = fs.readFileSync(envExamplePath, 'utf8');
   if (/^AI_PROVIDER=(?!\s*$).+/m.test(envExample)) issues.push('.env.example must not impose a default AI provider');
   if (!/^AI_PROVIDER_MODE=single$/m.test(envExample)) issues.push('.env.example must document single as the safe provider-selection mode');
+  if (!/^APP=\s*$/m.test(envExample) || !/^ENV=\s*$/m.test(envExample)) issues.push('.env.example must not impose a default project/environment');
+  if (!/^DB_TYPE=\s*$/m.test(envExample)) issues.push('.env.example must not impose a default database type; project/environment config owns it');
 }
 
-const todoPagePath = path.join(root, 'projects', 'demo', 'src', 'pages', 'todo.page.ts');
-if (fs.existsSync(todoPagePath)) {
-  const todoPage = fs.readFileSync(todoPagePath, 'utf8');
-  if (!todoPage.includes("navigate('/todomvc/')")) issues.push('demo Todo page must navigate to /todomvc/');
+
+// Semantic-healing release contracts (v1.2.2+).
+try {
+  const orchestrator = fs.readFileSync(path.join(root, 'src/framework/healing/healing.orchestrator.ts'), 'utf8');
+  const cache = fs.readFileSync(path.join(root, 'src/framework/healing/healing.cache.ts'), 'utf8');
+  const reportTypes = fs.readFileSync(path.join(root, 'src/framework/analytics/report.types.ts'), 'utf8');
+  const businessReporter = fs.readFileSync(path.join(root, 'src/framework/reporting/business.reporter.ts'), 'utf8');
+  const businessRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/business-html.renderer.ts'), 'utf8');
+  if (!orchestrator.includes('SELF_HEALING_POSTCONDITION_REJECTED')) issues.push('semantic healing rejection contract missing');
+  if (!orchestrator.includes('.visible()')) issues.push('healing resolver must evaluate visible locator matches');
+  if (!orchestrator.includes("descriptor.match === 'firstVisible'")) issues.push('explicit firstVisible locator cardinality policy missing');
+  if (!orchestrator.includes("decision.source === 'fallback' || mode === 'runtime'")) issues.push('reviewed deterministic fallbacks must remain executable in suggest mode');
+  if (!orchestrator.includes('LOCATOR_RESOLUTION_FAILED')) issues.push('locator failure diagnostics contract missing');
+  const locatorResolver = fs.readFileSync(path.join(root, 'src/framework/healing/locator.resolver.ts'), 'utf8');
+  if (!locatorResolver.includes('descriptor.namePattern')) issues.push('semantic accessible-name pattern support missing');
+  if (!orchestrator.includes("'validated'")) issues.push('semantic healing validated outcome missing');
+  if (!cache.includes("validation !== 'semantic'")) issues.push('healing cache must reject legacy/unverified cache entries');
+  if (!cache.includes("validation: 'semantic'")) issues.push('healing cache must mark promoted entries as semantically validated');
+  if (!reportTypes.includes('outcome?: HealingOutcome') || !reportTypes.includes('attempts: HealingAuditRecord[]')) issues.push('reporting healing outcome contract missing');
+  if (!businessReporter.includes("outcome(record) === 'validated'")) issues.push('business reporting must count only validated healing as successful recovery');
+  const businessOutcome = fs.readFileSync(path.join(root, 'src/framework/analytics/business-outcome.ts'), 'utf8');
+  if (!businessRenderer.includes('payload.healing.records.filter') || !businessOutcome.includes("return 'PASSED_WITH_HEALING'")) issues.push('business report must derive healed status from validated healing records only');
+} catch (error) {
+  issues.push(`unable to validate semantic healing contracts: ${error.message}`);
+}
+
+
+// Business-standard reporting contracts (v1.2.6+).
+try {
+  const reportTypes = fs.readFileSync(path.join(root, 'src/framework/analytics/report.types.ts'), 'utf8');
+  const businessOutcome = fs.readFileSync(path.join(root, 'src/framework/analytics/business-outcome.ts'), 'utf8');
+  const executionFacts = fs.readFileSync(path.join(root, 'src/framework/analytics/execution-facts.ts'), 'utf8');
+  const businessReporter = fs.readFileSync(path.join(root, 'src/framework/reporting/business.reporter.ts'), 'utf8');
+  const businessRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/business-html.renderer.ts'), 'utf8');
+  const csvWriter = fs.readFileSync(path.join(root, 'src/framework/reporting/business-dashboard.writer.ts'), 'utf8');
+  const emailTemplate = fs.readFileSync(path.join(root, 'src/framework/notifications/business-email.template.ts'), 'utf8');
+  const staticEmailReport = fs.readFileSync(path.join(root, 'src/framework/notifications/business-email-static-report.ts'), 'utf8');
+  const knownDefects = fs.readFileSync(path.join(root, 'src/framework/core/known-defects.ts'), 'utf8');
+  if (!reportTypes.includes("'KNOWN_DEFECT'") || !reportTypes.includes("'UNEXPECTED_PASS'")) issues.push('business outcome model must expose known defect and unexpected pass');
+  if (!reportTypes.includes('PASSED_WITH_ACCEPTED_RISK')) issues.push('quality gate must support accepted-risk decision state');
+  if (!businessOutcome.includes("outcome === 'KNOWN_DEFECT'") || !businessOutcome.includes('ciBlockingIssues')) issues.push('known-defect quality-vs-CI classification missing');
+  if (!executionFacts.includes('qualityFailed') || !executionFacts.includes('qualityPassRate') || !executionFacts.includes('unexpectedFailed')) issues.push('business quality fact model missing');
+  if (!knownDefects.includes("type: 'known-defect'") || !businessReporter.includes('readKnownDefect')) issues.push('known defects must be explicitly annotated and captured by reporter');
+  if (!businessReporter.includes('printsToStdio(): boolean { return true; }') || !businessReporter.includes('Runner note: Playwright may count expected-failure known defects')) issues.push('business reporter missing stakeholder terminal visibility for expected known defects');
+  if (!businessRenderer.includes('Known defects &amp; accepted risk') || !businessRenderer.includes('CI-blocking issues') || !businessRenderer.includes('Slowest scenarios')) issues.push('business dashboard missing executive risk/triage views');
+  if (!csvWriter.includes('Business Outcome') || !csvWriter.includes('Known Defect ID')) issues.push('CSV export missing business-outcome/known-defect columns');
+  if (!emailTemplate.includes('Quality failed') || !staticEmailReport.includes('Known defects')) issues.push('email/static reporting must use business-standard quality semantics');
+} catch (error) {
+  issues.push(`unable to validate business-standard reporting contracts: ${error.message}`);
+}
+
+
+
+
+// Reporting merge, applicability and evidence contracts (v1.2.8+).
+try {
+  const reportTypes = fs.readFileSync(path.join(root, 'src/framework/analytics/report.types.ts'), 'utf8');
+  const executionFacts = fs.readFileSync(path.join(root, 'src/framework/analytics/execution-facts.ts'), 'utf8');
+  const skipClassifier = fs.readFileSync(path.join(root, 'src/framework/reporting/skip-reason.classifier.ts'), 'utf8');
+  const fixture = fs.readFileSync(path.join(root, 'src/framework/core/fixtures/enterprise.fixture.ts'), 'utf8');
+  const renderer = fs.readFileSync(path.join(root, 'src/framework/reporting/business-html.renderer.ts'), 'utf8');
+  const writer = fs.readFileSync(path.join(root, 'src/framework/reporting/business-dashboard.writer.ts'), 'utf8');
+  const merge = fs.readFileSync(path.join(root, 'scripts/merge-business-reports.ts'), 'utf8');
+  const mergeContract = fs.readFileSync(path.join(root, 'scripts/reporting-merge-contract.ts'), 'utf8');
+  const bundleValidator = fs.readFileSync(path.join(root, 'scripts/validate-ci-business-bundle.ts'), 'utf8');
+  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
+  const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  if (!reportTypes.includes('executionEligible') || !reportTypes.includes('notApplicable') || !reportTypes.includes('blockedSkipped')) issues.push('reporting applicability/execution fact contract missing');
+  if (!skipClassifier.includes("'NOT_APPLICABLE'") || !skipClassifier.includes("'BLOCKED'")) issues.push('skip disposition contract missing');
+  if (!executionFacts.includes('total - notApplicable') || !executionFacts.includes("item.status !== 'skipped'")) issues.push('execution coverage/layer facts must exclude not-applicable/skipped scenarios correctly');
+  if (!fixture.includes("testInfo.attach('failure-screenshot'") || !fixture.includes('testigent-failure.png')) issues.push('failed UI evidence screenshot fixture contract missing');
+  if (!renderer.includes('Failure evidence') || !renderer.includes('<img') || !renderer.includes('Not Applicable')) issues.push('business dashboard inline evidence/applicability visibility missing');
+  if (!renderer.includes('Additional attachments') || !renderer.includes('selectPrimaryFailureEvidence')) issues.push('business dashboard failure-evidence de-duplication contract missing');
+  if (!writer.includes("failedScenario") || !writer.includes("contentType.startsWith('video/')")) issues.push('failed-scenario evidence materialization contract missing');
+  if (!merge.includes('Duplicate business scenario across CI report bundles') || !merge.includes("mode: 'merged'")) issues.push('merged CI business report duplicate/aggregation guard missing');
+  if (!mergeContract.includes('duplicate test IDs') || !mergeContract.includes('AI usage must merge exactly once')) issues.push('executable merged-report contract missing');
+  if (!/failed UI/i.test(bundleValidator) || !bundleValidator.includes("contentType.startsWith('image/')")) issues.push('CI business bundle must require screenshot evidence for failed UI scenarios');
+  if (!githubWorkflow.includes('--grep-invert="@ai"') || !azurePipeline.includes('--grep-invert="@ai"')) issues.push('normal CI shards must exclude dedicated AI tests');
+} catch (error) {
+  issues.push(`unable to validate reporting merge/evidence contracts: ${error.message}`);
+}
+
+// Authentication-state release contracts (v1.2.5+).
+try {
+  const appAuth = fs.readFileSync(path.join(root, 'scripts/app-auth.ts'), 'utf8');
+  const authState = fs.readFileSync(path.join(root, 'src/framework/core/auth.state.ts'), 'utf8');
+  const authVerifier = fs.readFileSync(path.join(root, 'src/framework/core/auth.verifier.ts'), 'utf8');
+  const basePage = fs.readFileSync(path.join(root, 'src/framework/core/ui/base.page.ts'), 'utf8');
+  const fixture = fs.readFileSync(path.join(root, 'src/framework/core/fixtures/enterprise.fixture.ts'), 'utf8');
+  if (!appAuth.includes('fresh browser context') && !appAuth.includes('verifyContext')) issues.push('qa:auth must verify captured state in a fresh browser context');
+  if (!authState.includes('SessionStorageSnapshot')) issues.push('sessionStorage auth companion support missing');
+  if (!fixture.includes('installSessionStorageSnapshot')) issues.push('enterprise fixture must restore sessionStorage auth state before test navigation');
+  if (!authVerifier.includes('AUTH_SESSION_INVALID')) issues.push('explicit invalid-auth runtime diagnostic missing');
+  if (!basePage.includes('assertAuthenticatedPage')) issues.push('authenticated navigation must fail before locator healing when auth is invalid');
+} catch (error) {
+  issues.push(`unable to validate auth-state contracts: ${error.message}`);
 }
 
 for (const file of walk(root).filter(f => f.endsWith('.json'))) {

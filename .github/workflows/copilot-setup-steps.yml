@@ -29,8 +29,8 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
 
-    - name: Validate framework environment
-      run: npm run framework:health
+    - name: Validate reusable architecture
+      run: npm run release:static && npm run architecture:check
 
     - name: Validate agent tooling
       run: npm run agents:check

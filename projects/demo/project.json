@@ -8,5 +8,10 @@
       "allowGenerated": false,
       "allowManual": false
     }
+  },
+  "capabilities": {
+    "database": {
+      "required": false
+    }
   }
 }

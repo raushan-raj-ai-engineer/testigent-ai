@@ -1,19 +1,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { HealingDecision, LocatorPlan } from './healing.types';
+import { resolveApplicationScope } from '../core/config/application.scope';
+import type { HealingDecision, HealingOutcome, HealingVerificationEvidence, LocatorPlan } from './healing.types';
 import { redact } from '../logging/redactor';
 import { RunContext } from '../core/config/run.context';
 
 /**
  * Author: Raushan Raj
- * Business Use: Creates an audit trail for every self-healing decision.
- * How to use: HealingOrchestrator records plan, decision, page URL and run identity automatically.
- * Benefit: Business/product defects are not hidden behind silent locator changes and reports can correlate healing to one execution.
+ * Business Use: Creates an audit trail for every healing proposal/attempt and whether semantic validation accepted it.
+ * Benefit: Reports can distinguish a genuine self-heal from a rejected locator guess; assertions are never hidden behind a false healing success.
  */
 export class HealingAudit {
-  constructor(private readonly filePath = path.resolve('reports', process.env.APP ?? 'demo', 'healing', 'healing-audit.jsonl')) {}
+  constructor(private readonly filePath = path.resolve('reports', resolveApplicationScope(), 'healing', 'healing-audit.jsonl')) {}
 
-  record(plan: LocatorPlan, decision: HealingDecision, pageUrl: string, testId?: string): void {
+  record(
+    plan: LocatorPlan,
+    decision: HealingDecision,
+    pageUrl: string,
+    testId?: string,
+    outcome: HealingOutcome = 'validated',
+    verification?: HealingVerificationEvidence
+  ): void {
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
     fs.appendFileSync(
       this.filePath,
@@ -24,6 +31,8 @@ export class HealingAudit {
         pageUrl,
         planId: plan.id,
         businessName: plan.businessName,
+        outcome,
+        verification,
         decision
       }))}\n`
     );

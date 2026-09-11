@@ -12,17 +12,20 @@ const deleteDefect = KnownDefectRegistry.get('sdet-practice', 'SDET-DEL-001');
 
 test(
   'Admin can create, update and delete a user @requirement:sdet-user-crud @app:sdet-practice @critical @user-management @crud @ui',
-  async ({ page, app }, testInfo) => {
+  async ({ app, data }, testInfo) => {
+    const defaults = await data.load<{ namePrefix: string; emailPrefix: string; emailDomain: string; password: string }>(
+      'projects/sdet-practice/data/users/create-user.json',
+    );
     const uniqueId = `${Date.now()}-${testInfo.workerIndex}-${testInfo.retry}`;
     const originalUser: CreateUserData = {
-      name: `Automation User ${uniqueId}`,
-      email: `automation-${uniqueId}@example.com`,
-      password: 'Test@12345',
+      name: `${defaults.namePrefix} ${uniqueId}`,
+      email: `${defaults.emailPrefix}-${uniqueId}@${defaults.emailDomain}`,
+      password: defaults.password,
     };
-    const updatedName = `Updated Automation User ${uniqueId}`;
+    const updatedName = `Updated ${defaults.namePrefix} ${uniqueId}`;
 
     await test.step('Admin opens the user management application', async () => {
-      await page.goto('/');
+      await app.userManagement.open();
     });
 
     await test.step('Admin creates a new user', async () => {
@@ -33,10 +36,10 @@ test(
       await app.userManagement.updateUser(originalUser.email, { name: updatedName });
     });
 
-    // Mark expected failure only after Create + Update have passed. If either regresses,
-    // Playwright still reports a real unexpected failure. If Delete starts passing,
-    // Playwright reports an unexpected pass so the known-defect entry must be removed.
-    if (deleteDefect) test.fail(true, `${deleteDefect.id}: ${deleteDefect.title}`);
+    if (deleteDefect) {
+      KnownDefectRegistry.annotate(testInfo, deleteDefect);
+      test.fail(true, `${deleteDefect.id}: ${deleteDefect.title}`);
+    }
 
     await test.step('Admin deletes the updated user', async () => {
       await app.userManagement.deleteUser(originalUser.email);
