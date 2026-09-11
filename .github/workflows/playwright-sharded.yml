@@ -6,9 +6,13 @@ on:
       app:
         description: Project folder under projects/
         required: true
+        type: string
+
       environment:
         description: Project environment config
         required: true
+        type: string
+
       run_ai:
         description: Run configured AI provider validation
         required: false
@@ -16,34 +20,80 @@ on:
         default: false
 
   push:
-    branches: [main]
+    branches:
+      - main
 
   pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: testigent-ai-${{ github.workflow }}-${{ github.ref }}
+  group: testigent-ai-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
-  APP: ${{ inputs.app || vars.APP }}
-  ENV: ${{ inputs.environment || vars.ENV }}
+  # workflow_dispatch inputs take precedence.
+  # Normal push/PR runs use GitHub Repository Variables APP and ENV.
+  APP: ${{ github.event_name == 'workflow_dispatch' && inputs.app || vars.APP }}
+  ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || vars.ENV }}
 
 jobs:
+
+  # ---------------------------------------------------------------------------
+  # 1. FRAMEWORK VALIDATION
+  # ---------------------------------------------------------------------------
+
   validate:
     name: Framework Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+
     env:
+      CI: 'true'
       AI_ENABLED: 'false'
       HEALING_AI_ENABLED: 'false'
 
     steps:
       - name: Checkout TestigentAI
         uses: actions/checkout@v7
+
+      - name: Validate CI target configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          [[ -n "${APP:-}" ]] || fail \
+            "Repository Variable APP is missing. Configure Settings > Secrets and variables > Actions > Variables."
+
+          [[ -n "${ENV:-}" ]] || fail \
+            "Repository Variable ENV is missing. Configure Settings > Secrets and variables > Actions > Variables."
+
+          [[ -d "projects/${APP}" ]] || fail \
+            "Configured project does not exist: projects/${APP}"
+
+          [[ -f "projects/${APP}/project.json" ]] || fail \
+            "Missing project configuration: projects/${APP}/project.json"
+
+          [[ -f "projects/${APP}/config/${ENV}.json" ]] || fail \
+            "Missing environment configuration: projects/${APP}/config/${ENV}.json"
+
+          echo "TestigentAI CI target"
+          echo "APP=${APP}"
+          echo "ENV=${ENV}"
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -57,29 +107,85 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # CI must never run interactive qa:auth.
+      # Authentication state is restored from repository secrets.
+      - name: Restore authentication state
+        shell: bash
+        env:
+          PW_STORAGE_STATE_B64: ${{ secrets.PW_STORAGE_STATE_B64 }}
+          PW_SESSION_STORAGE_B64: ${{ secrets.PW_SESSION_STORAGE_B64 }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .auth
+
+          STORAGE_PATH=".auth/${APP}.exploration.json"
+          SESSION_PATH="${STORAGE_PATH}.session.json"
+
+          if [[ -n "${PW_STORAGE_STATE_B64:-}" ]]; then
+            printf '%s' "${PW_STORAGE_STATE_B64}" \
+              | base64 --decode > "${STORAGE_PATH}"
+
+            chmod 600 "${STORAGE_PATH}"
+
+            echo "[auth] Playwright storage state restored."
+          else
+            echo "[auth] PW_STORAGE_STATE_B64 is not configured."
+          fi
+
+          if [[ -n "${PW_SESSION_STORAGE_B64:-}" ]]; then
+            printf '%s' "${PW_SESSION_STORAGE_B64}" \
+              | base64 --decode > "${SESSION_PATH}"
+
+            chmod 600 "${SESSION_PATH}"
+
+            echo "[auth] sessionStorage companion restored."
+          else
+            echo "[auth] No sessionStorage companion configured."
+          fi
+
+      - name: TestigentAI doctor
+        run: npm run qa:doctor
+
       - name: Validate TestigentAI
         run: npm run validate:final
 
+
+  # ---------------------------------------------------------------------------
+  # 2. NORMAL PROJECT TEST SHARDS
+  # ---------------------------------------------------------------------------
+
   test:
     name: Project Tests - Shard ${{ matrix.index }}
-    needs: [validate]
+    needs:
+      - validate
+
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     env:
+      CI: 'true'
+
       AI_ENABLED: 'false'
       HEALING_AI_ENABLED: 'false'
-      CI: 'true'
+
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-      # PRs run the governed smoke profile; main pushes run the broader regression profile.
+
+      # PR:
+      #   governed PR profile
+      #
+      # main:
+      #   broader regression profile
       TEST_PROFILE: ${{ github.event_name == 'pull_request' && 'pr' || 'regression' }}
 
     strategy:
       fail-fast: false
+
       matrix:
         include:
           - shard: '1/2'
             index: 1
+
           - shard: '2/2'
             index: 2
 
@@ -98,6 +204,36 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Restore authentication state
+        shell: bash
+        env:
+          PW_STORAGE_STATE_B64: ${{ secrets.PW_STORAGE_STATE_B64 }}
+          PW_SESSION_STORAGE_B64: ${{ secrets.PW_SESSION_STORAGE_B64 }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .auth
+
+          STORAGE_PATH=".auth/${APP}.exploration.json"
+          SESSION_PATH="${STORAGE_PATH}.session.json"
+
+          if [[ -n "${PW_STORAGE_STATE_B64:-}" ]]; then
+            printf '%s' "${PW_STORAGE_STATE_B64}" \
+              | base64 --decode > "${STORAGE_PATH}"
+
+            chmod 600 "${STORAGE_PATH}"
+          fi
+
+          if [[ -n "${PW_SESSION_STORAGE_B64:-}" ]]; then
+            printf '%s' "${PW_SESSION_STORAGE_B64}" \
+              | base64 --decode > "${SESSION_PATH}"
+
+            chmod 600 "${SESSION_PATH}"
+          fi
+
+      - name: Verify project readiness
+        run: npm run qa:doctor
 
       - name: Run non-AI project tests - shard ${{ matrix.index }}
         run: >
@@ -124,9 +260,23 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+
+  # ---------------------------------------------------------------------------
+  # 3. DEDICATED AI / HEALING VALIDATION
+  #
+  # AI is intentionally not executed for pull_request because:
+  #
+  # - cloud/provider secrets should not be required for normal PR validation
+  # - PR test shards already exclude @ai
+  # - AI execution is owned by this dedicated lane
+  # ---------------------------------------------------------------------------
+
   ai-smoke:
     name: AI Healing Validation
-    needs: [validate]
+
+    needs:
+      - validate
+
     if: >-
       ${{
         github.event_name != 'pull_request' &&
@@ -135,37 +285,44 @@ jobs:
           (github.event_name == 'push' && vars.AI_CI_ENABLED == 'true')
         )
       }}
+
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     env:
       CI: 'true'
-      APP: ${{ inputs.app || vars.APP }}
-      ENV: ${{ inputs.environment || vars.ENV }}
+
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
       AI_ENABLED: 'true'
+      HEALING_AI_ENABLED: 'true'
+      HEALING_MODE: runtime
+
       AI_PROVIDER_MODE: ${{ vars.AI_PROVIDER_MODE || 'single' }}
       AI_PROVIDER: ${{ vars.AI_PROVIDER || '' }}
       AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
+
       AI_ALLOW_CLOUD_EGRESS: ${{ vars.AI_ALLOW_CLOUD_EGRESS || 'false' }}
+
       AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '60000' }}
       AI_TOTAL_TIMEOUT_MS: ${{ vars.AI_TOTAL_TIMEOUT_MS || '90000' }}
+
       AI_RETRY_MAX_ATTEMPTS: ${{ vars.AI_RETRY_MAX_ATTEMPTS || '3' }}
       AI_RETRY_BASE_DELAY_MS: ${{ vars.AI_RETRY_BASE_DELAY_MS || '1000' }}
       AI_RETRY_MAX_DELAY_MS: ${{ vars.AI_RETRY_MAX_DELAY_MS || '8000' }}
       AI_RETRY_JITTER_MS: ${{ vars.AI_RETRY_JITTER_MS || '250' }}
       AI_RETRY_ON_TIMEOUT: ${{ vars.AI_RETRY_ON_TIMEOUT || 'false' }}
+
       AI_MAX_CALLS_PER_TEST: ${{ vars.AI_MAX_CALLS_PER_TEST || '2' }}
       AI_PROVIDER_GENERATION_CHECK: ${{ vars.AI_PROVIDER_GENERATION_CHECK || 'true' }}
 
       TEST_TIMEOUT_MS: ${{ vars.AI_TEST_TIMEOUT_MS || '180000' }}
       NAVIGATION_TIMEOUT_MS: ${{ vars.AI_NAVIGATION_TIMEOUT_MS || '60000' }}
+
       PW_RETRIES: '0'
 
-      HEALING_AI_ENABLED: 'true'
-      HEALING_MODE: runtime
       AI_HEALING_SNAPSHOT_MAX_CHARS: ${{ vars.AI_HEALING_SNAPSHOT_MAX_CHARS || '6000' }}
+
       AI_AUDIT_ENABLED: 'true'
       AI_RUNTIME_LOGGING: 'true'
 
@@ -174,11 +331,15 @@ jobs:
       GEMINI_MAX_OUTPUT_TOKENS: ${{ vars.GEMINI_MAX_OUTPUT_TOKENS || '512' }}
 
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || '' }}
+
       AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT || '' }}
       AZURE_OPENAI_MODEL: ${{ vars.AZURE_OPENAI_MODEL || '' }}
+
       ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || '' }}
+
       AI_COMPAT_BASE_URL: ${{ vars.AI_COMPAT_BASE_URL || '' }}
       AI_COMPAT_MODEL: ${{ vars.AI_COMPAT_MODEL || '' }}
+
       AI_ENDPOINT: ${{ vars.AI_ENDPOINT || '' }}
       AI_MODEL: ${{ vars.AI_MODEL || '' }}
 
@@ -201,6 +362,33 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Restore authentication state
+        shell: bash
+        env:
+          PW_STORAGE_STATE_B64: ${{ secrets.PW_STORAGE_STATE_B64 }}
+          PW_SESSION_STORAGE_B64: ${{ secrets.PW_SESSION_STORAGE_B64 }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .auth
+
+          STORAGE_PATH=".auth/${APP}.exploration.json"
+          SESSION_PATH="${STORAGE_PATH}.session.json"
+
+          if [[ -n "${PW_STORAGE_STATE_B64:-}" ]]; then
+            printf '%s' "${PW_STORAGE_STATE_B64}" \
+              | base64 --decode > "${STORAGE_PATH}"
+
+            chmod 600 "${STORAGE_PATH}"
+          fi
+
+          if [[ -n "${PW_SESSION_STORAGE_B64:-}" ]]; then
+            printf '%s' "${PW_SESSION_STORAGE_B64}" \
+              | base64 --decode > "${SESSION_PATH}"
+
+            chmod 600 "${SESSION_PATH}"
+          fi
+
       - name: Detect AI tests
         id: detect-ai
         shell: bash
@@ -217,100 +405,22 @@ jobs:
             --include='*.test.ts' \
             '@ai' \
             "projects/${APP}/tests" 2>/dev/null | grep -q .; then
-            echo "has_ai_tests=true" >> "$GITHUB_OUTPUT"
+
+            echo "has_ai_tests=true" >> "${GITHUB_OUTPUT}"
             echo "[ai] @ai tests found for project '${APP}'."
+
           else
-            echo "has_ai_tests=false" >> "$GITHUB_OUTPUT"
-            echo "[ai] No @ai tests found for project '${APP}'. AI job will finish without provider calls."
+
+            echo "has_ai_tests=false" >> "${GITHUB_OUTPUT}"
+            echo "[ai] No @ai tests found for project '${APP}'."
+
           fi
 
-      - name: Validate AI CI configuration
+      - name: Validate project readiness
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
-        shell: bash
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: |
-          set -euo pipefail
+        run: npm run qa:doctor
 
-          echo "APP=${APP}"
-          echo "ENV=${ENV}"
-          echo "AI_PROVIDER_MODE=${AI_PROVIDER_MODE}"
-          echo "AI_PROVIDER=${AI_PROVIDER}"
-          echo "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}"
-          echo "AI_ALLOW_CLOUD_EGRESS=${AI_ALLOW_CLOUD_EGRESS}"
-          echo "AI_TIMEOUT_MS=${AI_TIMEOUT_MS}"
-          echo "AI_TOTAL_TIMEOUT_MS=${AI_TOTAL_TIMEOUT_MS}"
-          echo "AI_RETRY_MAX_ATTEMPTS=${AI_RETRY_MAX_ATTEMPTS}"
-          echo "AI_RETRY_BASE_DELAY_MS=${AI_RETRY_BASE_DELAY_MS}"
-          echo "AI_RETRY_MAX_DELAY_MS=${AI_RETRY_MAX_DELAY_MS}"
-          echo "AI_RETRY_JITTER_MS=${AI_RETRY_JITTER_MS}"
-          echo "AI_RETRY_ON_TIMEOUT=${AI_RETRY_ON_TIMEOUT}"
-          echo "TEST_TIMEOUT_MS=${TEST_TIMEOUT_MS}"
-          echo "NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS}"
-          echo "PW_RETRIES=${PW_RETRIES}"
-          echo "AI_HEALING_SNAPSHOT_MAX_CHARS=${AI_HEALING_SNAPSHOT_MAX_CHARS}"
-          echo "AI_PROVIDER_GENERATION_CHECK=${AI_PROVIDER_GENERATION_CHECK}"
-          echo "GEMINI_MODEL=${GEMINI_MODEL}"
-          echo "GEMINI_THINKING_LEVEL=${GEMINI_THINKING_LEVEL}"
-          echo "GEMINI_MAX_OUTPUT_TOKENS=${GEMINI_MAX_OUTPUT_TOKENS}"
-
-          fail() {
-            echo "::error::$1"
-            exit 1
-          }
-
-          [[ "${AI_ENABLED}" == "true" ]] || fail "AI_ENABLED must be true in the AI job."
-          [[ "${HEALING_AI_ENABLED}" == "true" ]] || fail "HEALING_AI_ENABLED must be true in the AI job."
-
-          [[ "${AI_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TIMEOUT_MS must be numeric."
-          [[ "${AI_TOTAL_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TOTAL_TIMEOUT_MS must be numeric."
-          [[ "${AI_TOTAL_TIMEOUT_MS}" -ge "${AI_TIMEOUT_MS}" ]] || fail "AI_TOTAL_TIMEOUT_MS must be >= AI_TIMEOUT_MS."
-          [[ "${AI_RETRY_MAX_ATTEMPTS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_MAX_ATTEMPTS must be numeric."
-          [[ "${AI_RETRY_MAX_ATTEMPTS}" -ge 1 && "${AI_RETRY_MAX_ATTEMPTS}" -le 5 ]] || fail "AI_RETRY_MAX_ATTEMPTS must be between 1 and 5."
-          [[ "${AI_RETRY_BASE_DELAY_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_BASE_DELAY_MS must be numeric."
-          [[ "${AI_RETRY_MAX_DELAY_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_MAX_DELAY_MS must be numeric."
-          [[ "${AI_RETRY_MAX_DELAY_MS}" -ge "${AI_RETRY_BASE_DELAY_MS}" ]] || fail "AI_RETRY_MAX_DELAY_MS must be >= AI_RETRY_BASE_DELAY_MS."
-          [[ "${AI_RETRY_JITTER_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_JITTER_MS must be numeric."
-          case "${AI_RETRY_ON_TIMEOUT}" in
-            true|false) ;;
-            *) fail "AI_RETRY_ON_TIMEOUT must be true or false." ;;
-          esac
-          [[ "${TEST_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "TEST_TIMEOUT_MS must be numeric."
-          [[ "${TEST_TIMEOUT_MS}" -gt "${AI_TOTAL_TIMEOUT_MS}" ]] || fail "AI_TEST_TIMEOUT_MS/TEST_TIMEOUT_MS must be greater than AI_TOTAL_TIMEOUT_MS."
-
-          case "${AI_PROVIDER_MODE}" in
-            single)
-              [[ -n "${AI_PROVIDER}" ]] || fail "AI_PROVIDER is required when AI_PROVIDER_MODE=single. Create GitHub Actions Repository Variable AI_PROVIDER."
-              ;;
-            failover)
-              [[ -n "${AI_PROVIDER_ORDER}" ]] || fail "AI_PROVIDER_ORDER is required when AI_PROVIDER_MODE=failover."
-              ;;
-            *)
-              fail "AI_PROVIDER_MODE must be 'single' or 'failover'."
-              ;;
-          esac
-
-          if [[ "${AI_PROVIDER_MODE}" == "single" && "${AI_PROVIDER}" == "gemini" ]]; then
-            [[ "${AI_ALLOW_CLOUD_EGRESS}" == "true" ]] || fail "Gemini requires AI_ALLOW_CLOUD_EGRESS=true."
-            [[ -n "${GEMINI_MODEL}" ]] || fail "GEMINI_MODEL is required for Gemini."
-            [[ -n "${GEMINI_API_KEY:-}" ]] || fail "GitHub Actions Repository Secret GEMINI_API_KEY is missing."
-            case "${GEMINI_THINKING_LEVEL}" in
-              low|medium|high) ;;
-              *) fail "GEMINI_THINKING_LEVEL must be low, medium or high." ;;
-            esac
-            [[ "${GEMINI_MAX_OUTPUT_TOKENS}" =~ ^[0-9]+$ ]] || fail "GEMINI_MAX_OUTPUT_TOKENS must be numeric."
-            [[ "${GEMINI_MAX_OUTPUT_TOKENS}" -ge 64 ]] || fail "GEMINI_MAX_OUTPUT_TOKENS must be >= 64."
-            echo "Gemini API key configured: YES"
-          fi
-
-          echo "AI CI preflight validation: PASSED"
-
-      - name: Check configured AI provider and generation endpoint
+      - name: Check configured AI provider
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
         run: npm run ai:check
         env:
@@ -327,8 +437,10 @@ jobs:
           npm run test:project --
           --project=chromium
           --grep="@ai"
+
         env:
           AI_HEALING_DEMO: ${{ env.APP == 'demo' && 'true' || 'false' }}
+
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -363,26 +475,35 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+
+  # ---------------------------------------------------------------------------
+  # 4. FINAL MERGED REPORT
+  # ---------------------------------------------------------------------------
+
   merge:
     name: Merge TestigentAI Reports
-    needs: [test, ai-smoke]
+
+    needs:
+      - test
+      - ai-smoke
+
     if: >-
       ${{
         always() &&
         !cancelled() &&
         needs.test.result != 'skipped'
       }}
+
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     permissions:
       contents: read
       actions: write
 
     env:
+      CI: 'true'
       AI_ENABLED: 'false'
-      APP: ${{ inputs.app || vars.APP }}
-      ENV: ${{ inputs.environment || vars.ENV }}
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
@@ -451,21 +572,51 @@ jobs:
         if: ${{ always() }}
         shell: bash
         run: |
-          if [[ -f "reports/${APP}/business/business-report.json" ]]; then
-            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-            const fs = require('fs');
-            const app = process.env.APP;
-            const f = JSON.parse(fs.readFileSync(`reports/${app}/business/business-report.json`, 'utf8'));
-            console.log(`## TestigentAI merged quality report`);
-            console.log(`- Selected: **${f.total}**`);
-            console.log(`- Applicable: **${f.executionEligible}**`);
-            console.log(`- Executed: **${f.executed}/${f.executionEligible} (${f.executionRate}%)**`);
-            console.log(`- Quality failed: **${f.qualityFailed}** (known ${f.knownDefects}, unexpected ${f.unexpectedFailed})`);
-            console.log(`- CI-blocking issues: **${f.ciBlockingIssues}**`);
-            console.log(`- Self-healed: **${f.healing?.count ?? 0}** · AI calls: **${f.aiUsage?.calls ?? 0}**`);
-            console.log(`- Aggregated bundles: **${f.aggregation?.sourceReports ?? 1}**`);
-            NODE
+          set -euo pipefail
+
+          REPORT_FILE="reports/${APP}/business/business-report.json"
+
+          if [[ ! -f "${REPORT_FILE}" ]]; then
+            echo "Merged business report was not generated." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
           fi
+
+          node - <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
+          const fs = require('fs');
+
+          const app = process.env.APP;
+          const path = `reports/${app}/business/business-report.json`;
+
+          const f = JSON.parse(
+            fs.readFileSync(path, 'utf8')
+          );
+
+          console.log('## TestigentAI merged quality report');
+          console.log('');
+          console.log(`- Selected: **${f.total}**`);
+          console.log(`- Applicable: **${f.executionEligible}**`);
+          console.log(
+            `- Executed: **${f.executed}/${f.executionEligible} (${f.executionRate}%)**`
+          );
+          console.log(`- Not applicable: **${f.notApplicable ?? 0}**`);
+          console.log(`- Blocked: **${f.blocked ?? 0}**`);
+          console.log(
+            `- Quality failed: **${f.qualityFailed}** ` +
+            `(known ${f.knownDefects}, unexpected ${f.unexpectedFailed})`
+          );
+          console.log(
+            `- CI-blocking issues: **${f.ciBlockingIssues}**`
+          );
+          console.log(
+            `- Self-healed: **${f.healing?.count ?? 0}**`
+          );
+          console.log(
+            `- AI calls: **${f.aiUsage?.calls ?? 0}**`
+          );
+          console.log(
+            `- Aggregated report bundles: **${f.aggregation?.sourceReports ?? 1}**`
+          );
+          NODE
 
       - name: Upload final TestigentAI report
         id: final-upload
@@ -477,18 +628,34 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Publish report artifact link
+        if: ${{ always() && steps.final-upload.outputs.artifact-url != '' }}
+        shell: bash
+        run: |
+          {
+            echo ""
+            echo "### Final TestigentAI report"
+            echo ""
+            echo "[Download merged report artifact](${{ steps.final-upload.outputs.artifact-url }})"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Optional stakeholder email
         if: >-
           ${{
             github.event_name != 'pull_request' &&
             vars.BUSINESS_EMAIL_ENABLED == 'true'
           }}
+
         continue-on-error: true
+
         run: npm run ci:mail
+
         env:
           BUSINESS_EMAIL_ENABLED: 'true'
+
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
+
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -502,21 +669,29 @@ jobs:
             steps.final-upload.outcome == 'success' &&
             github.event_name != 'pull_request'
           }}
+
         continue-on-error: true
+
         shell: bash
+
         env:
           GH_TOKEN: ${{ github.token }}
+
         run: |
           set -euo pipefail
 
           artifact_ids="$({
             gh api \
               "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
-              --jq '.artifacts[] | select(
-                (.name | startswith("blob-")) or
-                (.name | startswith("business-")) or
-                (.name | startswith("ai-audit-"))
-              ) | .id'
+              --jq '
+                .artifacts[]
+                | select(
+                    (.name | startswith("blob-")) or
+                    (.name | startswith("business-")) or
+                    (.name | startswith("ai-audit-"))
+                  )
+                | .id
+              '
           } || true)"
 
           if [[ -z "${artifact_ids}" ]]; then
@@ -526,8 +701,11 @@ jobs:
 
           while IFS= read -r artifact_id; do
             [[ -z "${artifact_id}" ]] && continue
+
             echo "Removing intermediate artifact ${artifact_id}"
+
             gh api \
               --method DELETE \
               "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+
           done <<< "${artifact_ids}"
