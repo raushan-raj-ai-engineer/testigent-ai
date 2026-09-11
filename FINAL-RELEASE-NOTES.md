@@ -1,3 +1,16 @@
+# TestigentAI v1.2.0
+
+- Added schema-driven declarative/low-code UI authoring with explicit YAML-vs-TypeScript guidance.
+- Added `scenario:help`, `scenario:list`, `scenario:new`, `scenario:validate`, `scenario:run`, `scenario:schema`, and `scenario:doctor` commands.
+- Added Draft 2020-12 JSON Schema, VS Code YAML autocomplete/hover/validation association, and recommended editor extensions.
+- Added recursive per-project scenario discovery; every YAML scenario is now an independent Playwright test with `@scenario:<id>` selection, annotations, sharding, retries, and step-level reporting.
+- Added app-root-aware declarative navigation and safe-by-default cross-origin blocking.
+- Expanded constrained actions/locators while keeping arbitrary JavaScript/shell execution out of YAML.
+- Added declarative authoring contract tests and release-gate enforcement.
+- Hardened working-tree release verification so Git-ignored local `.env`/`.DS_Store` files do not create false release failures, while clean ZIPs remain strict because they contain no `.git` ignore context.
+- Incorporated the PR profile/console reporter/accessibility CI hardening and TodoMVC routing fix discovered during v1.1.2 PR verification.
+- Added deep research and operational user guide documents.
+
 # Final Enterprise Release Notes
 
 ## v1.1.2 CLI/audit usability hotfix

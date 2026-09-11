@@ -1,0 +1,13 @@
+{
+  "yaml.validate": true,
+  "yaml.completion": true,
+  "yaml.hover": true,
+  "yaml.schemas": {
+    "./schemas/testigent-scenario.schema.json": [
+      "projects/*/data/scenarios/**/*.yaml",
+      "projects/*/data/scenarios/**/*.yml",
+      "templates/project/data/scenarios/**/*.yaml",
+      "templates/project/data/scenarios/**/*.yml"
+    ]
+  }
+}

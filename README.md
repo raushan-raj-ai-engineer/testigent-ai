@@ -772,3 +772,8 @@ APP                         demo
 BUSINESS_EMAIL_ENABLED      false
 ENV                         qa
 GEMINI_MODEL                gemini-3.8-flash
+## Schema-driven declarative UI authoring
+
+TestigentAI v1.2.0 includes a governed low-code YAML layer for simple linear UI business flows. Authors do not need to memorize the DSL: run `npm run scenario:help`, scaffold with `npm run scenario:new`, receive JSON-Schema-driven VS Code completion/validation, preflight with `npm run scenario:validate`, and execute one scenario with `npm run scenario:run`. Complex control flow, cross-layer UI/API/DB orchestration, advanced browser behavior, and AI evaluation remain code-first TypeScript concerns.
+
+See `docs/24-DECLARATIVE-AUTOMATION-GUIDE.md` for the user guide and `docs/23-DECLARATIVE-AUTHORING-DEEP-RESEARCH.md` for the research/design rationale.

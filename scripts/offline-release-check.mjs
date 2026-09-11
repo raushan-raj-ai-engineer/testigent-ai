@@ -1,12 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
 const issues = [];
 const checked = { json: 0, text: 0, required: 0 };
 const ignoredDirs = new Set(['node_modules', '.git', 'reports', 'test-results', 'playwright-report', 'blob-report', '.runtime', '.auth', '.healing', '.report-history', 'coverage', 'dist']);
 const forbiddenNames = new Set(['.env', '.DS_Store']);
+
+function isGitIgnoredLocalFile(rel) {
+  if (!fs.existsSync(path.join(root, '.git'))) return false;
+  const result = spawnSync('git', ['check-ignore', '-q', '--', rel], { cwd: root, stdio: 'ignore' });
+  return result.status === 0;
+}
 const required = [
   'package.json', 'package-lock.json', 'playwright.config.ts', 'config/organization.json',
   'src/framework/core/execution/execution.policy.ts', 'src/framework/data/data-scope.ts',
@@ -15,6 +22,8 @@ const required = [
   'docs/TestigentAI_Issue_Challenge_Solution_Log.docx',
   'docs/TestigentAI_Product_Architecture_and_Scale_Roadmap.docx',
   'docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md', 'docs/22-COMPETITIVE-BENCHMARK-PLAN.md',
+  'docs/23-DECLARATIVE-AUTHORING-DEEP-RESEARCH.md', 'docs/24-DECLARATIVE-AUTOMATION-GUIDE.md',
+  'schemas/testigent-scenario.schema.json', 'scripts/scenario-authoring.ts',
 ];
 
 function walk(dir) {
@@ -38,7 +47,8 @@ const files = walk(root);
 for (const file of files) {
   const rel = path.relative(root, file).replace(/\\/g, '/');
   const base = path.basename(file);
-  if (forbiddenNames.has(base)) issues.push(`forbidden local/runtime file included: ${rel}`);
+  if (forbiddenNames.has(base) && !isGitIgnoredLocalFile(rel)) issues.push(`forbidden local/runtime file included: ${rel}`);
+  if (forbiddenNames.has(base) && isGitIgnoredLocalFile(rel)) continue;
   if (base.endsWith('.bak') || base.includes('.before-')) issues.push(`backup artifact included: ${rel}`);
 
   if (file.endsWith('.json')) {

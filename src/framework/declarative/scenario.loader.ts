@@ -1,29 +1,66 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
-import type { DeclarativeScenario } from './scenario.types';
+import { declarativeScenarioSchema, type DeclarativeScenario } from './scenario.schema';
+import { SUPPORTED_DECLARATIVE_ACTIONS } from './scenario.constants';
 
-/** Loads a constrained JSON/YAML scenario specification for low-code/manual-tester authoring. */
+/** Loads and validates one governed JSON/YAML scenario without executing arbitrary code. */
 export function loadDeclarativeScenario(filePath: string): DeclarativeScenario {
   const absolute = path.resolve(filePath);
   const text = fs.readFileSync(absolute, 'utf8');
   const extension = path.extname(absolute).toLowerCase();
-  const raw = extension === '.yaml' || extension === '.yml' ? YAML.parse(text) : JSON.parse(text);
+  let raw: unknown;
+
+  if (extension === '.yaml' || extension === '.yml') {
+    const document = YAML.parseDocument(text, { uniqueKeys: true });
+    if (document.errors.length) {
+      throw new Error(`${absolute}: invalid YAML: ${document.errors.map(error => error.message).join('; ')}`);
+    }
+    raw = document.toJS({ maxAliasCount: 20 });
+  } else if (extension === '.json') {
+    raw = JSON.parse(text);
+  } else {
+    throw new Error(`${absolute}: supported scenario extensions are .yaml, .yml, and .json.`);
+  }
+
   return validateScenario(raw, absolute);
 }
 
-/** Validates the declarative DSL without allowing arbitrary JavaScript execution. */
+/** Validates the declarative DSL and returns a normalized scenario with schema defaults applied. */
 export function validateScenario(raw: unknown, source = 'scenario'): DeclarativeScenario {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`${source}: scenario must be an object.`);
-  const value = raw as Record<string, unknown>;
-  if (typeof value.id !== 'string' || !value.id.trim()) throw new Error(`${source}: id is required.`);
-  if (typeof value.title !== 'string' || !value.title.trim()) throw new Error(`${source}: title is required.`);
-  if (!Array.isArray(value.steps) || !value.steps.length) throw new Error(`${source}: steps must be a non-empty array.`);
-  const allowed = new Set(['goto', 'click', 'fill', 'check', 'select', 'expectVisible', 'expectText']);
-  for (const [index, step] of value.steps.entries()) {
-    if (!step || typeof step !== 'object' || Array.isArray(step)) throw new Error(`${source}: step ${index + 1} must be an object.`);
-    const action = String((step as Record<string, unknown>).action ?? '');
-    if (!allowed.has(action)) throw new Error(`${source}: step ${index + 1} action '${action}' is not allowed.`);
+  assertAllowedActions(raw, source);
+  const result = declarativeScenarioSchema.safeParse(raw);
+  if (!result.success) {
+    const details = result.error.issues.map(issue => {
+      const pathLabel = issue.path.length ? issue.path.join('.') : '<root>';
+      return `${pathLabel}: ${issue.message}`;
+    });
+    throw new Error(`${source}: declarative scenario is invalid\n- ${details.join('\n- ')}\nRun "npm run scenario:help" for supported actions and authoring guidance.`);
   }
-  return raw as DeclarativeScenario;
+  return result.data;
+}
+
+
+/**
+ * Rejects unknown executable actions before union-schema parsing so authors get a
+ * deterministic governance error instead of Zod's generic "Invalid input".
+ */
+function assertAllowedActions(raw: unknown, source: string): void {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+
+  const steps = (raw as { steps?: unknown }).steps;
+  if (!Array.isArray(steps)) return;
+
+  const allowed = new Set<string>(SUPPORTED_DECLARATIVE_ACTIONS);
+  for (const [index, step] of steps.entries()) {
+    if (!step || typeof step !== 'object' || Array.isArray(step)) continue;
+    const action = (step as { action?: unknown }).action;
+    if (typeof action === 'string' && !allowed.has(action)) {
+      throw new Error(
+        `${source}: step ${index + 1} action '${action}' is not allowed. ` +
+        `Allowed actions: ${SUPPORTED_DECLARATIVE_ACTIONS.join(', ')}. ` +
+        'Run "npm run scenario:help" for authoring guidance.',
+      );
+    }
+  }
 }
