@@ -28,10 +28,21 @@ export async function runAccessibilitySmoke(page: Page): Promise<AccessibilitySm
     for (const control of Array.from(document.querySelectorAll('input:not([type="hidden"]), select, textarea'))) {
       const element = control as HTMLInputElement;
       const id = element.id;
-      const hasLabel = Boolean(id && document.querySelector(`label[for="${CSS.escape(id)}"]`));
-      const wrapped = Boolean(element.closest('label'));
+      const hasLabel = Boolean(element.labels?.length)
+        || Boolean(id && document.querySelector(`label[for="${CSS.escape(id)}"]`))
+        || Boolean(element.closest('label'));
       const aria = Boolean(element.getAttribute('aria-label')?.trim() || element.getAttribute('aria-labelledby')?.trim());
-      if (!hasLabel && !wrapped && !aria) issues.push({ rule: 'form-label', severity: 'error', message: 'Form control has no programmatic label.', selector: selectorFor(element) });
+      const weakFallback = element.getAttribute('placeholder')?.trim() || element.getAttribute('title')?.trim();
+      if (!hasLabel && !aria && weakFallback) {
+        issues.push({
+          rule: 'form-label-fallback',
+          severity: 'warning',
+          message: 'Form control relies on placeholder/title instead of a persistent programmatic label.',
+          selector: selectorFor(element),
+        });
+      } else if (!hasLabel && !aria) {
+        issues.push({ rule: 'form-label', severity: 'error', message: 'Form control has no programmatic label.', selector: selectorFor(element) });
+      }
     }
 
     for (const button of Array.from(document.querySelectorAll('button, [role="button"]'))) {

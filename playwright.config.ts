@@ -37,6 +37,8 @@ export default defineConfig({
   maxFailures: policy.maxFailures || undefined,
   reporter: process.env.CI
     ? [
+        // Keep a concise console reporter in CI so failed shard/test names and errors are visible in GitHub logs.
+        ['line'],
         ['blob', { outputDir: process.env.PLAYWRIGHT_BLOB_OUTPUT_DIR ?? path.join(reportRoot, 'blob-report') }],
         ['./src/framework/reporting/business.reporter.ts', { outputDir: path.join(reportRoot, 'business') }],
         ['./src/framework/execution/duration-history.reporter.ts'],
