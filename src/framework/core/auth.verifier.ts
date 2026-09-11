@@ -6,6 +6,13 @@ export interface AuthVerificationResult {
   reason?: string;
 }
 
+/**
+ * Verifies that the current page satisfies the configured project
+ * authentication contract.
+ *
+ * Verification happens before locator healing so an expired or invalid
+ * session cannot be misclassified as a selector failure.
+ */
 export async function verifyAuthenticatedPage(
   page: Page,
   verification: ProjectAuthVerificationConfig | undefined,
@@ -55,6 +62,13 @@ export async function verifyAuthenticatedPage(
   return { ok: true };
 }
 
+/**
+ * Enforces the configured authentication contract and fails fast when the
+ * restored browser session is not authenticated.
+ *
+ * Authentication failures are surfaced as authentication errors instead of
+ * being forwarded to the self-healing locator pipeline.
+ */
 export async function assertAuthenticatedPage(
   page: Page,
   verification: ProjectAuthVerificationConfig | undefined,

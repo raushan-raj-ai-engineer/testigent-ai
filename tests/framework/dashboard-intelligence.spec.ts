@@ -1,5 +1,5 @@
-import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import path from 'node:path';
 import { buildExecutionFacts } from '../../src/framework/analytics/execution-facts';
 import type { BusinessTestResult, HealingSummary } from '../../src/framework/analytics/report.types';
 import { classifyTestLayers } from '../../src/framework/analytics/test-layer.classifier';
@@ -45,10 +45,12 @@ test.describe('Business dashboard runtime', () => {
         sample('3', 'Order record persists @db', 'skipped', ['@db'], '/tests/database/order.spec.ts')
       ]
     });
-    const html = renderBusinessHtml(facts, { history: [
-      { runId: 'r1', generatedAt: '2026-09-01T00:00:00Z', environment: 'qa', application: 'demo', total: 3, passed: 2, failed: 1, passRate: 66.67, flaky: 0, healed: 0 },
-      { runId: 'r2', generatedAt: '2026-09-02T00:00:00Z', environment: 'qa', application: 'demo', total: 3, passed: 1, failed: 1, passRate: 33.33, flaky: 0, healed: 0 }
-    ] });
+    const html = renderBusinessHtml(facts, {
+      history: [
+        { runId: 'r1', generatedAt: '2026-09-01T00:00:00Z', environment: 'qa', application: 'demo', total: 3, passed: 2, failed: 1, passRate: 66.67, flaky: 0, healed: 0 },
+        { runId: 'r2', generatedAt: '2026-09-02T00:00:00Z', environment: 'qa', application: 'demo', total: 3, passed: 1, failed: 1, passRate: 33.33, flaky: 0, healed: 0 }
+      ]
+    });
 
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
     expect(html).toContain('AI runtime audit');
@@ -71,16 +73,16 @@ test.describe('Business dashboard runtime', () => {
     await expect(page.locator('#showing')).toContainText('1 of 3');
     await expect(page.locator('#filteredFail')).toHaveText('Fail 1');
 
-    await page.locator('#resetBtn').click();
+    await page.getByTestId('dashboard-reset-filters').click();
     await page.locator('#layerFilter').selectOption('api');
     await expect(page.locator('.test-row:not([hidden])')).toHaveCount(2);
 
-    await page.locator('#resetBtn').click();
+    await page.getByTestId('dashboard-reset-filters').click();
     await page.locator('#tagFilter').selectOption('@critical');
     await expect(page.locator('.test-row:not([hidden])')).toHaveCount(1);
     await expect(page.locator('.test-row:not([hidden]) .scenario-title')).toContainText('Checkout works');
 
-    await page.locator('#resetBtn').click();
+    await page.getByTestId('dashboard-reset-filters').click();
     await page.locator('#searchFilter').fill('order record');
     await expect(page.locator('.test-row:not([hidden])')).toHaveCount(1);
     await expect(page.locator('.test-row:not([hidden]) .scenario-title')).toContainText('Order record persists');

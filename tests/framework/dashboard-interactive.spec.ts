@@ -71,7 +71,7 @@ test('interactive dashboard filters, buttons, graphs and test-step details work 
     await expect(page.locator('#statusDonut .status-donut-svg')).toBeVisible();
     await expect(page.locator('#statusLegend')).toContainText('Passed');
     await expect(page.locator('#statusLegend')).toContainText('Failed');
-    await expect(page.locator('#statusLegend')).toContainText('Skipped');
+    await expect(page.locator('#statusLegend')).toContainText('Blocked');
     await expect(page.locator('.scenario-details').first()).toBeVisible();
     await page.emulateMedia({ media: 'screen' });
 

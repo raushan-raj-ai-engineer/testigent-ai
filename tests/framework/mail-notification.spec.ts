@@ -48,7 +48,9 @@ test('business email preview contains deterministic summary and V3-safe attachme
     expect(raw).toContain('[Framework Test] PASS - Order Portal - qa - 100% quality pass');
     expect(raw.toLowerCase()).toContain('automation release summary');
     expect(raw).toContain('Execution coverage: 100%');
-    expect(raw).toContain('https://reports.example.com/run-mail-test');
+    expect(raw.replace(/=\r?\n/g, '')).toContain(
+      'https://reports.example.com/run-mail-test',
+    );
     expect(raw).toContain('automation-business-report-mail-test.html');
     const topLevelEml = fs.readdirSync(path.dirname(result.previewPath!)).filter(name => name.endsWith('.eml'));
     expect(topLevelEml).toEqual(['latest-business-report.eml']);

@@ -20,6 +20,14 @@ export function enrichBusinessOutcomes(results: BusinessTestResult[], healing: H
   });
 }
 
+/**
+ * Classifies a completed test execution into the canonical TestigentAI
+ * business outcome used by dashboards, CI gates, reports, and notifications.
+ *
+ * This keeps Playwright execution semantics separate from business-quality
+ * semantics such as known defects, healed passes, retry-recovered tests,
+ * unexpected failures, and unexpected passes.
+ */
 export function classifyBusinessOutcome(result: BusinessTestResult, healed: boolean): BusinessOutcome {
   if (result.status === 'skipped') return 'SKIPPED';
   if (result.knownDefect && result.status === 'failed') return 'KNOWN_DEFECT';
@@ -30,6 +38,14 @@ export function classifyBusinessOutcome(result: BusinessTestResult, healed: bool
   return 'PASSED';
 }
 
+/**
+ * Builds the normalized business-outcome summary consumed by TestigentAI
+ * reporting channels.
+ *
+ * Centralizing this calculation ensures terminal output, HTML reports,
+ * JSON/CSV exports, email reporting, and merged CI dashboards use identical
+ * quality-status semantics.
+ */
 export function buildBusinessOutcomeSummary(results: BusinessTestResult[]): BusinessOutcomeSummary {
   const count = (outcome: BusinessOutcome) => results.filter(result => result.outcome === outcome).length;
   const cleanPassed = count('PASSED');

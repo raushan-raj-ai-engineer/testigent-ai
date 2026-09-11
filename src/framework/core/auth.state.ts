@@ -13,6 +13,13 @@ export interface ResolvedAuthStatePaths {
   sessionStoragePath?: string;
 }
 
+/**
+ * Resolves the canonical Playwright storage-state and sessionStorage snapshot
+ * paths for the active TestigentAI application.
+ *
+ * Authentication artifacts are runtime data and must not be committed to
+ * source control.
+ */
 export function resolveAuthStatePaths(
   auth: ProjectAuthConfig,
   root = process.cwd(),
@@ -28,12 +35,23 @@ export function resolveAuthStatePaths(
   };
 }
 
+/**
+ * Determines whether usable persisted authentication state exists for the
+ * active application.
+ *
+ * Both Playwright storage state and the optional sessionStorage companion are
+ * considered when determining whether authentication can be restored.
+ */
 export function hasPersistedAuthState(paths: ResolvedAuthStatePaths): boolean {
   const hasStorage = Boolean(paths.storageStatePath && storageStateHasData(paths.storageStatePath));
   const hasSession = Boolean(paths.sessionStoragePath && sessionStorageHasData(paths.sessionStoragePath));
   return hasStorage || hasSession;
 }
 
+/**
+ * Checks whether a Playwright storage-state file contains meaningful
+ * authentication data such as cookies or persisted browser origins.
+ */
 export function storageStateHasData(file: string): boolean {
   if (!fs.existsSync(file)) return false;
   try {
@@ -50,6 +68,10 @@ export function storageStateHasData(file: string): boolean {
   }
 }
 
+/**
+ * Checks whether a captured sessionStorage snapshot contains values that can
+ * participate in restoring an authenticated browser session.
+ */
 export function sessionStorageHasData(file: string): boolean {
   if (!fs.existsSync(file)) return false;
   try {
@@ -60,6 +82,11 @@ export function sessionStorageHasData(file: string): boolean {
   }
 }
 
+/**
+ * Captures sessionStorage values from the current page so applications that
+ * keep authentication outside Playwright storageState can restore the session
+ * in a later browser context.
+ */
 export async function captureSessionStorage(page: Page): Promise<SessionStorageSnapshot> {
   const result = await page.evaluate(() => ({
     origin: window.location.origin,
@@ -71,11 +98,19 @@ export async function captureSessionStorage(page: Page): Promise<SessionStorageS
   return { version: 1, origins: [result] };
 }
 
+/**
+ * Persists a captured sessionStorage snapshot to the framework-managed runtime
+ * authentication location for later restoration.
+ */
 export function writeSessionStorageSnapshot(file: string, snapshot: SessionStorageSnapshot): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(snapshot, null, 2));
 }
 
+/**
+ * Reads a previously persisted sessionStorage snapshot and returns the
+ * normalized data required by the authentication restoration process.
+ */
 export function readSessionStorageSnapshot(file: string): SessionStorageSnapshot | undefined {
   if (!fs.existsSync(file)) return undefined;
   try {
@@ -86,6 +121,11 @@ export function readSessionStorageSnapshot(file: string): SessionStorageSnapshot
   }
 }
 
+/**
+ * Installs a persisted sessionStorage snapshot before application code runs,
+ * allowing session-based authentication to survive creation of a fresh
+ * Playwright browser context.
+ */
 export async function installSessionStorageSnapshot(
   context: BrowserContext,
   snapshot: SessionStorageSnapshot | undefined,
