@@ -10,6 +10,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const NUMERIC_ID = /^\d{2,}$/;
 const LONG_ID = /^[A-Za-z0-9_-]{20,}$/;
 
+/**
+ * Reusable framework function `redactKnowledgeText`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function redactKnowledgeText(value: string): string {
   return value
     .replace(EMAIL, '[EMAIL_REDACTED]')
@@ -21,6 +26,11 @@ export function redactKnowledgeText(value: string): string {
     .trim();
 }
 
+/**
+ * Reusable framework function `sanitizeKnowledgeValue`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function sanitizeKnowledgeValue<T>(value: T): T {
   const base = redact(value);
   const visit = (input: unknown): unknown => {
@@ -34,6 +44,11 @@ export function sanitizeKnowledgeValue<T>(value: T): T {
   return visit(base) as T;
 }
 
+/**
+ * Reusable framework function `normalizeRoutePath`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function normalizeRoutePath(pathname: string): string {
   const normalized = pathname.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/';
   const parts = normalized.split('/').map(part => {
@@ -44,6 +59,11 @@ export function normalizeRoutePath(pathname: string): string {
   return parts.join('/') || '/';
 }
 
+/**
+ * Reusable framework function `safeVisibleText`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function safeVisibleText(values: string[], limit = 40): string[] {
   const out: string[] = [];
   const seen = new Set<string>();

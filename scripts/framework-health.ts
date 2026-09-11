@@ -12,6 +12,14 @@ const requiredFiles = [
   'src/framework/healing/healing.orchestrator.ts',
   'src/framework/intelligence/generation/framework.generator.ts',
   'src/framework/intelligence/review/proposal.review.ts',
+  'src/framework/core/execution/execution.policy.ts',
+  'src/framework/data/data-scope.ts',
+  'src/framework/execution/duration-history.store.ts',
+  'src/framework/declarative/scenario.runner.ts',
+  'src/framework/evaluation/evaluation.runner.ts',
+  'src/framework/quality/accessibility.smoke.ts',
+  'src/framework/quality/performance.budget.ts',
+  'src/framework/quality/visual.assertion.ts',
 ];
 
 const missing = requiredFiles.filter(file => !fs.existsSync(path.resolve(file)));

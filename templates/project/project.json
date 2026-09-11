@@ -1,0 +1,12 @@
+{
+  "execution": {
+    "fullyParallel": true
+  },
+  "profiles": {
+    "custom": {
+      "allowAi": false,
+      "allowGenerated": false,
+      "allowManual": false
+    }
+  }
+}

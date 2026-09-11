@@ -1,6 +1,6 @@
 # TestigentAI — Intelligent Quality Engineering Platform
 
-A clean multi-project Playwright + TypeScript quality platform for UI, API, database and data-driven automation with project-scoped reporting, guarded self-healing, optional AI/MCP tooling, requirement intelligence and CI/CD support.
+A multi-project, provider-neutral Playwright + TypeScript quality engineering platform for UI, API, database, data-driven and AI/agent quality with project-scoped reporting, governed self-healing, declarative authoring, optional AI/MCP tooling and CI/CD support.
 
 ## Design rule
 
@@ -22,6 +22,19 @@ npm ci
 npx playwright install chromium
 npm run validate:final
 ```
+
+
+## V6 product architecture
+
+V6 adds execution profiles, organization/project/environment/runtime policy layering, percentage workers, capability-aware auth, parallel-safe data identities, JSON/CSV/YAML/Excel case parameterization, duration history/balancing, governed declarative scenarios, visual/accessibility/performance lanes, and a provider-neutral AI-evaluation contract.
+
+```bash
+APP=demo ENV=qa TEST_PROFILE=regression PW_WORKERS=50% npm run test:project -- --project=chromium
+APP=demo ENV=qa npm run test:db
+APP=demo ENV=qa npm run scale:audit
+```
+
+Read `docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md`, `docs/20-V6-DATA-PARALLEL-EXECUTION.md`, `docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md`, and `docs/22-COMPETITIVE-BENCHMARK-PLAN.md`.
 
 ## Daily use
 

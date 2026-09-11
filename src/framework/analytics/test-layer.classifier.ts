@@ -27,6 +27,11 @@ export function classifyTestLayers(tags: string[], sourceFile?: string): { layer
   return { layers: ordered, testType: toTestType(ordered) };
 }
 
+/**
+ * Reusable framework function `toTestType`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function toTestType(layers: TestLayer[]): TestType {
   const has = (layer: TestLayer) => layers.includes(layer);
   if (has('UI') && has('API') && has('DATABASE')) return 'UI_API_DATABASE';
@@ -39,6 +44,11 @@ export function toTestType(layers: TestLayer[]): TestType {
   return 'OTHER';
 }
 
+/**
+ * Reusable framework function `formatTestType`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function formatTestType(type: TestType): string {
   return ({
     UI_ONLY: 'UI only',

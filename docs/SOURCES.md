@@ -21,3 +21,29 @@ The architecture and operational recommendations were checked against current fi
 - Playwright Test Agents: https://playwright.dev/docs/test-agents
 - GitHub custom agents: https://docs.github.com/en/copilot/concepts/agents/copilot-cli/about-custom-agents
 - GitHub custom agent configuration: https://docs.github.com/en/copilot/reference/custom-agents-configuration
+
+## V6 market / product research (2026)
+
+- Capgemini, World Quality Report 2025-26: https://www.capgemini.com/insights/research-library/world-quality-report-2025-26/
+- PractiTest, 2026 State of Testing: https://www.practitest.com/state-of-testing/
+- Playwright documentation (parallelism, sharding, agents): https://playwright.dev/docs/test-parallel ; https://playwright.dev/docs/test-sharding ; https://playwright.dev/docs/test-agents
+- BrowserStack AI Agents / Test Management: https://www.browserstack.com/automate/ai-agents ; https://www.browserstack.com/test-management
+- TestMu AI KaneAI: https://www.testmuai.com/kane-ai/
+- Tricentis Vision AI: https://docs.tricentis.com/tosca-2026.1/en-us/content/vision_ai/vision_ai_introduction.htm
+- Katalon MCP: https://docs.katalon.com/katalon-platform/testops-mcp-server
+- mabl AI application testing: https://www.mabl.com/ai-application-testing
+- Postman Agent Mode: https://learning.postman.com/docs/use/agent-mode/overview
+- DeepEval AI agent evaluation: https://deepeval.com/guides/guides-ai-agent-evaluation-metrics
+- LangSmith evaluation concepts: https://docs.langchain.com/langsmith/evaluation-concepts
+
+## 2026 market validation additions
+- Capgemini, World Quality Report 2025-26: https://www.capgemini.com/insights/research-library/world-quality-report-2025-26/
+- BrowserStack AI Test Management agents: https://www.browserstack.com/docs/test-management/browserstack-ai
+- BrowserStack test data generator agent: https://www.browserstack.com/docs/test-management/browserstack-ai/generate-test-datasets
+- BrowserStack Playwright AI self-heal: https://www.browserstack.com/docs/automate/playwright/self-healing
+- Tricentis Tosca Cloud release notes: https://docs.tricentis.com/tosca-cloud/en-us/content/release_notes/release_notes.htm
+- Tricentis Tosca Agentic Test Automation: https://docs.tricentis.com/tosca-2026.1/en-us/content/agentic_ai/landing_page.htm
+- Katalon TrueTest / Production Insights: https://katalon.com/truetest
+- DeepEval AI Agent Evaluation Metrics: https://deepeval.com/guides/guides-ai-agent-evaluation-metrics
+- LangSmith Evaluation: https://docs.langchain.com/langsmith/evaluation
+- LangSmith trajectory evaluation: https://docs.langchain.com/langsmith/trajectory-evals

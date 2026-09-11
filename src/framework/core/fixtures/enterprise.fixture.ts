@@ -1,6 +1,7 @@
 import { test as base, expect } from '@playwright/test';
 import { BaseApiClient } from '../../api/base-api.client';
 import { DataFactory } from '../../data/data.factory';
+import { DataScope } from '../../data/data-scope';
 import type { DatabaseClient } from '../../database/database.client';
 import { DatabaseFactory } from '../../database/database.factory';
 import { ObservedDatabaseClient } from '../../database/observed.database';
@@ -16,6 +17,7 @@ export interface EnterpriseFixtures {
   apiClient: BaseApiClient;
   db: DatabaseClient;
   data: DataFactory;
+  dataScope: DataScope;
   logger: EnterpriseLogger;
   healer: HealingOrchestrator;
 }
@@ -40,6 +42,19 @@ export const test = base.extend<EnterpriseFixtures>({
   },
 
   data: async ({}, use) => { await use(new DataFactory()); },
+
+  dataScope: async ({}, use, testInfo) => {
+    const scope = new DataScope({
+      runId: RunContext.get().runId,
+      application: process.env.APP ?? 'demo',
+      environment: process.env.ENV ?? 'qa',
+      testId: testInfo.testId,
+      retry: testInfo.retry,
+      parallelIndex: testInfo.parallelIndex,
+      caseId: testInfo.annotations.find(item => item.type === 'caseId')?.description,
+    });
+    await use(scope);
+  },
 
   db: async ({ logger }, use) => {
     const rawDb = DatabaseFactory.create();

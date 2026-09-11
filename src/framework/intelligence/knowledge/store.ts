@@ -49,6 +49,11 @@ function tokens(value:string):Set<string> {
   return new Set(value.toLowerCase().replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(token=>token.length>2&&!ignored.has(token)));
 }
 
+/**
+ * Reusable framework class `ApplicationKnowledgeStore`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class ApplicationKnowledgeStore {
   readonly root:string;
   constructor(projectRoot:string){ this.root=join(projectRoot,'.application-knowledge'); }

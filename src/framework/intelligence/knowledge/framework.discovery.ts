@@ -41,6 +41,11 @@ function reusableKind(path: string): ReusableCandidate['kind'] | undefined {
   return undefined;
 }
 
+/**
+ * Reusable framework function `semanticTokens`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function semanticTokens(value: string): Set<string> {
   return new Set(value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(/\s+/)
     .filter(token => token.length > 2 && !/^\d+$/.test(token) && !STOP_WORDS.has(token)));
@@ -50,6 +55,11 @@ function intersection(query: Set<string>, candidate: Set<string>): string[] {
   return [...query].filter(token => candidate.has(token)).sort();
 }
 
+/**
+ * Reusable framework function `discoverReusable`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function discoverReusable(root: string, query: string, limit = 20): Promise<ReusableCandidate[]> {
   const files = [...await walk(join(root, 'src')), ...await walk(join(root, 'projects'))];
   const queryTokens = semanticTokens(query);

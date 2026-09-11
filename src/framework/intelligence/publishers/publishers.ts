@@ -42,6 +42,11 @@ async function jiraCommentExists(base: string, issue: string, marker: string, he
   return (data.comments ?? []).some((comment: any) => adfToPlainText(comment.body).includes(marker));
 }
 
+/**
+ * Reusable framework class `JiraExecutionPublisher`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class JiraExecutionPublisher implements ExecutionStatusPublisher {
   async publish(x: ExecutionPublishRequest): Promise<PublishResult> {
     const actions = plannedActions('jira', x);
@@ -103,6 +108,11 @@ async function azureCommentExists(org: string, project: string, issue: string, m
   return (data.comments ?? []).some((comment: any) => String(comment.text ?? '').includes(marker));
 }
 
+/**
+ * Reusable framework class `AzureBoardsExecutionPublisher`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class AzureBoardsExecutionPublisher implements ExecutionStatusPublisher {
   async publish(x: ExecutionPublishRequest): Promise<PublishResult> {
     const actions = plannedActions('azure-boards', x);
@@ -158,6 +168,11 @@ async function githubCommentExists(api: string, repo: string, issue: string, mar
   return comments.some(comment => String(comment.body ?? '').includes(marker));
 }
 
+/**
+ * Reusable framework class `GitHubIssueExecutionPublisher`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class GitHubIssueExecutionPublisher implements ExecutionStatusPublisher {
   async publish(x: ExecutionPublishRequest): Promise<PublishResult> {
     const actions = plannedActions('github', x);
@@ -209,6 +224,11 @@ export class GitHubIssueExecutionPublisher implements ExecutionStatusPublisher {
   }
 }
 
+/**
+ * Reusable framework function `publisherFor`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function publisherFor(target: string): ExecutionStatusPublisher {
   switch (target.toLowerCase()) {
     case 'jira': return new JiraExecutionPublisher();

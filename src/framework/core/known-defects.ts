@@ -9,6 +9,11 @@ export interface KnownDefect {
   note?: string;
 }
 
+/**
+ * Reusable framework class `KnownDefectRegistry`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class KnownDefectRegistry {
   static get(project: string, id: string): KnownDefect | undefined {
     const file = path.resolve('projects', project, 'known-defects.json');

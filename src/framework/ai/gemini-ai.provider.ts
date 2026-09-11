@@ -35,6 +35,11 @@ interface GeminiErrorResponse {
  * - Use exponential backoff + jitter.
  * - Bound all attempts by AI_TOTAL_TIMEOUT_MS so provider retries cannot consume the entire test indefinitely.
  */
+/**
+ * Reusable framework class `GeminiAiProvider`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class GeminiAiProvider implements AiProvider {
   private readonly apiKey = process.env.GEMINI_API_KEY ?? '';
   private readonly model = process.env.GEMINI_MODEL ?? '';

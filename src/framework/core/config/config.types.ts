@@ -1,3 +1,4 @@
+import type { ExecutionSettings, ExecutionProfileName } from '../execution/execution.types';
 /** Author: Raushan Raj */
 export interface ApplicationConfig {
   name: string;
@@ -15,6 +16,8 @@ export interface ProjectEnvironmentConfig {
   environment: string;
   application: ApplicationConfig;
   auth?: ProjectAuthConfig;
+  execution?: ExecutionSettings;
+  profiles?: Partial<Record<ExecutionProfileName, ExecutionSettings>>;
 }
 
 /** Compatibility shape used by generic framework services. */
