@@ -73,6 +73,8 @@ jobs:
       HEALING_AI_ENABLED: 'false'
       CI: 'true'
       RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+      # PRs run the governed smoke profile; main pushes run the broader regression profile.
+      TEST_PROFILE: ${{ github.event_name == 'pull_request' && 'pr' || 'regression' }}
 
     strategy:
       fail-fast: false
@@ -104,7 +106,6 @@ jobs:
           npm run test:project --
           --project=chromium
           --shard=${{ matrix.shard }}
-          --grep-invert="@ai"
 
       - name: Upload technical blob
         if: ${{ always() && !cancelled() }}

@@ -28,6 +28,11 @@ export function createAiProvider(): AiProvider | undefined {
   return providers.length === 1 ? providers[0].provider : new FailoverAiProvider(providers);
 }
 
+/**
+ * Reusable framework function `createAiGateway`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function createAiGateway(testId?: string): AiGateway | undefined {
   const provider = createAiProvider();
   return provider ? new AiGateway(provider, testId) : undefined;
@@ -67,6 +72,11 @@ export function resolveProviderOrder(): SupportedAiProvider[] {
   return providers;
 }
 
+/**
+ * Reusable framework function `createSingleProvider`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function createSingleProvider(name: SupportedAiProvider): AiProvider {
   enforceCloudEgressPolicy(name);
   switch (name) {

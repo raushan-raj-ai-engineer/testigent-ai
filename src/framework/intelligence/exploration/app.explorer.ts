@@ -89,6 +89,11 @@ async function installGuidedActionCapture(context:BrowserContext,events:GuidedEv
   });
 }
 
+/**
+ * Reusable framework function `safeExplore`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function safeExplore(root:string,base=process.env.APP_BASE_URL??''){
   allowedEnvironment(); if(!base)throw new Error('APP_BASE_URL is required.'); const baseUrl=parsedBase(base); const resolution=await resolveApplicationForUrl(root,baseUrl.toString());
   if(!resolution.app)throw new Error(resolution.reason); const app=resolution.app, origins=allowedOrigins(baseUrl), store=new ApplicationKnowledgeStore(root);
@@ -111,6 +116,11 @@ export async function safeExplore(root:string,base=process.env.APP_BASE_URL??'')
   }finally{await browser.close();}
 }
 
+/**
+ * Reusable framework function `guidedLearn`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function guidedLearn(root:string,base=process.env.APP_BASE_URL??'',journeyName=process.env.EXPLORATION_JOURNEY_NAME??'Guided business journey'){
   allowedEnvironment(); if(!base)throw new Error('APP_BASE_URL is required.'); if(!process.stdin.isTTY)throw new Error('app:learn requires an interactive terminal.');
   const baseUrl=parsedBase(base),resolution=await resolveApplicationForUrl(root,baseUrl.toString()); if(!resolution.app)throw new Error(resolution.reason); const app=resolution.app,origins=allowedOrigins(baseUrl),store=new ApplicationKnowledgeStore(root);

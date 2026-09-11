@@ -33,6 +33,11 @@ function azureRef(source: string): { org: string; project: string; id: string } 
   } catch { return undefined; }
 }
 
+/**
+ * Reusable framework function `loadRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function loadRequirement(source: string) {
   if (/^JIRA:/i.test(source)) return new JiraRequirementAdapter().getRequirement(source.replace(/^JIRA:/i, ''));
   if (/^(?:AZURE|ADO):/i.test(source)) return new AzureBoardsRequirementAdapter().getRequirement(source.replace(/^(?:AZURE|ADO):/i, ''));

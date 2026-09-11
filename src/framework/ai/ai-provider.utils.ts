@@ -28,6 +28,11 @@ export const HEALING_OUTPUT_SCHEMA = {
   additionalProperties: false
 } as const;
 
+/**
+ * Reusable framework function `buildHealingPrompt`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function buildHealingPrompt(request: AiHealingRequest): { system: string; user: string } {
   const system = [
     'You are a guarded Playwright locator recovery assistant.',
@@ -50,6 +55,11 @@ export function buildHealingPrompt(request: AiHealingRequest): { system: string;
   return { system, user };
 }
 
+/**
+ * Reusable framework function `buildSummaryPrompt`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function buildSummaryPrompt(payload: unknown): { system: string; user: string } {
   return {
     system: [
@@ -67,6 +77,11 @@ export function buildSummaryPrompt(payload: unknown): { system: string; user: st
   };
 }
 
+/**
+ * Reusable framework function `parseHealingJson`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function parseHealingJson(
   content: string | undefined,
   metadata: { provider: string; model?: string; latencyMs?: number }
@@ -103,6 +118,11 @@ export function parseHealingJson(
   }
 }
 
+/**
+ * Reusable framework function `extractOpenAiResponseText`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function extractOpenAiResponseText(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
   const record = body as Record<string, unknown>;
@@ -120,6 +140,11 @@ export function extractOpenAiResponseText(body: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Reusable framework function `fetchWithTimeout`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

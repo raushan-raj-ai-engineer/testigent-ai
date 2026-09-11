@@ -1,0 +1,4 @@
+[
+  { "caseId": "login-valid-001", "username": "demo.user", "password": "demo123", "expected": "success" },
+  { "caseId": "login-invalid-001", "username": "bad.user", "password": "wrong", "expected": "rejected" }
+]

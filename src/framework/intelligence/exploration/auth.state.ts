@@ -10,9 +10,19 @@ export function explorationStorageStatePath(root:string,app:string):string{
   return join(root,'.auth',`${app}.exploration.json`);
 }
 
+/**
+ * Reusable framework function `contextOptionsWithAuth`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function contextOptionsWithAuth(root:string,app:string):Promise<{storageState?:string}>{
   const path=explorationStorageStatePath(root,app);
   return (await exists(path))?{storageState:path}:{};
 }
 
+/**
+ * Reusable framework function `ensureStorageStateDirectory`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function ensureStorageStateDirectory(path:string):Promise<void>{await mkdir(dirname(path),{recursive:true});}

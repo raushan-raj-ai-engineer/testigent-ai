@@ -23,6 +23,11 @@ function jiraHeaders(email: string, token: string, bearer: string): Record<strin
   return { Authorization: `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`, Accept: 'application/json' };
 }
 
+/**
+ * Reusable framework class `JiraRequirementAdapter`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class JiraRequirementAdapter implements RequirementSourceAdapter {
   constructor(
     private readonly base = process.env.JIRA_BASE_URL ?? '',
@@ -71,6 +76,11 @@ function azureAuthHeaders(pat: string, accessToken: string): Record<string, stri
   throw new Error('Set AZURE_DEVOPS_ACCESS_TOKEN (recommended for automation) or AZURE_DEVOPS_PAT.');
 }
 
+/**
+ * Reusable framework class `AzureBoardsRequirementAdapter`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class AzureBoardsRequirementAdapter implements RequirementSourceAdapter {
   constructor(
     private readonly org = process.env.AZURE_DEVOPS_ORG_URL ?? '',
@@ -118,6 +128,11 @@ export class AzureBoardsRequirementAdapter implements RequirementSourceAdapter {
   }
 }
 
+/**
+ * Reusable framework class `GitHubIssueRequirementAdapter`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class GitHubIssueRequirementAdapter implements RequirementSourceAdapter {
   constructor(
     private readonly repo = process.env.GITHUB_REQUIREMENT_REPO ?? '',

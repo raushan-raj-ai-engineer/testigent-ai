@@ -75,6 +75,11 @@ function featureReuseApplication(candidates: ReusableCandidate[]): string | unde
   return ranked[0][0];
 }
 
+/**
+ * Reusable framework function `resolveApplicationTarget`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function resolveApplicationTarget(
   root: string,
   requirement: RequirementDocument,
@@ -135,6 +140,11 @@ export async function resolveApplicationTarget(
   };
 }
 
+/**
+ * Reusable framework function `resolveApplicationForUrl`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function resolveApplicationForUrl(root: string, baseUrl: string): Promise<ApplicationResolution> {
   const synthetic: RequirementDocument = {
     sourceType: 'unknown', sourceId: 'application-exploration', title: 'Application exploration',

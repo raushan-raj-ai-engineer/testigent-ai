@@ -34,7 +34,7 @@ for (const file of walk(root).filter(f => /\.(?:ts|tsx|js|mjs|cjs)$/.test(f))) {
 }
 
 for (const project of fs.readdirSync(path.join(root, 'projects'), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)) {
-  for (const needed of [`projects/${project}/config`, `projects/${project}/fixtures/test.fixture.ts`, `projects/${project}/tests`]) {
+  for (const needed of [`projects/${project}/project.json`, `projects/${project}/config`, `projects/${project}/fixtures/test.fixture.ts`, `projects/${project}/tests`]) {
     if (!fs.existsSync(path.join(root, needed))) issues.push(`project contract missing: ${needed}`);
   }
 }
@@ -52,6 +52,18 @@ try {
 }
 
 
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  for (const [group, entries] of Object.entries({ dependencies: pkg.dependencies ?? {}, devDependencies: pkg.devDependencies ?? {} })) {
+    for (const [name, spec] of Object.entries(entries)) {
+      if (String(spec) === 'latest' || /^[~^]/.test(String(spec))) issues.push(`floating dependency not allowed in release: ${group}.${name}=${spec}`);
+    }
+  }
+} catch (error) {
+  issues.push(`unable to validate dependency pinning: ${error.message}`);
+}
+
+
 for (const required of [
   'docs/14-ROOT-FOLDERS-AND-LOCAL-STATE.md',
   'docs/15-NEW-PROJECT-HANDOFF.md',
@@ -59,7 +71,23 @@ for (const required of [
   'docs/17-DEEP-REVIEW-2026.md',
   'scripts/harden-agent-definitions.ts',
   'scripts/authoring-productivity.ts',
-  'src/framework/ai/ai.audit.ts'
+  'src/framework/ai/ai.audit.ts',
+  'src/framework/core/execution/execution.policy.ts',
+  'src/framework/core/execution/execution.cli-filters.ts',
+  'src/framework/data/data-scope.ts',
+  'src/framework/execution/duration-history.store.ts',
+  'src/framework/evaluation/evaluation.runner.ts',
+  'src/framework/declarative/scenario.runner.ts',
+  'docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md',
+  'docs/20-V6-DATA-PARALLEL-EXECUTION.md',
+  'docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md',
+  'docs/22-COMPETITIVE-BENCHMARK-PLAN.md',
+  'scripts/offline-release-check.mjs',
+  'scripts/generate-sbom.mjs',
+  'scripts/generate-release-manifest.mjs',
+  'VERIFY_RELEASE.sh',
+  'APPLY_UPGRADE.sh',
+  'VERIFY_UPGRADE.sh'
 ]) {
   if (!fs.existsSync(path.join(root, required))) issues.push(`required deep-review artifact missing: ${required}`);
 }
@@ -69,6 +97,7 @@ try {
   if (!pkg.scripts?.['agents:init']) issues.push('missing generic agents:init script');
   if (!pkg.scripts?.['agents:policy']) issues.push('missing agent enterprise-policy script');
   if (!pkg.scripts?.['authoring:report']) issues.push('missing authoring productivity report script');
+  if (!pkg.scripts?.['comments:audit']?.includes('docs:comment-audit')) issues.push('comments:audit must alias docs:comment-audit for CLI compatibility');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);

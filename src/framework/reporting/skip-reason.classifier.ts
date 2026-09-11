@@ -16,6 +16,11 @@ const LABELS: Record<SkipCategory, string> = {
   OTHER: 'Other / conditional skip'
 };
 
+/**
+ * Reusable framework function `classifySkipReason`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function classifySkipReason(
   reason?: string,
   context: SkipClassificationContext = {}
@@ -47,6 +52,11 @@ export function classifySkipReason(
   return { category, label: LABELS[category] };
 }
 
+/**
+ * Reusable framework function `buildSkipSummary`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function buildSkipSummary(results: BusinessTestResult[]): SkipSummary {
   type Bucket = {
     label: string;

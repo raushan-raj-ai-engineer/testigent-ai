@@ -108,6 +108,11 @@ function recordMaterialization(
   }
 }
 
+/**
+ * Reusable framework function `generateFrameworkProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function generateFrameworkProposal(root: string, analysis: RequirementAnalysis) {
   const requirement = analysis.requirement;
   const feature = kebab(requirement.feature || requirement.title);

@@ -1,0 +1,61 @@
+{
+  "execution": {
+    "workers": "50%",
+    "fullyParallel": true,
+    "durationBalancing": "native",
+    "allowAi": false,
+    "allowGenerated": false,
+    "allowManual": false
+  },
+  "profiles": {
+    "pr": {
+      "workers": "50%",
+      "retries": 1,
+      "maxFailures": 10,
+      "includeTags": ["@smoke"],
+      "allowAi": false,
+      "allowGenerated": false,
+      "allowManual": false
+    },
+    "smoke": {
+      "workers": "50%",
+      "retries": 1,
+      "maxFailures": 10,
+      "includeTags": ["@smoke"],
+      "allowAi": false,
+      "allowGenerated": false,
+      "allowManual": false
+    },
+    "regression": {
+      "workers": "50%",
+      "retries": 1,
+      "maxFailures": 50,
+      "excludeTags": ["@manual"],
+      "allowAi": false,
+      "allowGenerated": false,
+      "allowManual": false
+    },
+    "nightly": {
+      "workers": "75%",
+      "retries": 1,
+      "maxFailures": 100,
+      "durationBalancing": "native",
+      "allowAi": true,
+      "allowGenerated": false,
+      "allowManual": false
+    },
+    "release": {
+      "workers": "50%",
+      "retries": 0,
+      "maxFailures": 1,
+      "allowAi": false,
+      "allowGenerated": false,
+      "allowManual": false
+    },
+    "custom": {
+      "allowAi": false,
+      "allowGenerated": false,
+      "allowManual": false
+    }
+  }
+}

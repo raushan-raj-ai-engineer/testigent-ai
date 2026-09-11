@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ApplicationRegistry } from '../src/framework/core/config/application.registry';
+import { laneRequiresBrowserAuth, resolveExecutionPolicy } from '../src/framework/core/execution/execution.policy';
+import type { ExecutionProfileName, TestLane } from '../src/framework/core/execution/execution.types';
 
 export interface ProjectPreflight {
   application: string;
@@ -9,16 +11,30 @@ export interface ProjectPreflight {
   uiBaseUrl: string;
   apiBaseUrl: string;
   storageState?: string;
+  lane?: TestLane;
+  profile: ExecutionProfileName;
 }
 
-export function projectPreflight(requireAuth = true): ProjectPreflight {
+export interface ProjectPreflightOptions {
+  requireAuth?: boolean;
+  lane?: TestLane;
+}
+
+/**
+ * Validates one project before Playwright starts, including capability-aware auth requirements.
+ * DB/API lanes can run without browser storage state; UI-like lanes still fail fast when authentication is required.
+ */
+export function projectPreflight(options: ProjectPreflightOptions | boolean = {}): ProjectPreflight {
+  const normalized = typeof options === 'boolean' ? { requireAuth: options } : options;
   const application = process.env.APP?.trim();
   if (!application) throw new Error(`APP is required. Available projects: ${ApplicationRegistry.listProjects().join(', ') || '(none)'}`);
   const environment = process.env.ENV?.trim() || 'qa';
+  const policy = resolveExecutionPolicy({ application, environment, lane: normalized.lane });
   const config = ApplicationRegistry.projectConfig(application, environment);
   const testDir = path.resolve('projects', application, 'tests');
   if (!fs.existsSync(testDir)) throw new Error(`Project tests not found: ${testDir}`);
 
+  const requireAuth = normalized.requireAuth ?? laneRequiresBrowserAuth(policy.lane);
   let storageState: string | undefined;
   const auth = config.auth ?? { strategy: 'none' as const };
   if (auth.strategy === 'storageState') {
@@ -27,7 +43,7 @@ export function projectPreflight(requireAuth = true): ProjectPreflight {
       storageState = path.isAbsolute(configured) ? configured : path.resolve(configured);
       if (requireAuth && auth.required !== false && !fs.existsSync(storageState)) {
         throw new Error(
-          `Authentication state is required but missing: ${storageState}\n` +
+          `Authentication state is required for lane '${policy.lane ?? 'unspecified'}' but missing: ${storageState}\n` +
           `Run: APP=${application} ENV=${environment} APPLICATION_EXPLORATION_ENABLED=true npm run app:auth`,
         );
       }
@@ -42,7 +58,9 @@ export function projectPreflight(requireAuth = true): ProjectPreflight {
     testDir,
     uiBaseUrl: config.application.uiBaseUrl,
     apiBaseUrl: config.application.apiBaseUrl,
-    storageState,
+    storageState: requireAuth ? storageState : undefined,
+    lane: policy.lane,
+    profile: policy.profile,
   };
 }
 

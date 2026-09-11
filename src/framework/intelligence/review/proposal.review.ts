@@ -197,6 +197,11 @@ async function ensureSnapshot(root: string, requirementId: string, entry: Propos
   await copyFile(source, snapshot);
 }
 
+/**
+ * Reusable framework function `initializeProposalReview`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function initializeProposalReview(
   root: string,
   manifest: GenerationManifest,
@@ -272,6 +277,11 @@ async function loadPromotionManifest(root: string, requirementId: string): Promi
   return await exists(path) ? readJson<PromotionManifest>(path) : undefined;
 }
 
+/**
+ * Reusable framework function `inspectProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function inspectProposal(root: string, requirementId: string): Promise<ProposalInspection> {
   const manifest = await loadGenerationManifest(root, requirementId);
   let state = await loadReviewState(root, requirementId);
@@ -348,6 +358,11 @@ function runTypecheck(root: string, options?: ProposalReviewOptions): void {
   }
 }
 
+/**
+ * Reusable framework function `validateProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function validateProposal(root: string, requirementId: string): Promise<ProposalInspection> {
   const inspection = await inspectProposal(root, requirementId);
   if (inspection.issues.length) {
@@ -356,6 +371,11 @@ export async function validateProposal(root: string, requirementId: string): Pro
   return inspection;
 }
 
+/**
+ * Reusable framework function `approveProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function approveProposal(root: string, requirementId: string, reviewerValue?: string, note?: string, options?: ProposalReviewOptions): Promise<ProposalReviewState> {
   const reviewer = reviewerFrom(reviewerValue);
   const inspection = await inspectProposal(root, requirementId);
@@ -381,6 +401,11 @@ export async function approveProposal(root: string, requirementId: string, revie
   return state;
 }
 
+/**
+ * Reusable framework function `rejectProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function rejectProposal(root: string, requirementId: string, reviewerValue?: string, reason?: string): Promise<ProposalReviewState> {
   const reviewer = reviewerFrom(reviewerValue);
   const message = reason?.trim();
@@ -404,6 +429,11 @@ export async function rejectProposal(root: string, requirementId: string, review
   return state;
 }
 
+/**
+ * Reusable framework function `reopenProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function reopenProposal(root: string, requirementId: string, reviewerValue?: string, note?: string): Promise<ProposalReviewState> {
   const reviewer = reviewerFrom(reviewerValue);
   const manifest = await loadGenerationManifest(root, requirementId);
@@ -456,6 +486,11 @@ async function restoreFromBackup(root: string, backupRoot: string, mappings: Arr
   }
 }
 
+/**
+ * Reusable framework function `promoteProposal`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function promoteProposal(root: string, requirementId: string, options?: ProposalReviewOptions): Promise<PromotionManifest> {
   const state = await loadReviewState(root, requirementId);
   if (!state || state.status !== 'APPROVED') throw new Error(`Proposal '${requirementId}' must be APPROVED before promotion.`);
@@ -524,6 +559,11 @@ export async function promoteProposal(root: string, requirementId: string, optio
   return manifest;
 }
 
+/**
+ * Reusable framework function `listProposals`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function listProposals(root: string): Promise<Array<{ requirementId: string; status: ProposalReviewStatus; targetApplication?: string; reviewer?: string }>> {
   const base = join(root, 'generated', 'requirements');
   if (!(await exists(base))) return [];

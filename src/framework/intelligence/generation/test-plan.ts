@@ -26,6 +26,11 @@ function semanticUnique(values: string[]): string[] {
   return out;
 }
 
+/**
+ * Reusable framework function `buildTestPlan`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function buildTestPlan(analysis: RequirementAnalysis) {
   const requirement = analysis.requirement;
   const hasManualJourney = requirement.manualTestSteps.length > 0;

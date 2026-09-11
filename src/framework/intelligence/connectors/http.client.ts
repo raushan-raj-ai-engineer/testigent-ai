@@ -47,6 +47,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Reusable framework function `connectorJson`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function connectorJson<T = unknown>(
   url: string,
   init: RequestInit = {},
@@ -90,12 +95,22 @@ export async function connectorJson<T = unknown>(
   throw lastError instanceof Error ? lastError : new Error(`Connector request failed for ${safeUrl(url)}`);
 }
 
+/**
+ * Reusable framework function `connectorBoolean`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function connectorBoolean(name: string, fallback = false): boolean {
   const value = process.env[name];
   if (value == null || value.trim() === '') return fallback;
   return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
 }
 
+/**
+ * Reusable framework function `jsonPointerSegment`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function jsonPointerSegment(value: string): string {
   return value.replace(/~/g, '~0').replace(/\//g, '~1');
 }

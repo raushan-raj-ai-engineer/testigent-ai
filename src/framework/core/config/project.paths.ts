@@ -1,5 +1,10 @@
 import path from 'node:path';
 
+/**
+ * Reusable framework class `ProjectPaths`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export class ProjectPaths {
   static project(app = process.env.APP?.trim() || 'demo'): string { return path.resolve('projects', app); }
   static tests(app = process.env.APP?.trim() || 'demo'): string { return path.join(this.project(app), 'tests'); }

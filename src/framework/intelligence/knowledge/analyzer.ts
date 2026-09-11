@@ -35,6 +35,11 @@ function classifyCandidateRoles(requirement: RequirementDocument, candidates: Re
   }).filter(candidate => !(['fixture', 'data'] as ReusableCandidate['kind'][]).includes(candidate.kind) || candidate.role === 'feature');
 }
 
+/**
+ * Reusable framework function `analyzeRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function analyzeRequirement(root: string, requirement: RequirementDocument): Promise<RequirementAnalysis> {
   const text = [
     requirement.title, requirement.description, ...(requirement.preconditions ?? []), ...(requirement.scenarioHints ?? []),

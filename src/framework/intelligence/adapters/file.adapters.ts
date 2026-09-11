@@ -10,6 +10,11 @@ function arr(v:unknown):string[]{return Array.isArray(v)?v.map(String):v==null?[
 function lowerRecord(record:Record<string,unknown>):Record<string,unknown>{return Object.fromEntries(Object.entries(record).map(([k,v])=>[k.trim().toLowerCase(),v]));}
 function field(o:Record<string,unknown>,...names:string[]):string{for(const name of names){const value=o[name.toLowerCase()];if(value!=null&&String(value).trim())return String(value).trim();}return '';}
 
+/**
+ * Reusable framework function `readMarkdownRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function readMarkdownRequirement(filePath:string):Promise<RequirementDocument>{
   const text=await readFile(filePath,'utf8');const s=mdSections(text);const get=(...n:string[])=>n.flatMap(x=>s.get(x)??[]);
   const title=text.split(/\r?\n/).find(x=>/^#\s+/.test(x))?.replace(/^#\s+/,'').trim()||basename(filePath,extname(filePath));
@@ -26,6 +31,11 @@ export async function readMarkdownRequirement(filePath:string):Promise<Requireme
   };
 }
 
+/**
+ * Reusable framework function `readJsonRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function readJsonRequirement(filePath:string):Promise<RequirementDocument>{
   const raw=JSON.parse(await readFile(filePath,'utf8')) as Record<string,any>;
   const steps=(Array.isArray(raw.manualTestSteps??raw.steps)?(raw.manualTestSteps??raw.steps):[])
@@ -41,6 +51,11 @@ export async function readJsonRequirement(filePath:string):Promise<RequirementDo
 
 function parseCsv(t:string){const rows:string[][]=[];let row:string[]=[],cell='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(c==='"'){if(q&&t[i+1]==='"'){cell+='"';i++;}else q=!q;}else if(c===','&&!q){row.push(cell.trim());cell='';}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cell.trim());cell='';if(row.some(Boolean))rows.push(row);row=[];}else cell+=c;}if(cell||row.length){row.push(cell.trim());if(row.some(Boolean))rows.push(row);}return rows;}
 
+/**
+ * Reusable framework function `readCsvRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function readCsvRequirement(filePath:string):Promise<RequirementDocument>{
   const rows=parseCsv(await readFile(filePath,'utf8'));if(!rows.length)throw new Error(`Empty CSV: ${filePath}`);
   const h=rows[0].map(x=>x.trim().toLowerCase());const objs=rows.slice(1).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]??''])));const f=lowerRecord((objs[0]??{}) as Record<string,unknown>);
@@ -55,6 +70,11 @@ export async function readCsvRequirement(filePath:string):Promise<RequirementDoc
   };
 }
 
+/**
+ * Reusable framework function `readExcelRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function readExcelRequirement(filePath:string):Promise<RequirementDocument>{
   const XLSX=await import('xlsx');const wb=XLSX.readFile(filePath);const sheet=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json<Record<string,unknown>>(sheet,{defval:''});if(!rows.length)throw new Error(`Empty Excel file: ${filePath}`);
   const normalized=rows.map(lowerRecord);const f=normalized[0];
@@ -68,4 +88,9 @@ export async function readExcelRequirement(filePath:string):Promise<RequirementD
   };
 }
 
+/**
+ * Reusable framework function `readLocalRequirement`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export async function readLocalRequirement(filePath:string){const e=extname(filePath).toLowerCase();if(['.md','.markdown'].includes(e))return readMarkdownRequirement(filePath);if(e==='.json')return readJsonRequirement(filePath);if(e==='.csv')return readCsvRequirement(filePath);if(['.xlsx','.xls'].includes(e))return readExcelRequirement(filePath);throw new Error(`Unsupported requirement file type: ${e}`);}

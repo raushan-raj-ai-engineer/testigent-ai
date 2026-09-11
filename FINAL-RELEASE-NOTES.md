@@ -1,5 +1,17 @@
 # Final Enterprise Release Notes
 
+## v1.1.2 CLI/audit usability hotfix
+
+- Added `comments:audit` as a compatibility alias for `docs:comment-audit`, so both intuitive and canonical command names work.
+- Removed the misleading scale warning for pure data-contract specs: tests explicitly classified with `@data` no longer require a fake UI/API/DB/E2E lane tag.
+- The release static gate now enforces the comment-audit alias so this CLI contract cannot regress silently.
+
+## v1.1.1 verification hotfix
+
+- Fixed a TypeScript compile defect in `scripts/test-project.ts` where an optional function parameter type was indexed through `Parameters<...>[0]`, producing `TS2339` because the parameter can be `undefined`.
+- `ProjectPreflight.profile` and the runner helper now use the explicit reusable `ExecutionProfileName` contract. The unsafe cast was removed.
+- This defect was found by the clean `VERIFY_RELEASE.sh` flow after dependency installation, demonstrating why `typecheck` remains a mandatory release gate.
+
 This release converts the repository from an application-centric layout into a reusable multi-project quality platform.
 
 Key changes: reusable engines moved under `src/framework`; project code/data/config/tests moved under `projects/<project>`; generic project creation/preflight/test runner added; project-scoped reports/results/history/healing added; auth state is project-configured and preflighted; requirement generation/review targets project-owned paths; application defects use project known-defect registry; obsolete generated snapshots/backups/duplicate documentation were removed; current architecture/daily-use/onboarding/security/CI docs replace historical phase documents.
@@ -37,3 +49,25 @@ Provider selection is user/CI controlled: `AI_PROVIDER_MODE=single` uses exactly
 - Removed pre-generated `.claude`, `.codex`, `.opencode`, `opencode.json` and empty `.playwright` release clutter; selected loops are generated on demand.
 - Added measured authoring-productivity sessions and baseline-backed savings reporting.
 - Added root-folder/local-state, new-project handoff and Playwright Agent productivity guides.
+
+## V6 — Market-informed scale and quality architecture
+
+- Added execution profiles (`pr`, `smoke`, `regression`, `nightly`, `release`, `custom`) and layered organization/project/environment/runtime policy resolution.
+- Added percentage worker support (`PW_WORKERS=50%`), Playwright-native lanes/sharding, optional duration-aware balancing and indexed duration history.
+- Removed DB/API-only dependence on browser authentication preflight.
+- Added parallel-safe `dataScope`, duplicate `caseId` protection, declaration-time JSON/CSV/YAML/Excel case loading, and a one-row-per-test reference.
+- Added visual/accessibility/performance quality lanes with explicit scope boundaries.
+- Added governed JSON/YAML declarative scenarios with allowlisted actions only.
+- Added a provider-neutral AI/agent evaluation contract with deterministic hard-gate metrics and bounded concurrency; DeepEval/LangSmith can be integrated through adapters rather than becoming core dependencies.
+- Pinned package dependency versions to the committed lockfile for deterministic installation.
+- Added scale and reusable-API documentation audits plus market/benchmark guidance.
+- Added current 2026 competitive research. Commercial device clouds, full WCAG engines, SAP/desktop drivers and load generators are treated as integration targets rather than falsely claimed built-in infrastructure.
+
+## Final deep-review hardening
+
+- Closed Playwright CLI filter-precedence gap: user grep/invert flags are merged with, rather than replace, mandatory profile/lane governance.
+- Hardened parallel data ownership with environment + unique Playwright test identity and declaration-time `caseId` annotations.
+- Added invalid-duration guards for history-based scheduling metadata.
+- Added dependency-independent release/secret/reproducibility verification and a clean-install `VERIFY_RELEASE.sh` gate.
+- Added lockfile-derived CycloneDX SBOM generation and release supply-chain inventory.
+- Market positioning remains benchmark-led: TestigentAI is the provider-neutral quality control plane; dedicated real-device, specialist accessibility and load infrastructure remain pluggable providers rather than fake built-ins.

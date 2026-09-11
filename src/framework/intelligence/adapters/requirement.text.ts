@@ -29,6 +29,11 @@ function unique(values: string[]): string[] {
   });
 }
 
+/**
+ * Reusable framework function `cleanListLine`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function cleanListLine(value: string): string {
   return value
     .replace(/^\s*[-*+]\s+/, '')
@@ -37,10 +42,20 @@ export function cleanListLine(value: string): string {
     .trim();
 }
 
+/**
+ * Reusable framework function `plainLines`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function plainLines(value: string): string[] {
   return unique(value.split(/\r?\n/).map(cleanListLine).filter(Boolean));
 }
 
+/**
+ * Reusable framework function `parseManualStepLines`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function parseManualStepLines(value: string): ManualTestStep[] {
   const lines = value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   return lines.map((line, index) => {
@@ -55,6 +70,11 @@ function sectionName(raw: string): string | undefined {
   return sectionAliases[cleaned] ? cleaned : undefined;
 }
 
+/**
+ * Reusable framework function `parseRequirementText`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function parseRequirementText(text: string): StructuredRequirementText {
   const sections = new Map<string, string[]>();
   let current = 'description';
@@ -103,6 +123,11 @@ export function parseRequirementText(text: string): StructuredRequirementText {
   };
 }
 
+/**
+ * Reusable framework function `htmlToPlainText`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function htmlToPlainText(value: string): string {
   return value
     .replace(/<\s*br\s*\/?\s*>/gi, '\n')
@@ -121,6 +146,11 @@ export function htmlToPlainText(value: string): string {
     .trim();
 }
 
+/**
+ * Reusable framework function `adfToPlainText`.
+ * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
+ * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ */
 export function adfToPlainText(node: unknown): string {
   if (node == null) return '';
   if (typeof node === 'string') return node;
