@@ -2,7 +2,7 @@ id: todo-low-code-001
 title: Create one todo using declarative scenario
 steps:
   - action: goto
-    url: /
+    url: /todomvc/
   - action: fill
     by: placeholder
     value: What needs to be done?
