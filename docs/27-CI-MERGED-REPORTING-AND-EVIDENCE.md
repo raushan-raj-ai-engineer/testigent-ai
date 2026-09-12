@@ -91,3 +91,9 @@ Both run through `npm run reporting:contract`, which is part of `qa:validate` / 
 4. Reliability signals (retry, healing, AI).
 5. Business scenarios and failed-step evidence.
 6. Playwright HTML/trace for engineering-level debugging.
+
+## Merge-job hardening (v1.3.6)
+
+The GitHub merge job publishes its step summary through `npm run ci:business:summary`; it does not embed Node.js in a Bash heredoc. This avoids whitespace/terminator failures in generated runner scripts and keeps summary rendering non-blocking when an earlier merge gate already failed.
+
+Both GitHub Actions and Azure Pipelines now pass `EXPECTED_BUSINESS_REPORTS` to the business merge. The merge fails closed when fewer required non-AI shard bundles are present, preventing a partial shard download from being published as a complete quality report. The final artifact upload uses `if-no-files-found: warn` so it does not replace the real merge error with a secondary missing-artifact error.

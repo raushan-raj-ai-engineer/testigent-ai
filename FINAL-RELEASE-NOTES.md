@@ -1,3 +1,13 @@
+## v1.3.6 - CI merged-report hardening
+
+- Replaced the GitHub merged-quality summary Bash/Node heredoc with the dedicated `ci:business:summary` script, eliminating indentation-sensitive `NODE` terminator failures.
+- Marked the GitHub step-summary publication as informational (`continue-on-error`) so a summary-rendering problem cannot falsely fail an otherwise valid merged report.
+- Added a deterministic missing/corrupt-report fallback summary that preserves the earlier merge/validation step as the root failure.
+- Added `EXPECTED_BUSINESS_REPORTS` enforcement to fail closed when a required shard business bundle is missing instead of publishing partial quality coverage as complete.
+- Wired the source-count guard into GitHub Actions and Azure Pipelines; optional AI reports remain additive.
+- Changed final GitHub artifact publication to warn on missing files so it cannot obscure the actual merge failure with a secondary upload error.
+- Extended executable reporting contracts and static release checks for summary rendering, missing-shard rejection, and no-heredoc workflow governance.
+
 ## v1.3.5 - Final stale-contract regression closure
 
 - Updated dashboard interactive regression to assert the current business-status label `Blocked` instead of legacy `Skipped`.

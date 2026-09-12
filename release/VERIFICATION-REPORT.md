@@ -1,25 +1,38 @@
-# TestigentAI v1.3.5 Verification Report
+# TestigentAI v1.3.6 Verification Report
 
 ## Scope
 
-This patch closes the final three stale framework assertions reported by the clean v1.3.4 validation run. Production runtime behavior is unchanged.
+This patch hardens the CI merged-report path after the GitHub merge job failed while publishing the step summary. The v1.3.5 framework baseline had already completed the user's full `npm run validate:final` successfully; v1.3.6 changes are limited to CI report merge/summary governance and supporting contracts/docs.
 
-## v1.3.5 corrections
+## Root cause closed
 
-1. Dashboard interactive test now expects the current business legend label `Blocked` rather than legacy `Skipped`.
-2. Explicit-new-app test resolves `claims` before project bootstrap so the resolver source remains `explicit-new-app`, then creates the required project fixture before generation.
-3. Generated-proposal architecture test now expects the project-owned `../../fixtures/test.fixture.js` import used by the generator safety contract.
+The GitHub Actions `run: |` block used a Bash heredoc for inline Node.js. The closing `NODE` marker inherited indentation inside the generated runner script, so Bash did not recognize it as the delimiter and ended with `unexpected end of file`.
 
-## Verification performed in release build environment
+## v1.3.6 corrections
 
-- `npm run release:static`
-- `node scripts/offline-release-check.mjs`
-- package/package-lock version synchronization: `1.3.5`
-- release SBOM regeneration
-- release SHA-256 manifest regeneration
-- targeted source contract checks for all three corrected assertions
-- clean ZIP extraction and independent release-manifest verification
+1. Replaced the inline Bash/Node heredoc with `npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"`.
+2. Made the step-summary publication informational/non-blocking so it cannot falsely fail a valid merged report.
+3. Added a missing/corrupt-report fallback summary that points engineers to the earlier merge/validation failure.
+4. Added `EXPECTED_BUSINESS_REPORTS` merge enforcement so missing shard bundles cannot silently produce partial coverage.
+5. Wired the report-count guard into both GitHub Actions and Azure Pipelines.
+6. Changed the final GitHub artifact upload to warn when no final report exists, preserving the original merge error as the root failure.
+7. Extended reporting/static release contracts to prevent heredoc regression and verify merged-summary/source-count behavior.
 
-## Dependency-backed Playwright validation
+## Verification performed in the release build environment
 
-The final authoritative certification remains `npm ci && npx playwright install chromium && npm run validate:final` on a network-enabled developer/CI runner. The supplied user run of v1.3.4 had 88/91 framework tests passing; the remaining three failures map exactly to the three stale assertions corrected above.
+- GitHub workflow YAML parse: PASS
+- Azure Pipelines YAML parse: PASS
+- GitHub summary shell syntax: PASS
+- dependency-free TypeScript transpile of all changed TS files: PASS
+- step-summary functional rendering with merged facts: PASS
+- step-summary missing-report fallback: PASS
+- `node scripts/release-static-check.mjs`: PASS
+- `node scripts/offline-release-check.mjs`: PASS
+- JSON/YAML/shell syntax checks: PASS
+- package/package-lock version synchronization: `1.3.6`
+- SBOM regenerated: 149 components
+- release SHA-256 manifest regenerated and independently verified after clean ZIP extraction
+
+## Dependency-backed validation
+
+The build container could not complete a fresh `npm ci` because registry access timed out. No claim is made that this container reran the entire Playwright suite. The user had already confirmed the v1.3.5 dependency-backed `validate:final` suite passed; after applying this CI-only patch, the authoritative final check remains the normal GitHub CI run or `npm ci && npm run validate:final` on a network-enabled runner.

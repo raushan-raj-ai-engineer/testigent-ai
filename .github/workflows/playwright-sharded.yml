@@ -446,6 +446,8 @@ jobs:
         run: npm run report:merge:business -- all-business-reports
         env:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          # The matrix above has two required non-AI shards. AI is additive when enabled.
+          EXPECTED_BUSINESS_REPORTS: '2'
 
       - name: Finalize business execution facts
         run: npm run ci:business:finalize
@@ -460,23 +462,9 @@ jobs:
 
       - name: Publish merged report summary
         if: ${{ always() }}
+        continue-on-error: true
         shell: bash
-        run: |
-          if [[ -f "reports/${APP}/business/business-report.json" ]]; then
-            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-            const fs = require('fs');
-            const app = process.env.APP;
-            const f = JSON.parse(fs.readFileSync(`reports/${app}/business/business-report.json`, 'utf8'));
-            console.log(`## TestigentAI merged quality report`);
-            console.log(`- Selected: **${f.total}**`);
-            console.log(`- Applicable: **${f.executionEligible}**`);
-            console.log(`- Executed: **${f.executed}/${f.executionEligible} (${f.executionRate}%)**`);
-            console.log(`- Quality failed: **${f.qualityFailed}** (known ${f.knownDefects}, unexpected ${f.unexpectedFailed})`);
-            console.log(`- CI-blocking issues: **${f.ciBlockingIssues}**`);
-            console.log(`- Self-healed: **${f.healing?.count ?? 0}** · AI calls: **${f.aiUsage?.calls ?? 0}**`);
-            console.log(`- Aggregated bundles: **${f.aggregation?.sourceReports ?? 1}**`);
-            NODE
-          fi
+        run: npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload final TestigentAI report
         id: final-upload
@@ -485,7 +473,7 @@ jobs:
         with:
           name: testigent-ai-report-${{ env.APP }}-${{ github.run_id }}
           path: reports/${{ env.APP }}
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Optional stakeholder email

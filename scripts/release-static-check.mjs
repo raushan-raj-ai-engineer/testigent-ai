@@ -278,6 +278,10 @@ try {
   if (!mergeContract.includes('duplicate test IDs') || !mergeContract.includes('AI usage must merge exactly once')) issues.push('executable merged-report contract missing');
   if (!/failed UI/i.test(bundleValidator) || !bundleValidator.includes("contentType.startsWith('image/')")) issues.push('CI business bundle must require screenshot evidence for failed UI scenarios');
   if (!githubWorkflow.includes('--grep-invert="@ai"') || !azurePipeline.includes('--grep-invert="@ai"')) issues.push('normal CI shards must exclude dedicated AI tests');
+  if (!githubWorkflow.includes('npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"')) issues.push('GitHub merged-report summary must use the dedicated summary script');
+  if (!githubWorkflow.includes('continue-on-error: true\n        shell: bash\n        run: npm run --silent ci:business:summary')) issues.push('GitHub merged-report summary must remain informational/non-blocking');
+  if (githubWorkflow.includes("<<'NODE'") || githubWorkflow.includes('GITHUB\\_STEP\\_SUMMARY')) issues.push('GitHub merged-report summary must not use fragile heredoc/escaped step-summary syntax');
+  if (!merge.includes('EXPECTED_BUSINESS_REPORTS') || !githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'") || !azurePipeline.includes('EXPECTED_BUSINESS_REPORTS="${{ parameters.shards }}"')) issues.push('CI merged-report source-count guard missing');
 } catch (error) {
   issues.push(`unable to validate reporting merge/evidence contracts: ${error.message}`);
 }

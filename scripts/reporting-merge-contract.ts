@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildExecutionFacts } from '../src/framework/analytics/execution-facts';
 import type { AiRuntimeAuditRecord, BusinessTestResult, HealingAuditRecord, HealingSummary } from '../src/framework/analytics/report.types';
 import { mergeBusinessReports } from './merge-business-reports';
+import { formatBusinessStepSummary } from './ci-business-step-summary';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`REPORTING_MERGE_CONTRACT_FAILED: ${message}`);
@@ -162,6 +163,8 @@ assert(merged.knownDefects === 1 && merged.qualityFailed === 1 && merged.ciBlock
 assert(merged.healing.count === 1 && merged.healing.ai === 1, 'validated AI healing must merge exactly once');
 assert(merged.aiUsage?.calls === 1 && merged.aiUsage.healingCalls === 1, 'AI usage must merge exactly once');
 assert(merged.aggregation?.mode === 'merged' && merged.aggregation.sourceReports === 3, 'aggregation metadata must identify three sources');
+const stepSummary = formatBusinessStepSummary(merged);
+assert(stepSummary.includes('Aggregated bundles: **3**') && stepSummary.includes('CI-blocking issues: **0**'), 'GitHub step summary must render deterministic merged facts');
 assert(fs.existsSync(path.join(out, 'index.html')), 'merged dashboard must be generated');
 const mergedKnown = merged.results.find(result => result.testId === 'known-delete');
 const mergedScreenshot = mergedKnown?.attachments?.find(item => item.contentType.startsWith('image/'));
@@ -176,5 +179,13 @@ writeReport(dupRoot, 'b', [pass]);
 let duplicateRejected = false;
 try { mergeBusinessReports(dupRoot); } catch (error) { duplicateRejected = String(error).includes('Duplicate business scenario'); }
 assert(duplicateRejected, 'duplicate test IDs across shard/AI bundles must fail merge');
+
+const missingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-missing-'));
+writeReport(missingRoot, 'only-shard', [pass]);
+process.env.EXPECTED_BUSINESS_REPORTS = '2';
+let missingShardRejected = false;
+try { mergeBusinessReports(missingRoot); } catch (error) { missingShardRejected = String(error).includes('Incomplete CI business merge'); }
+delete process.env.EXPECTED_BUSINESS_REPORTS;
+assert(missingShardRejected, 'missing CI shard bundle must fail the merge instead of silently publishing partial coverage');
 
 console.log(JSON.stringify({ ok: true, selected: merged.total, applicable: merged.executionEligible, executed: merged.executed, notApplicable: merged.notApplicable, healing: merged.healing.count, aiCalls: merged.aiUsage?.calls ?? 0, sourceReports: merged.aggregation?.sourceReports }, null, 2));

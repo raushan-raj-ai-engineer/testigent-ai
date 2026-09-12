@@ -18,6 +18,7 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
   const root = path.resolve(rootInput);
   const files = walk(root).filter(file => path.basename(file) === 'business-report.json');
   if (!files.length) throw new Error(`No business-report.json files found under ${root}`);
+  enforceExpectedReportCount(files.length);
 
   const reports: LocatedReport[] = files.map(file => ({
     file,
@@ -97,6 +98,19 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
   return written;
 }
 
+
+
+function enforceExpectedReportCount(actual: number): void {
+  const raw = process.env.EXPECTED_BUSINESS_REPORTS?.trim();
+  if (!raw) return;
+  const expected = Number(raw);
+  if (!Number.isInteger(expected) || expected < 1) {
+    throw new Error(`EXPECTED_BUSINESS_REPORTS must be a positive integer, received '${raw}'.`);
+  }
+  if (actual < expected) {
+    throw new Error(`Incomplete CI business merge: expected at least ${expected} report bundle(s), found ${actual}. A shard artifact may be missing.`);
+  }
+}
 
 function buildAiUsageSummary(records: AiRuntimeAuditRecord[]): AiRuntimeUsageSummary {
   const providerMap = new Map<string, { calls: number; models: Set<string> }>();

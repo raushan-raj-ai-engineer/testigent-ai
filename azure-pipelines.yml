@@ -222,7 +222,7 @@ stages:
         find "$(Pipeline.Workspace)/all-blob-reports" -type f -name '*.zip' -exec cp {} all-blob-reports/ \;
         find "$(Pipeline.Workspace)/all-business-reports" -type f -exec cp --parents {} all-business-reports/ \; || true
         APP="$(APP)" npm run report:merge:technical
-        APP="$(APP)" RUN_ID="$(Build.BuildId)" npm run report:merge:business -- all-business-reports
+        APP="$(APP)" RUN_ID="$(Build.BuildId)" EXPECTED_BUSINESS_REPORTS="${{ parameters.shards }}" npm run report:merge:business -- all-business-reports
         APP="$(APP)" npm run ci:business:finalize
         APP="$(APP)" AI_ENABLED=false npm run report:business
         APP="$(APP)" npm run ci:business:validate
