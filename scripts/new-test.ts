@@ -28,7 +28,31 @@ async function main(): Promise<void> {
   const outDir = join(root, 'generated', 'requirements', requirementId);
   await mkdir(outDir, { recursive: true });
   const promptPath = join(outDir, 'PLAYWRIGHT_AUTHORING_PROMPT.md');
-  const prompt = `# Playwright Framework Authoring Prompt\n\nAuthor: Raushan Raj\n\nUse ${mode.toUpperCase()} to inspect the live application and implement requirement **${requirementId}**.\n\n## Non-negotiable framework rules\n1. Read generation-manifest.json, AUTOMATION_PROPOSAL.md and the generated Page/Workflow/spec first.\n2. Use Playwright CLI/MCP/Test Agent browser evidence to validate locators and flows; never invent UI details.\n3. Tests contain business intent + test.step(), never raw page.locator/getByRole/click/fill.\n4. Page Objects own UI mechanics. Every executable UI action uses LocatorPlan + HealingOrchestrator (or BasePage healingClick/healingFill helpers).\n5. Scope modal/component plans so healing cannot jump to a same-named control elsewhere on the page.\n6. Deterministic primary/fallback first; AI healing only through AiGateway/HealingOrchestrator.\n7. Do not heal business assertions, API 4xx/5xx, wrong DB state, authorization defects or expected-result mismatches.\n8. Keep GENERATED PROPOSAL ownership header until proposal promotion. Remove REVIEW_REQUIRED/test.fixme only after live validation.\n9. Finish with npm run typecheck, npm run test:authoring:contract, and npm run proposal:validate -- ${requirementId}.\n\n## Tool preference\n- CLI: use playwright-cli snapshots/codegen/generate-locator for token-efficient authoring.\n- MCP: use Playwright MCP when persistent structured browser exploration is more useful.\n- Agents: planner -> Markdown plan, generator -> implementation, healer -> repair; still obey this framework contract.\n`;
+  const seed = `projects/${process.env.APP ?? '<selected-project>'}/tests/_agent/seed.spec.ts`;
+  const prompt = `# Playwright Framework Authoring Prompt
+
+Author: Raushan Raj
+
+Use ${mode.toUpperCase()} to inspect the live application and implement requirement **${requirementId}**.
+
+## Non-negotiable framework rules
+1. Read generation-manifest.json, AUTOMATION_PROPOSAL.md and the generated Page/Workflow/spec first.
+2. Start browser exploration from the selected project's agent seed (${seed}) so authentication, fixtures and setup are inherited.
+3. Use Playwright CLI/MCP/Test Agent browser evidence to validate locators and flows; never invent UI details, URLs, credentials or expected results.
+4. Final business specs consume project fixtures/facades (app, api, repositories, data) and contain business intent + test.step(). Never construct framework services or use raw page.goto/locator/getByRole/click/fill in normal specs.
+5. Page Objects own UI mechanics. Every executable UI action uses LocatorPlan + HealingOrchestrator (or BasePage healing helpers). Workflows own reusable business journeys.
+6. Scope modal/component plans so healing cannot jump to a same-named control elsewhere on the page. Deterministic primary/fallback comes before AI recovery.
+7. Runtime healing may recover locators only. Source healing is review-only; do not alter business assertions, API 4xx/5xx expectations, DB/security outcomes, or add test.skip/test.fixme to hide defects.
+8. Keep GENERATED PROPOSAL ownership header until proposal promotion. Remove REVIEW_REQUIRED/test.fixme only after live validation and human review.
+9. Finish with npm run architecture:check, npm run typecheck, npm run test:authoring:contract, and npm run proposal:validate -- ${requirementId}.
+
+## Tool policy
+- Planner: create/review the business test plan using the project seed.
+- CLI: preferred for token-efficient coding-agent snapshots and locator evidence.
+- MCP: use when persistent structured browser state/exploration is valuable.
+- Generator: treat raw Playwright output as evidence; map it into Page -> Workflow -> Facade -> business spec before promotion.
+- Healer: use for diagnosis/source-maintenance proposals; runtime healing remains handled by TestigentAI.
+`;
   await writeFile(promptPath, prompt, 'utf8');
 
   if ((process.env.AUTHORING_PRODUCTIVITY_ENABLED ?? 'true').toLowerCase() === 'true') {

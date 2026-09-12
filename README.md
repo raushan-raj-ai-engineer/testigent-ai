@@ -15,13 +15,16 @@ tests/framework/        platform regression only
 templates/project/      onboarding skeleton
 ```
 
-## Install and validate
+## Install and select a project
 
 ```bash
 npm ci
 npx playwright install chromium
-npm run validate:final
+npm run qa:use -- <project> <environment>
+npm run qa:doctor
 ```
+
+Local selection is stored in gitignored `.runtime/workspace.json`. CI must provide `APP` and `ENV` explicitly; reusable runtime code has no silent `demo/qa` fallback.
 
 
 ## V6 product architecture
@@ -38,28 +41,75 @@ Read `docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md`, `docs/20-V6-DATA-PARALLEL-EX
 
 ## Daily use
 
-```bash
-npm run project:list
-APP=demo ENV=qa npm run project:check
-APP=demo ENV=qa npm run test:project -- --project=chromium
-APP=demo ENV=qa npm run report:open
-```
-
-Create another team/application area:
+New joiners use the thin `qa:*` surface:
 
 ```bash
-npm run project:new -- project2
+npm run qa:status
+# auth-required projects only:
+npm run qa:auth
+npm run qa:new -- <requirement-id-or-file>
+npm run qa:test -- --project=chromium
+npm run qa:validate
+npm run qa:report
+npm run qa:heal
 ```
 
-For authenticated projects:
+Auth capture is verified in a fresh browser context before it is promoted. The framework also restores a gitignored sessionStorage companion when required and raises `AUTH_SESSION_INVALID` before locator healing if the selected session is no longer authenticated.
+
+Normal business specs consume project `app`, `api`, `repositories` and data fixtures. Page mechanics stay in Page Objects/LocatorPlans, business journeys stay in workflows, and reusable engines stay under `src/framework`. `npm run architecture:check` prevents ordinary specs from bypassing these boundaries.
+
+For CI/one-off execution use explicit selection, for example `APP=demo ENV=qa npm run test:project -- --project=chromium`.
+
+
+## v1.2.9 failure-evidence de-duplication
+
+Business dashboards show the primary failure screenshot once, directly under the failed `test.step()`. The scenario evidence pane then shows only additional artifacts such as video, trace, logs, or error context, avoiding duplicate screenshots while preserving technical evidence.
+
+## v1.2.8 merged CI reporting and evidence
+
+Business reporting now separates **Selected**, **Applicable**, **Executed**, **Not applicable** and **Blocked** scenarios. Execution coverage is `Executed / Applicable`, so an optional disabled capability such as DB does not falsely lower coverage or appear in executed layer coverage.
+
+CI produces one authoritative merged report: normal shards exclude `@ai`, the dedicated AI/healing lane owns AI scenarios, duplicate scenario IDs fail the merge, and healing/AI audit facts are merged once. Failed UI scenarios attach a framework screenshot through Playwright; the business report shows that screenshot directly under the failed `test.step()` while retained video/trace/text evidence remains linked. See `docs/27-CI-MERGED-REPORTING-AND-EVIDENCE.md`.
+
+## v1.2.7 reporting validation hotfix
+
+The mail-notification regression fixture now derives facts through the canonical `buildExecutionFacts()` pipeline instead of manually duplicating the `ExecutionFacts` schema. This keeps email validation aligned with the business outcome model and explicitly distinguishes quality pass rate from execution coverage.
+
+## v1.2.6 platform status: resilient authentication, semantic healing and business-standard reporting
+
+Runtime healing now distinguishes **locator actionability** from **business success**. Critical healed actions can declare a semantic post-condition (for example, "Create User modal becomes visible"). Only recoveries whose post-condition passes are counted as self-healed or written to the reusable healing cache. Rejected, suggested and unverified attempts remain auditable in reports but cannot pollute the cache or inflate healing KPIs.
+
+Locator resolution is also visibility-aware. The framework evaluates cardinality against visible elements rather than raw DOM count, so hidden template/modal duplicates do not create false ambiguity. `unique` remains the default safety policy; projects may opt into `match: 'firstVisible'` only when duplicate visible controls are intentionally equivalent and the action is protected by a business post-condition.
+
+The v1.2.2+ cache intentionally ignores pre-semantic entries because older cache records were created before business post-condition validation existed. This causes a safe one-time cache cold start after upgrade.
+
+v1.2.4+ also makes deterministic recovery useful on a fresh checkout without turning AI on: `HEALING_MODE=off` means primary only, `suggest` means primary plus reviewed source-controlled fallbacks while cache/AI remain suggestion-only, and `runtime` enables validated cache plus configured AI. Role descriptors may use `namePattern` for stable accessible-name families such as Create/Add/New User. When resolution still fails, the error/log includes a bounded summary of visible interactive controls so locator drift is diagnosable from CI evidence instead of a generic failure. See `docs/07-HEALING-AI-MCP.md`.
+
+
+### v1.2.5 authentication guard
+
+Required storage-state projects now verify authentication as a business precondition rather than trusting that an auth file merely exists. `qa:auth` captures cookies/localStorage plus sessionStorage, proves the captured state in a second fresh browser context, and only then promotes it. Project auth verification stays configurable under `projects/<project>/config/<env>.json`. Normal authenticated navigation fails with `AUTH_SESSION_INVALID` before healing if the session resolves to a login page, preventing authentication failures from being misclassified as locator failures.
+
+
+## v1.2.6 business-standard reporting
+
+The business dashboard now distinguishes **product quality** from **CI blocking**. Registered known defects are reported as `KNOWN_DEFECT`: they count in **Quality failed** but remain non-blocking when explicitly accepted. Unexpected failures and unexpected passes remain CI-blocking signals. The executive dashboard separates new failures, accepted defect debt, flaky/retry debt, slow scenarios, validated healing and execution coverage, while Playwright HTML/trace remains the technical evidence layer.
+
+```text
+Quality failed     = KNOWN_DEFECT + FAILED
+CI-blocking issues = FAILED + UNEXPECTED_PASS
+```
+
+This same outcome model is used by the interactive dashboard, JSON, CSV, email/static report, executive summary, merged CI reporting, terminal summary and history trend. See `docs/26-BUSINESS-REPORTING-STANDARD-2026.md`.
+
+
+Reporting semantics are protected by an executable contract gate:
 
 ```bash
-APP=project2 ENV=qa APPLICATION_EXPLORATION_ENABLED=true npm run app:auth
-APP=project2 ENV=qa npm run test:project -- --project=chromium
+npm run reporting:contract
 ```
 
-Start with [`docs/00-START-HERE.md`](docs/00-START-HERE.md) and [`docs/02-DAILY-COMMANDS.md`](docs/02-DAILY-COMMANDS.md). For AI setup, use [`docs/07-HEALING-AI-MCP.md`](docs/07-HEALING-AI-MCP.md) and [`docs/13-AI-PROVIDER-EXAMPLES.md`](docs/13-AI-PROVIDER-EXAMPLES.md). Research basis is in [`docs/SOURCES.md`](docs/SOURCES.md).
-
+This gate also runs inside `npm run qa:validate`. It verifies that known defects remain quality failures but non-blocking when explicitly accepted, while unexpected failures and unexpected passes remain CI-blocking attention items.
 
 ## Release validation
 
@@ -777,3 +827,9 @@ GEMINI_MODEL                gemini-3.8-flash
 TestigentAI v1.2.0 includes a governed low-code YAML layer for simple linear UI business flows. Authors do not need to memorize the DSL: run `npm run scenario:help`, scaffold with `npm run scenario:new`, receive JSON-Schema-driven VS Code completion/validation, preflight with `npm run scenario:validate`, and execute one scenario with `npm run scenario:run`. Complex control flow, cross-layer UI/API/DB orchestration, advanced browser behavior, and AI evaluation remain code-first TypeScript concerns.
 
 See `docs/24-DECLARATIVE-AUTOMATION-GUIDE.md` for the user guide and `docs/23-DECLARATIVE-AUTHORING-DEEP-RESEARCH.md` for the research/design rationale.
+
+## v1.2.1 database capability gating
+
+Database execution is resolved centrally rather than inside project specs. Each project declares whether database validation is required in `projects/<project>/project.json`, while each environment declares the database type in `projects/<project>/config/<env>.json`. Secret connection values remain external (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`); `DB_TYPE` is only an explicit runtime override.
+
+Tag any scenario that requires database access with `@db`. When DB is optional and unavailable, the enterprise automatic capability fixture skips only those `@db` scenarios with a clear reason. When DB is required and unavailable, `qa:doctor`, framework health and project preflight fail before execution. Normal project specs must not read `DB_*` variables or implement their own DB skip logic.

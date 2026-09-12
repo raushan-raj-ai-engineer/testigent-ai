@@ -2,6 +2,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ApplicationResolution, RequirementDocument, ReusableCandidate } from '../core/models.js';
+import { WorkspaceContext } from '../../core/config/workspace.context.js';
 
 interface ConfigApplication { name?: string; uiBaseUrl?: string; apiBaseUrl?: string; }
 interface EnvironmentConfigFile { applications?: Record<string, ConfigApplication>; }
@@ -37,7 +38,9 @@ async function applicationDirectories(root: string): Promise<string[]> {
 }
 
 async function configuredApplications(root: string): Promise<Record<string, ConfigApplication>> {
-  const env = process.env.ENV ?? process.env.TEST_ENV ?? 'qa';
+  const workspace = WorkspaceContext.read(root);
+  const env = process.env.ENV?.trim() || process.env.TEST_ENV?.trim() || workspace?.environment;
+  if (!env) return {};
   const applications: Record<string, ConfigApplication> = {};
   for (const project of await applicationDirectories(root)) {
     try {
@@ -90,7 +93,7 @@ export async function resolveApplicationTarget(
   const configured = await configuredApplications(root);
   const known = [...new Set([...directories, ...Object.keys(configured)])].sort();
   const fromTag = appTag(requirement);
-  const fromEnv = process.env.APP?.trim() || undefined;
+  const fromEnv = process.env.APP?.trim() || WorkspaceContext.read(root)?.application || undefined;
   const url = safeUrl(baseUrl);
   const fromUrl = url
     ? Object.entries(configured).find(([, config]) => sameApplicationUrl(config.uiBaseUrl, url.toString()))?.[0]
@@ -134,7 +137,7 @@ export async function resolveApplicationTarget(
   const urlMessage = url ? ` APP_BASE_URL='${url.toString()}' is not mapped to a configured application.` : '';
   return {
     source: 'unresolved',
-    reason: `Target application is ambiguous.${urlMessage} Set APP=<application>, add @app:<application>, or map the URL in projects/<application>/config/${process.env.ENV ?? process.env.TEST_ENV ?? 'qa'}.json before generation.`,
+    reason: `Target application is ambiguous.${urlMessage} Set APP=<application>, add @app:<application>, or map the URL in the selected projects/<application>/config/<environment>.json before generation.`,
     baseUrl: url?.toString(),
     candidates: known
   };

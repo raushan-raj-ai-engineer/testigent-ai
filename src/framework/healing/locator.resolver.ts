@@ -9,7 +9,12 @@ export type LocatorRoot = Page | Locator;
  */
 export function resolveLocator(root: LocatorRoot, descriptor: LocatorDescriptor): Locator {
   switch (descriptor.type) {
-    case 'role': return root.getByRole(descriptor.role, descriptor.name ? { name: descriptor.name, exact: descriptor.exact } : undefined);
+    case 'role': {
+      const name = descriptor.namePattern
+        ? new RegExp(descriptor.namePattern, descriptor.namePatternFlags ?? 'i')
+        : descriptor.name;
+      return root.getByRole(descriptor.role, name ? { name, exact: descriptor.namePattern ? undefined : descriptor.exact } : undefined);
+    }
     case 'label': return root.getByLabel(descriptor.value, { exact: descriptor.exact });
     case 'testId': return root.getByTestId(descriptor.value);
     case 'placeholder': return root.getByPlaceholder(descriptor.value, { exact: descriptor.exact });

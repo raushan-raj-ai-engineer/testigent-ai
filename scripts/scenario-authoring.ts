@@ -18,6 +18,7 @@ import {
 import { discoverDeclarativeScenarios } from '../src/framework/declarative/scenario.discovery';
 import { loadDeclarativeScenario } from '../src/framework/declarative/scenario.loader';
 import { buildDeclarativeJsonSchema } from '../src/framework/declarative/scenario.json-schema';
+import { WorkspaceContext } from '../src/framework/core/config/workspace.context';
 
 const SCHEMA_PATH = path.resolve('schemas/testigent-scenario.schema.json');
 
@@ -68,7 +69,7 @@ function printHelp(): void {
 
 function listScenarios(args: string[]): void {
   const flags = parseArgs(args);
-  const app = flags.app ?? process.env.APP ?? 'demo';
+  const app = resolveApp(flags.app);
   const scenarios = discoverDeclarativeScenarios(app);
   if (!scenarios.length) {
     console.log(`No declarative scenarios found for app '${app}'.`);
@@ -89,7 +90,7 @@ function validateScenarios(args: string[]): void {
     console.log(`PASS ${scenario.id}: ${fileArg}`);
     return;
   }
-  const app = flags.app ?? process.env.APP ?? 'demo';
+  const app = resolveApp(flags.app);
   const scenarios = discoverDeclarativeScenarios(app);
   if (!scenarios.length) throw new Error(`No declarative scenarios found under projects/${app}/data/scenarios.`);
   for (const item of scenarios) console.log(`PASS ${item.scenario.id}: ${path.relative(process.cwd(), item.filePath)}`);
@@ -101,8 +102,10 @@ async function createScenario(args: string[]): Promise<void> {
   const interactive = process.stdin.isTTY && process.stdout.isTTY;
   const rl = interactive ? createInterface({ input, output }) : undefined;
   try {
-    const appInput = flags.app ?? process.env.APP ?? (rl ? await rl.question('Application [demo]: ') : 'demo');
-    const app = appInput || 'demo';
+    const selected = flags.app ?? process.env.APP?.trim() ?? WorkspaceContext.read()?.application;
+    const appInput = selected ?? (rl ? await rl.question('Application: ') : undefined);
+    const app = appInput?.trim();
+    if (!app) throw new Error('Application is required. Run npm run qa:use -- <project> <environment> or pass --app <project>.');
     const title = flags.name ?? (rl ? await rl.question('Scenario title: ') : undefined);
     if (!title?.trim()) throw new Error('Scenario title is required. Use --name "..." in non-interactive mode.');
     const id = flags.id ?? slugify(title);
@@ -151,7 +154,7 @@ function generateSchema(checkOnly: boolean): void {
 
 function doctor(args: string[]): void {
   const flags = parseArgs(args);
-  const app = flags.app ?? process.env.APP ?? 'demo';
+  const app = resolveApp(flags.app);
   assertCapabilityCatalogMatchesSchema();
   generateSchema(true);
   // Declarative authoring is optional per project: validate every scenario that exists, but do not force teams to adopt YAML.
@@ -166,7 +169,7 @@ function doctor(args: string[]): void {
 
 function runScenario(args: string[]): void {
   const flags = parseArgs(args);
-  const app = flags.app ?? process.env.APP ?? 'demo';
+  const app = resolveApp(flags.app);
   const scenarios = discoverDeclarativeScenarios(app);
   const explicitFile = flags.file;
   const explicitId = flags.id;
@@ -212,6 +215,13 @@ function slugify(value: string): string {
 function normalizePath(value: string): string {
   const normalized = value.split(path.sep).join('/');
   return normalized.startsWith('.') ? normalized : `./${normalized}`;
+}
+
+
+function resolveApp(explicit?: string): string {
+  const value = explicit?.trim() || process.env.APP?.trim() || WorkspaceContext.read()?.application;
+  if (value) return value;
+  return WorkspaceContext.resolve().application;
 }
 
 main().catch(error => {

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { resolveApplicationScope } from '../core/config/application.scope';
 import { RunContext } from '../core/config/run.context';
 import { redact } from '../logging/redactor';
 
@@ -25,7 +26,7 @@ export interface AiAuditRecord {
 export class AiAudit {
   constructor(
     private readonly testId?: string,
-    private readonly filePath = path.resolve('reports', process.env.APP ?? 'demo', 'ai', 'ai-audit.jsonl')
+    private readonly filePath = path.resolve('reports', resolveApplicationScope(), 'ai', 'ai-audit.jsonl')
   ) {}
 
   record(input: Omit<AiAuditRecord, 'runId' | 'testId' | 'timestamp'>): void {

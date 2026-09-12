@@ -17,6 +17,8 @@ export class UserManagementWorkflow {
     private readonly userManagementPage: UserManagementPage,
   ) { }
 
+  async open(): Promise<void> { await this.userManagementPage.open(); }
+
   async createUser(
     user: CreateUserData,
   ): Promise<void> {

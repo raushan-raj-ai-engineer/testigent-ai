@@ -19,3 +19,14 @@ Use API validation for status/headers/schema/business data and for efficient tes
 Reusable readers support structured sources; project datasets stay under `projects/<project>/data`. Use JSON for hierarchical payloads, CSV for simple tabular business cases, YAML for readable structured configuration/test cases where appropriate, and XLSX only when spreadsheet input is a real stakeholder requirement.
 
 Keep secrets out of test data files.
+
+
+## Database capability policy
+
+Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` selects the database type (`none`, `postgres`, `mysql`, or `mssql`). `DB_TYPE` may override the configured type in CI/local runtime, while database credentials remain secret environment variables.
+
+- optional + unavailable: tests tagged `@db` are skipped automatically with a clear reason; UI/API suites continue
+- configured and ready: `@db` tests execute normally
+- required + unavailable: `qa:doctor`, framework health and project preflight fail before Playwright execution
+
+Business specs must not read `DB_TYPE` or manually decide whether to skip. Tag any scenario that requires database access with `@db`; the framework owns capability gating.

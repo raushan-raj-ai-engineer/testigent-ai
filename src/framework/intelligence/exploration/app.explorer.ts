@@ -4,6 +4,7 @@ import { ApplicationKnowledgeStore, type KnowledgeRecord } from '../knowledge/st
 import { normalizeRoutePath, redactKnowledgeText, safeVisibleText, sanitizeKnowledgeValue } from '../knowledge/knowledge.redactor.js';
 import { resolveApplicationForUrl } from '../knowledge/application.resolver.js';
 import { contextOptionsWithAuth } from './auth.state.js';
+import { WorkspaceContext } from '../../core/config/workspace.context.js';
 
 const DESTRUCTIVE=/\b(delete|remove|refund|cancel(?:\s+order)?|terminate|deactivate|purchase|pay(?:\s+now)?|place\s+order|submit|confirm(?:\s+payment)?|logout|sign\s*out|close\s+account|disable)\b/i;
 const API_TYPES=new Set(['xhr','fetch']);
@@ -13,7 +14,7 @@ interface GuidedEvent { type:'click'|'change'|'submit'|'navigation'; at:string; 
 interface NetworkFact { method:string;path:string;status:number;contentType:string;resourceType:string;count:number; }
 
 function allowedEnvironment():void{
-  const env=(process.env.ENV??process.env.TEST_ENV??'qa').toLowerCase();
+  const env=(process.env.ENV?.trim() || process.env.TEST_ENV?.trim() || WorkspaceContext.resolve().environment).toLowerCase();
   const allowed=(process.env.EXPLORATION_ALLOWED_ENVIRONMENTS??'dev,qa,test,staging').split(',').map((value:string)=>value.trim().toLowerCase()).filter(Boolean);
   if(!allowed.includes(env))throw new Error(`Exploration blocked for '${env}'. Allowed: ${allowed.join(', ')}`);
 }

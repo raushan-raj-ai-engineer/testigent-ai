@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
-import type { ExecutionFacts } from '../../src/framework/analytics/report.types';
+import { buildExecutionFacts } from '../../src/framework/analytics/execution-facts';
+import type { BusinessTestResult, HealingSummary } from '../../src/framework/analytics/report.types';
 import { MailNotificationProvider } from '../../src/framework/notifications/mail.notification';
 
 /**
@@ -44,10 +45,12 @@ test('business email preview contains deterministic summary and V3-safe attachme
     expect(result.attachmentNames).toContain('automation-business-report-mail-test.html');
     expect(result.attachmentNames).toContain('business-tests-mail-test.csv');
     const raw = fs.readFileSync(result.previewPath!, 'utf8');
-    expect(raw).toContain('[Framework Test] PASS - Order Portal - qa - 96.67%');
+    expect(raw).toContain('[Framework Test] PASS - Order Portal - qa - 100% quality pass');
     expect(raw.toLowerCase()).toContain('automation release summary');
-    expect(raw).toContain('96.67%');
-    expect(raw).toContain('https://reports.example.com/run-mail-test');
+    expect(raw).toContain('Execution coverage: 100%');
+    expect(raw.replace(/=\r?\n/g, '')).toContain(
+      'https://reports.example.com/run-mail-test',
+    );
     expect(raw).toContain('automation-business-report-mail-test.html');
     const topLevelEml = fs.readdirSync(path.dirname(result.previewPath!)).filter(name => name.endsWith('.eml'));
     expect(topLevelEml).toEqual(['latest-business-report.eml']);
@@ -56,28 +59,71 @@ test('business email preview contains deterministic summary and V3-safe attachme
   }
 });
 
-function sampleFacts(): ExecutionFacts {
+function sampleFacts() {
+  const results: BusinessTestResult[] = Array.from({ length: 29 }, (_, index): BusinessTestResult => ({
+    testId: `checkout-${index + 1}`,
+    title: index === 0 ? 'Customer places an order @critical @ui @api' : `Order scenario ${index + 1} @ui`,
+    project: 'chromium',
+    status: 'passed',
+    rawStatus: 'passed',
+    durationMs: index === 0 ? 1000 : 0,
+    totalDurationMs: index === 0 ? 1000 : 0,
+    retriesUsed: 0,
+    flaky: false,
+    tags: index === 0 ? ['@critical', '@ui', '@api'] : ['@ui'],
+    steps: index === 0 ? ['Customer logs in', 'Customer submits order'] : [],
+    stepDetails: index === 0 ? [
+      { title: 'Customer logs in', category: 'test.step', durationMs: 300, status: 'passed', children: [] },
+      { title: 'Customer submits order', category: 'test.step', durationMs: 700, status: 'passed', children: [] }
+    ] : [],
+    attachments: [],
+    attempts: [{ retry: 0, status: 'passed', durationMs: index === 0 ? 1000 : 0 }],
+    sourceFile: index === 0 ? 'tests/e2e/order.spec.ts' : `tests/e2e/order-${index + 1}.spec.ts`,
+    layers: index === 0 ? ['UI', 'API'] : ['UI'],
+    testType: index === 0 ? 'UI_API' : 'UI_ONLY'
+  }));
+
+  results.push({
+    testId: 'not-applicable',
+    title: 'Optional database scenario',
+    project: 'chromium',
+    status: 'skipped',
+    rawStatus: 'skipped',
+    durationMs: 0,
+    totalDurationMs: 0,
+    retriesUsed: 0,
+    flaky: false,
+    tags: [],
+    steps: [],
+    skipReason: 'Database capability is optional and disabled for this project/environment.',
+    skipCategory: 'DATABASE_NOT_CONFIGURED',
+    attempts: [{ retry: 0, status: 'skipped', durationMs: 0 }]
+  });
+
+  return buildExecutionFacts({
+    runId: 'mail-test',
+    environment: 'qa',
+    application: 'Order Portal',
+    generatedAt: new Date().toISOString(),
+    results,
+    healing: noHealing(),
+    scope: { excludedInternalTests: 5, internalTestsIncluded: false }
+  });
+}
+
+function noHealing(): HealingSummary {
   return {
-    runId: 'mail-test', environment: 'qa', application: 'Order Portal', generatedAt: new Date().toISOString(),
-    total: 30, passed: 29, failed: 0, skipped: 1, executed: 29, executionRate: 96.67, executedPassRate: 100, passRate: 96.67,
-    skipBreakdown: { count: 1, categories: [{ category: 'OTHER', label: 'Other / conditional skip', count: 1, testTitles: ['Not applicable scenario'], reasons: ['Not applicable in this configuration.'] }] },
-    durationMs: 1000,
-    healing: { count: 1, fallback: 0, cache: 0, ai: 1, affectedTests: 1, records: [] },
-    flakiness: { flakyTests: 1, retryRecovered: 1, totalRetryAttempts: 1, tests: [] },
-    failureClusters: [], failureCategoryCounts: {}, businessImpacts: [],
-    layerCounts: { UI: 12, API: 10, DATABASE: 8, OTHER: 0 },
-    testTypeCounts: { UI_ONLY: 8, API_ONLY: 6, DATABASE_ONLY: 4, UI_API: 4, UI_DATABASE: 2, API_DATABASE: 2, UI_API_DATABASE: 4, OTHER: 0 },
-    qualityGate: { status: 'PASSED', passThreshold: 95, highImpactFailures: 0, reasons: [] },
-    scope: { includedTests: 30, excludedInternalTests: 5, internalTestsIncluded: false, description: 'Business tests only' },
-    results: [{
-      testId: 'checkout', title: 'Customer places an order @critical @ui @api', project: 'chromium', status: 'passed', rawStatus: 'passed',
-      durationMs: 1000, totalDurationMs: 1000, retriesUsed: 0, flaky: false, tags: ['@critical','@ui','@api'],
-      steps: ['Customer logs in', 'Customer submits order'],
-      stepDetails: [
-        { title: 'Customer logs in', category: 'test.step', durationMs: 300, status: 'passed', children: [] },
-        { title: 'Customer submits order', category: 'test.step', durationMs: 700, status: 'passed', children: [] }
-      ],
-      attachments: [], attempts: [{ retry: 0, status: 'passed', durationMs: 1000 }], sourceFile: 'tests/e2e/order.spec.ts', layers: ['UI','API'], testType: 'UI_API'
-    }]
+    count: 0,
+    fallback: 0,
+    cache: 0,
+    ai: 0,
+    affectedTests: 0,
+    records: [],
+    attempts: [],
+    attemptCount: 0,
+    rejected: 0,
+    suggested: 0,
+    unverified: 0
   };
 }
+

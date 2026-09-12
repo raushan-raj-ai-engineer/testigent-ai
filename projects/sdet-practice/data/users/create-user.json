@@ -1,0 +1,6 @@
+{
+  "namePrefix": "Automation User",
+  "emailPrefix": "automation",
+  "emailDomain": "example.com",
+  "password": "Test@12345"
+}

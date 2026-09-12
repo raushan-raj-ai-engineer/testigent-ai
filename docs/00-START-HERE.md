@@ -1,31 +1,56 @@
 # Start Here
 
-This repository is a reusable enterprise Playwright + TypeScript quality platform. Framework engines live under `src/framework/`; application-owned automation lives under `projects/<project>/`.
+TestigentAI is a reusable Playwright + TypeScript quality platform. Reusable engines live in `src/framework/`; application behavior lives only in `projects/<project>/`.
 
 ## First-time setup
 
 ```bash
 npm ci
 npx playwright install chromium
-npm run validate:final
 npm run project:list
+npm run qa:use -- <project> <environment>
+npm run qa:doctor
 ```
 
-## Daily flow
+`qa:use` stores the local selection in `.runtime/workspace.json` (gitignored). CI must provide `APP` and `ENV` explicitly. The framework has no silent `demo/qa` runtime fallback.
+
+## Daily flow — five commands
 
 ```bash
-APP=demo ENV=qa npm run project:check
-APP=demo ENV=qa npm run test:project -- --project=chromium
-APP=demo ENV=qa npm run report:open
+npm run qa:status
+# auth-required projects only: npm run qa:auth
+
+Auth capture is verified in a fresh browser context before it is promoted. The framework also restores a gitignored sessionStorage companion when required and raises `AUTH_SESSION_INVALID` before locator healing if the selected session is no longer authenticated.
+npm run qa:new -- <requirement-id-or-file>
+npm run qa:test -- --project=chromium
+npm run qa:validate
+npm run qa:report
+npm run qa:heal
 ```
 
-For a project that requires stored authentication:
+Use `qa:validate -- --with-tests` when you also want the selected project's Chromium suite.
 
-```bash
-APP=my-project ENV=qa APPLICATION_EXPLORATION_ENABLED=true npm run app:auth
-APP=my-project ENV=qa npm run test:project -- --project=chromium
+## New test rule
+
+Normal business tests use project fixtures/facades (`app`, `api`, `repositories`, `data`). They do not instantiate framework infrastructure and do not contain raw `page.goto/locator/click/fill` actions.
+
+```text
+Test -> project fixture/facade -> workflow/domain service -> page/repository -> reusable framework
 ```
 
-Never commit `.auth`, `.env`, reports, test results, healing cache, learned application evidence, or proposal backups.
+For authenticated projects, `qa:doctor` fails until the configured storage-state file exists. Create/refresh it through the governed auth flow; never commit `.auth/`.
 
-Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, and `03-ADD-NEW-PROJECT.md`. For team onboarding also read `14-ROOT-FOLDERS-AND-LOCAL-STATE.md` and `15-NEW-PROJECT-HANDOFF.md`. If AI/healing or agent-assisted authoring is required, continue with `07-HEALING-AI-MCP.md`, `13-AI-PROVIDER-EXAMPLES.md`, and `16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md`.
+Never commit `.auth`, `.env`, reports, test results, healing/cache/runtime files, or captured application evidence.
+
+Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, `15-NEW-PROJECT-HANDOFF.md`, and `16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md`.
+
+
+## Database capability policy
+
+Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` selects the database type (`none`, `postgres`, `mysql`, or `mssql`). `DB_TYPE` may override the configured type in CI/local runtime, while database credentials remain secret environment variables.
+
+- optional + unavailable: tests tagged `@db` are skipped automatically with a clear reason; UI/API suites continue
+- configured and ready: `@db` tests execute normally
+- required + unavailable: `qa:doctor`, framework health and project preflight fail before Playwright execution
+
+Business specs must not read `DB_TYPE` or manually decide whether to skip. Tag any scenario that requires database access with `@db`; the framework owns capability gating.

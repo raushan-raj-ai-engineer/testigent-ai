@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { WorkspaceContext } from '../config/workspace.context';
 import type {
   ExecutionConfigLayer,
   ExecutionProfileName,
@@ -51,8 +52,14 @@ export interface ExecutionPolicyInput {
 export function resolveExecutionPolicy(input: ExecutionPolicyInput = {}): ResolvedExecutionPolicy {
   const root = input.root ?? process.cwd();
   const env = input.env ?? process.env;
-  const application = input.application ?? env.APP?.trim() ?? 'demo';
-  const environment = input.environment ?? env.ENV?.trim() ?? 'qa';
+  const target = input.application
+    ? {
+        application: input.application,
+        environment: WorkspaceContext.resolveEnvironment(input.application, input.environment, root, env),
+      }
+    : WorkspaceContext.resolve({ root, env });
+  const application = target.application;
+  const environment = target.environment;
   const profile = parseProfile(input.profile ?? env.TEST_PROFILE ?? env.EXECUTION_PROFILE ?? 'custom');
   const lane = parseOptionalLane(input.lane ?? env.TEST_LANE);
 

@@ -39,8 +39,12 @@ function auditExecutionMatrix(project: string, findings: AuditFinding[]): void {
   const configDir = path.resolve('projects', project, 'config');
   const environments = fs.existsSync(configDir)
     ? fs.readdirSync(configDir).filter(file => file.endsWith('.json')).map(file => path.basename(file, '.json'))
-    : ['qa'];
-  for (const environment of environments.length ? environments : ['qa']) {
+    : [];
+  if (!environments.length) {
+    findings.push({ level: 'ERROR', code: 'ENV_CONFIG', message: `${project} has no environment configuration.` });
+    return;
+  }
+  for (const environment of environments) {
     for (const profile of PROFILES) {
       try {
         const policy = resolveExecutionPolicy({ application: project, environment, profile, env: {} });

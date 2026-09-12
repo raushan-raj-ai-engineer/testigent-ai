@@ -8,6 +8,24 @@
   "auth": {
     "strategy": "storageState",
     "storageStatePath": ".auth/sdet-practice.exploration.json",
-    "required": true
+    "required": true,
+    "verification": {
+      "stateKey": {
+        "name": "sdet_access_token",
+        "storage": "either"
+      },
+      "unauthenticatedControl": {
+        "role": "button",
+        "name": "Login",
+        "exact": true
+      },
+      "settleMs": 400,
+      "timeoutMs": 2500
+    }
+  },
+  "capabilities": {
+    "database": {
+      "type": "none"
+    }
   }
 }

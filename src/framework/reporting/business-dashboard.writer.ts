@@ -29,7 +29,7 @@ function materializeEvidence(outputDir: string, facts: ExecutionFacts): void {
   const evidenceRoot = path.join(outputDir, 'evidence');
   for (const result of facts.results) {
     for (const attachment of result.attachments ?? []) {
-      if (!attachment.sourcePath || !fs.existsSync(attachment.sourcePath) || !shouldCopy(attachment, includeVideo)) continue;
+      if (!attachment.sourcePath || !fs.existsSync(attachment.sourcePath) || !shouldCopy(attachment, includeVideo, result.status === 'failed')) continue;
       const testDir = path.join(evidenceRoot, safeFile(`${result.project}-${result.testId}`));
       fs.mkdirSync(testDir, { recursive: true });
       const ext = path.extname(attachment.sourcePath);
@@ -41,11 +41,11 @@ function materializeEvidence(outputDir: string, facts: ExecutionFacts): void {
   }
 }
 
-function shouldCopy(attachment: BusinessAttachment, includeVideo: boolean): boolean {
+function shouldCopy(attachment: BusinessAttachment, includeVideo: boolean, failedScenario: boolean): boolean {
   if (attachment.contentType.startsWith('image/')) return true;
   if (attachment.contentType.includes('zip')) return true;
   if (attachment.contentType.includes('json') || attachment.contentType.startsWith('text/')) return true;
-  if (includeVideo && attachment.contentType.startsWith('video/')) return true;
+  if ((includeVideo || failedScenario) && attachment.contentType.startsWith('video/')) return true;
   return false;
 }
 
@@ -59,11 +59,16 @@ function uniquePath(candidate: string): string {
 }
 
 function toCsv(facts: ExecutionFacts): string {
-  const rows: string[][] = [['Scenario', 'Status', 'Test Type', 'Layers', 'Project', 'Tags', 'Duration ms', 'Retries', 'Flaky', 'Self Healed', 'Failure Category', 'Skip Category', 'Skip Reason', 'Source File']];
+  const rows: string[][] = [['Scenario', 'Business Outcome', 'Raw Status', 'Quality Status', 'CI Blocking', 'Known Defect ID', 'Known Defect Title', 'Test Type', 'Layers', 'Project', 'Tags', 'Duration ms', 'Retries', 'Flaky', 'Self Healed', 'Failure Category', 'Skip Category', 'Skip Reason', 'Source File']];
   const healed = new Set(facts.healing.records.map(record => record.testId).filter(Boolean));
   for (const result of facts.results) rows.push([
     result.title,
-    result.status,
+    result.outcome ?? result.status.toUpperCase(),
+    result.rawStatus,
+    result.qualityStatus ?? '',
+    String(Boolean(result.ciBlocking)),
+    result.knownDefect?.id ?? '',
+    result.knownDefect?.title ?? '',
     result.testType ?? 'OTHER',
     (result.layers ?? []).join('+'),
     result.project,
@@ -80,6 +85,6 @@ function toCsv(facts: ExecutionFacts): string {
   return rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
 }
 
-function csvCell(value: string): string { return `"${value.replaceAll('"', '""')}"`; }
+function csvCell(value: unknown): string { return `"${String(value ?? '').replaceAll('"', '""')}"`; }
 function safeFile(value: string): string { return value.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 140); }
 function cloneFacts(value: ExecutionFacts): ExecutionFacts { return JSON.parse(JSON.stringify(value)) as ExecutionFacts; }

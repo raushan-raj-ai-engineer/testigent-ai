@@ -71,7 +71,7 @@ test('interactive dashboard filters, buttons, graphs and test-step details work 
     await expect(page.locator('#statusDonut .status-donut-svg')).toBeVisible();
     await expect(page.locator('#statusLegend')).toContainText('Passed');
     await expect(page.locator('#statusLegend')).toContainText('Failed');
-    await expect(page.locator('#statusLegend')).toContainText('Skipped');
+    await expect(page.locator('#statusLegend')).toContainText('Blocked');
     await expect(page.locator('.scenario-details').first()).toBeVisible();
     await page.emulateMedia({ media: 'screen' });
 
@@ -101,5 +101,5 @@ function sample(testId:string,title:string,status:'passed'|'failed'|'skipped',ta
     attempts:[{retry:0,status,durationMs:650,failureCategory}],sourceFile,...classification
   };
 }
-function noHealing():HealingSummary{return {count:0,fallback:0,cache:0,ai:0,affectedTests:0,records:[]};}
+function noHealing():HealingSummary{return {count:0,fallback:0,cache:0,ai:0,affectedTests:0,records:[],attempts:[],attemptCount:0,rejected:0,suggested:0,unverified:0};}
 function serve(root:string):Promise<{url:string;close:()=>Promise<void>}>{return new Promise((resolve,reject)=>{const server=http.createServer((req,res)=>{const target=path.join(root,req.url==='/'?'index.html':String(req.url).replace(/^\//,''));if(!fs.existsSync(target)){res.writeHead(404);res.end();return;}const ext=path.extname(target);res.setHeader('Content-Type',ext==='.js'?'text/javascript':ext==='.csv'?'text/csv':'text/html');fs.createReadStream(target).pipe(res);});server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const address=server.address();if(!address||typeof address==='string')return reject(new Error('No server address'));resolve({url:`http://127.0.0.1:${address.port}/`,close:()=>new Promise<void>((r,j)=>server.close(e=>e?j(e):r()))});});});}

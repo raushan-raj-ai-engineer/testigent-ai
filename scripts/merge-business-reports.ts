@@ -14,8 +14,8 @@ interface LocatedReport { file: string; directory: string; facts: ExecutionFacts
  * How to use: Download each shard's reports/<APP>/business directory beneath all-business-reports and run report:merge:business.
  * Benefit: Screenshots/traces/text evidence survive worker boundaries instead of becoming broken links after report merge.
  */
-function main(): void {
-  const root = path.resolve(process.argv[2] ?? 'all-business-reports');
+export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-business-reports'): ExecutionFacts {
+  const root = path.resolve(rootInput);
   const files = walk(root).filter(file => path.basename(file) === 'business-report.json');
   if (!files.length) throw new Error(`No business-report.json files found under ${root}`);
 
@@ -32,24 +32,36 @@ function main(): void {
   for (const located of reports) {
     for (const result of located.facts.results) {
       const rebased = rebaseShardEvidence(result, located.directory);
-      uniqueResults.set(`${rebased.project}:${rebased.testId}`, rebased);
+      const key = `${rebased.project}:${rebased.testId}`;
+      const existing = uniqueResults.get(key);
+      if (existing) {
+        throw new Error(`Duplicate business scenario across CI report bundles: ${key}. Ensure normal shards exclude dedicated AI tests and each shard executes a scenario once.`);
+      }
+      uniqueResults.set(key, rebased);
     }
-    for (const record of located.facts.healing.records) {
-      healingByKey.set(`${record.runId}:${record.testId ?? ''}:${record.planId}:${record.timestamp}:${record.decision.source}`, record);
+    for (const record of located.facts.healing.attempts ?? located.facts.healing.records) {
+      healingByKey.set(`${record.runId}:${record.testId ?? ''}:${record.planId}:${record.timestamp}:${record.decision.source}:${record.outcome ?? 'validated'}`, record);
     }
     for (const record of located.facts.aiUsage?.records ?? []) {
       aiByKey.set(`${record.runId}:${record.testId ?? ''}:${record.timestamp}:${record.purpose}:${record.provider ?? ''}:${record.model ?? ''}`, record);
     }
   }
 
-  const healingRecords = [...healingByKey.values()];
+  const healingAttempts = [...healingByKey.values()];
+  const outcome = (record: HealingAuditRecord) => record.outcome ?? 'validated';
+  const healingRecords = healingAttempts.filter(record => outcome(record) === 'validated');
   const healing: HealingSummary = {
     count: healingRecords.length,
     fallback: healingRecords.filter(record => record.decision.source === 'fallback').length,
     cache: healingRecords.filter(record => record.decision.source === 'cache').length,
     ai: healingRecords.filter(record => record.decision.source === 'ai').length,
     affectedTests: new Set(healingRecords.map(record => record.testId).filter(Boolean)).size,
-    records: healingRecords
+    records: healingRecords,
+    attempts: healingAttempts,
+    attemptCount: healingAttempts.length,
+    rejected: healingAttempts.filter(record => outcome(record) === 'rejected').length,
+    suggested: healingAttempts.filter(record => outcome(record) === 'suggested').length,
+    unverified: healingAttempts.filter(record => outcome(record) === 'unverified').length
   };
 
   const aiUsage = buildAiUsageSummary([...aiByKey.values()]);
@@ -68,13 +80,21 @@ function main(): void {
     }
   });
 
+  merged.aggregation = {
+    mode: 'merged',
+    sourceReports: reports.length,
+    sourceRunIds: [...new Set(reports.map(report => report.facts.runId))].sort(),
+    sourceDirectories: reports.map(report => path.relative(root, report.directory) || '.').sort()
+  };
+
   // CI restores .report-history before this command and this is the only place that appends the final merged release point.
   const history = new ReportHistoryStore().append(merged);
   const outputDir = path.resolve(process.env.MERGED_BUSINESS_REPORT_DIR ?? path.join(ProjectPaths.reports(), 'business-merged'));
   fs.rmSync(outputDir, { recursive: true, force: true });
-  writeBusinessDashboard(outputDir, merged, { history, reportUrl: cleanEnv('REPORT_PUBLIC_URL') });
+  const written = writeBusinessDashboard(outputDir, merged, { history, reportUrl: cleanEnv('REPORT_PUBLIC_URL') });
   console.log(`Merged ${files.length} shard business report(s) into ${path.join(outputDir, 'index.html')}`);
-  console.log(`Merged business scenarios: ${merged.total}; evidence links retained where shard artifacts contained the files.`);
+  console.log(`Merged business scenarios: ${written.total} selected; ${written.executed}/${written.executionEligible} applicable scenarios executed; ${written.healing.count} validated healing event(s); ${written.aiUsage?.calls ?? 0} AI runtime call(s).`);
+  return written;
 }
 
 
@@ -138,4 +158,4 @@ function walk(root: string): string[] {
   return output;
 }
 
-main();
+if (require.main === module) mergeBusinessReports();

@@ -12,6 +12,23 @@ test-results/<APP>/
 
 The business dashboard contains execution KPIs, status/layer graphs, searchable/filterable test explorer, step drill-down and materialized evidence. Email supports preview mode so SMTP is not required for local report validation.
 
+## Business-standard status model (v1.2.6)
+
+The business report now separates **raw Playwright execution** from **product quality** and **CI blocking**:
+
+```text
+PASSED / PASSED_WITH_HEALING / PASSED_AFTER_RETRY  -> quality pass
+KNOWN_DEFECT                                        -> quality fail, accepted/non-blocking
+FAILED                                              -> quality fail, CI blocking
+SKIPPED                                             -> neutral; lowers execution coverage only
+UNEXPECTED_PASS                                     -> quality pass, CI blocking until stale defect marker is reviewed
+```
+
+`Quality failed = KNOWN_DEFECT + FAILED`. A known product defect is therefore never displayed as an ordinary pass even though Playwright expected-failure semantics may keep the native run green. The dashboard separately shows **Known defects**, **CI-blocking issues**, **Investigate now**, slowest scenarios, flaky/retry debt and accepted-risk release state.
+
+See `26-BUSINESS-REPORTING-STANDARD-2026.md` for the full industry benchmark and metric definitions.
+
+
 ## CI model
 
 1. Install locked dependencies.
@@ -69,3 +86,14 @@ AI_RUNTIME_LOGGING
 ```
 
 The framework-validation stage forces AI off so compile/architecture/security regression stays deterministic. The selected project-test stage may enable AI through protected CI variables/secrets.
+
+## Semantic healing reporting
+
+The business report distinguishes locator attempts from proven recovery:
+
+- `validated` — post-condition passed; counts as **Self-healed** and may reuse a semantically validated cache entry
+- `rejected` — candidate/action did not produce the intended state; visible in the audit but never counted as healed or cached
+- `suggested` — candidate found while `HEALING_MODE=suggest`; no runtime action was taken
+- `unverified` — runtime action completed without a semantic post-condition; retained for audit but not counted/cached
+
+`business-report.json`, the HTML dashboard, merged shard reporting and the executive summary use the same rule. Historical pre-v1.2.2 records without an outcome are treated as validated for backward-compatible report reading, but legacy cache entries are not trusted for future execution.

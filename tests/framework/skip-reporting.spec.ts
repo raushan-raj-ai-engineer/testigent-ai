@@ -21,9 +21,12 @@ test.describe('Skip reporting contract', () => {
 
     expect(facts.total).toBe(3);
     expect(facts.executed).toBe(1);
-    expect(facts.executionRate).toBe(33.33);
+    expect(facts.executionEligible).toBe(2);
+    expect(facts.notApplicable).toBe(1);
+    expect(facts.blockedSkipped).toBe(1);
+    expect(facts.executionRate).toBe(50);
     expect(facts.executedPassRate).toBe(100);
-    expect(facts.qualityGate.status).toBe('PASSED');
+    expect(facts.qualityGate.status).toBe('ATTENTION_REQUIRED');
     expect(facts.skipBreakdown.count).toBe(2);
     expect(facts.skipBreakdown.categories.map(item => item.category)).toEqual([
       'DATABASE_NOT_CONFIGURED',
@@ -31,10 +34,10 @@ test.describe('Skip reporting contract', () => {
     ]);
 
     const html = renderBusinessHtml(facts);
-    expect(html).toContain('Skip Breakdown');
+    expect(html).toContain('Non-execution breakdown');
     expect(html).toContain('Database not configured');
     expect(html).toContain('Human review pending');
-    expect(html).toContain('Executed pass rate');
+    expect(html).toContain('Executed');
   });
 });
 
@@ -54,5 +57,5 @@ function result(
 }
 
 function noHealing(): HealingSummary {
-  return { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [] };
+  return { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [], attempts: [], attemptCount: 0, rejected: 0, suggested: 0, unverified: 0 };
 }

@@ -1,17 +1,20 @@
 import 'dotenv/config';
+import fs from 'node:fs';
 import path from 'node:path';
-import { defineConfig, devices } from '@playwright/test';
-import { ApplicationRegistry } from './src/framework/core/config/application.registry';
-import { requiredTagGroupsToRegExp, resolveExecutionPolicy, tagsToRegExp } from './src/framework/core/execution/execution.policy';
+import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/test';
+import { RuntimeConfig, type SupportedBrowser } from './src/framework/core/config/runtime.config';
+import { requiredTagGroupsToRegExp, tagsToRegExp } from './src/framework/core/execution/execution.policy';
 
-const appName = process.env.APP?.trim() || 'demo';
-const environment = process.env.ENV?.trim() || 'qa';
-const app = ApplicationRegistry.get(appName, environment);
-const policy = resolveExecutionPolicy({ application: appName, environment });
-const baseURL = process.env.APP_BASE_URL?.trim() || app.uiBaseUrl;
-const storageState = process.env.PW_STORAGE_STATE?.trim() || undefined;
-const reportRoot = path.join('reports', appName);
-const resultRoot = path.join('test-results', appName);
+const runtime = RuntimeConfig.resolve();
+const policy = runtime.execution;
+const baseURL = process.env.APP_BASE_URL?.trim() || runtime.application.uiBaseUrl;
+const configuredStorageState = process.env.PW_STORAGE_STATE?.trim() || runtime.auth.storageStatePath;
+const storageState = configuredStorageState
+  ? (path.isAbsolute(configuredStorageState) ? configuredStorageState : path.resolve(configuredStorageState))
+  : undefined;
+const usableStorageState = storageState && fs.existsSync(storageState) ? storageState : undefined;
+const reportRoot = runtime.reportRoot;
+const resultRoot = runtime.resultRoot;
 const profileGrep = requiredTagGroupsToRegExp([
   policy.includeTags,
   policy.lane ? [`@lane:${policy.lane}`, `@${policy.lane}`] : [],
@@ -27,7 +30,7 @@ export default defineConfig({
   timeout: policy.timeoutMs,
   expect: {
     timeout: policy.expectTimeoutMs,
-    toHaveScreenshot: { maxDiffPixelRatio: Number(process.env.VISUAL_MAX_DIFF_RATIO ?? 0.01) },
+    toHaveScreenshot: { maxDiffPixelRatio: runtime.playwright.visualMaxDiffPixelRatio },
   },
   grep: profileGrep,
   grepInvert: profileGrepInvert,
@@ -37,7 +40,6 @@ export default defineConfig({
   maxFailures: policy.maxFailures || undefined,
   reporter: process.env.CI
     ? [
-        // Keep a concise console reporter in CI so failed shard/test names and errors are visible in GitHub logs.
         ['line'],
         ['blob', { outputDir: process.env.PLAYWRIGHT_BLOB_OUTPUT_DIR ?? path.join(reportRoot, 'blob-report') }],
         ['./src/framework/reporting/business.reporter.ts', { outputDir: path.join(reportRoot, 'business') }],
@@ -51,19 +53,27 @@ export default defineConfig({
       ],
   use: {
     baseURL,
-    storageState,
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    storageState: usableStorageState,
+    trace: runtime.playwright.trace,
+    screenshot: runtime.playwright.screenshot,
+    video: runtime.playwright.video,
     actionTimeout: policy.actionTimeoutMs,
     navigationTimeout: policy.navigationTimeoutMs,
-    ignoreHTTPSErrors: false,
+    ignoreHTTPSErrors: runtime.playwright.ignoreHTTPSErrors,
     ...(process.env.PW_WS_ENDPOINT?.trim()
-      ? { connectOptions: { wsEndpoint: process.env.PW_WS_ENDPOINT.trim(), timeout: Number(process.env.PW_WS_TIMEOUT_MS ?? 30_000) } }
+      ? { connectOptions: { wsEndpoint: process.env.PW_WS_ENDPOINT.trim(), timeout: runtime.playwright.wsConnectTimeoutMs } }
       : {}),
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-  ],
+  projects: runtime.playwright.browsers.map(browser => browserProject(browser, usableStorageState)),
 });
+
+function browserProject(
+  browser: SupportedBrowser,
+  storageState: string | undefined,
+): NonNullable<PlaywrightTestConfig['projects']>[number] {
+  switch (browser) {
+    case 'chromium': return { name: 'chromium', use: { ...devices['Desktop Chrome'], storageState } };
+    case 'firefox': return { name: 'firefox', use: { ...devices['Desktop Firefox'], storageState } };
+    case 'webkit': return { name: 'webkit', use: { ...devices['Desktop Safari'], storageState } };
+  }
+}
