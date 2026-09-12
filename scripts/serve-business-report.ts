@@ -11,7 +11,7 @@ import { URL } from 'node:url';
  * How to use: `npm run report:serve`; set REPORT_PORT or NOTIFY_REPORT_DIR when needed.
  * Benefit: Avoids file/email preview security restrictions that can disable JavaScript and make interactive controls appear static.
  */
-const root = path.resolve(process.env.NOTIFY_REPORT_DIR ?? ProjectPaths.businessReport());
+const root = path.resolve(process.env.NOTIFY_REPORT_DIR ?? ProjectPaths.latestBusinessReport());
 const requestedPort = Number(process.env.REPORT_PORT ?? 4173);
 if (!fs.existsSync(path.join(root, 'index.html'))) throw new Error(`Missing ${path.join(root, 'index.html')}. Run tests/report:dashboard first.`);
 

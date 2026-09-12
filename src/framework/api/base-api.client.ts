@@ -1,6 +1,8 @@
 import type { APIRequestContext, APIResponse, TestInfo } from '@playwright/test';
 import type { EnterpriseLogger } from '../logging/enterprise.logger';
-import { redact } from '../logging/redactor';
+import { redact, sanitizeAndTruncate, sanitizeUrl } from '../logging/redactor';
+
+type ApiLogger = Pick<EnterpriseLogger, 'info'>;
 
 export interface ApiRequestOptions {
   data?: unknown;
@@ -18,7 +20,7 @@ export class BaseApiClient {
   constructor(
     private readonly request: APIRequestContext,
     private readonly baseUrl: string,
-    private readonly logger: EnterpriseLogger,
+    private readonly logger: ApiLogger,
     private readonly testInfo?: TestInfo
   ) {}
 
@@ -39,10 +41,27 @@ export class BaseApiClient {
       headers: { 'x-test-correlation-id': correlationId, ...options.headers }
     });
     const body = await response.text();
-    const evidence = redact({ method, url, status: response.status(), durationMs: Date.now() - started, correlationId, request: options, responseBody: body.slice(0, 8_000) });
+
+    // Evidence is intentionally allowlisted. Do not persist the Playwright request/response objects themselves.
+    const evidence = {
+      method,
+      url: sanitizeUrl(url),
+      status: response.status(),
+      durationMs: Date.now() - started,
+      correlationId,
+      request: redact({
+        headers: options.headers ?? {},
+        params: options.params ?? {},
+        data: options.data
+      }),
+      responseBody: sanitizeAndTruncate(body, 8_000)
+    };
     this.logger.info('API_CALL', evidence);
     if (this.testInfo) {
-      await this.testInfo.attach(`api-${method}-${correlationId}.json`, { body: JSON.stringify(evidence, null, 2), contentType: 'application/json' });
+      await this.testInfo.attach(`api-${method}-${correlationId}.json`, {
+        body: JSON.stringify(evidence, null, 2),
+        contentType: 'application/json'
+      });
     }
     return response;
   }

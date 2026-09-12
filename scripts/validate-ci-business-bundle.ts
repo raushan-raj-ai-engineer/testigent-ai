@@ -6,7 +6,7 @@ import type { ExecutionFacts } from '../src/framework/analytics/report.types';
 /**
  * Author: Raushan Raj
  * Business Use: CI release gate for the complete V3 dashboard bundle before artifact publication or stakeholder mail.
- * How to use: Run ci:business:validate against reports/<APP>/business after merge/finalization.
+ * How to use: Run ci:business:validate against reports/<APP>/<ENV>/<RUN_ID>/business after merge/finalization.
  * Benefit: Prevents publishing an HTML shell with missing JavaScript, CSV, evidence or inconsistent business counts.
  */
 function main(): void {

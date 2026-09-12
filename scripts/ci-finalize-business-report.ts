@@ -4,7 +4,7 @@ import { ProjectPaths } from '../src/framework/core/config/project.paths';
 
 /**
  * Author: Raushan Raj
- * Business Use: Promotes the merged CI dashboard into the canonical reports/<APP>/business location used by publishing and notification.
+ * Business Use: Promotes the merged CI dashboard into the canonical reports/<APP>/<ENV>/<RUN_ID>/business location used by publishing and notification.
  * How to use: Run after report:merge:business and before ci:business:validate / ci:mail.
  * Benefit: Every downstream consumer reads the same immutable merged dashboard instead of shard-local or stale report folders.
  */

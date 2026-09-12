@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import type { AiGateway } from '../ai/ai.gateway.js';
 import type { EnterpriseLogger } from '../logging/enterprise.logger.js';
+import { sanitizeAndTruncate } from '../logging/redactor.js';
 import { HealingAudit } from './healing.audit.js';
 import { HealingCache } from './healing.cache.js';
 import type {
@@ -19,7 +20,11 @@ interface ResolvedCandidate {
   decision: HealingDecision;
 }
 
-type AiGatewayFactory = () => AiGateway | undefined;
+type HealingAiGateway = Pick<AiGateway, 'proposeLocator'>;
+
+type AiGatewayFactory = () => HealingAiGateway | undefined;
+
+type HealingLogger = Pick<EnterpriseLogger, 'warn'> & Partial<Pick<EnterpriseLogger, 'debug'>>;
 
 /**
  * Author: Raushan Raj
@@ -31,12 +36,12 @@ export class HealingOrchestrator {
   private readonly audit = new HealingAudit();
   private readonly cache = new HealingCache();
   private aiResolved = false;
-  private resolvedAi?: AiGateway;
+  private resolvedAi?: HealingAiGateway;
 
   constructor(
     private readonly page: Page,
-    private readonly logger: EnterpriseLogger,
-    private readonly ai?: AiGateway | AiGatewayFactory,
+    private readonly logger: HealingLogger,
+    private readonly ai?: HealingAiGateway | AiGatewayFactory,
     private readonly testId?: string
   ) {}
 
@@ -187,7 +192,7 @@ export class HealingOrchestrator {
 
     // Deterministic fallbacks are already source-controlled. Cache only dynamic AI recoveries;
     // cache hits are already semantically validated records from a prior execution.
-    if (decision.source === 'ai') this.cache.set(plan.id, decision, postCondition.description);
+    if (decision.source === 'ai') this.cache.set(plan, decision, postCondition.description);
 
     this.logger.warn('SELF_HEALING_VALIDATED', {
       planId: plan.id,
@@ -206,7 +211,7 @@ export class HealingOrchestrator {
     const scopedRoot = plan.scope ? await this.resolveScope(root, plan.scope) : root;
 
     if (!options.skipPrimary && !excluded.has(this.descriptorKey(plan.primary))) {
-      const primary = await this.usableLocator(scopedRoot, plan.primary);
+      const primary = await this.usableLocator(scopedRoot, plan.primary, 'primary');
       if (primary) {
         return {
           locator: primary,
@@ -243,7 +248,7 @@ export class HealingOrchestrator {
       }
     }
 
-    const cached = this.cache.get(plan.id);
+    const cached = this.cache.get(plan);
     if (
       cached &&
       this.isAllowedDescriptor(cached.descriptor) &&
@@ -309,7 +314,7 @@ export class HealingOrchestrator {
   }
 
   private async resolveScope(root: LocatorRoot, scope: LocatorScopePlan): Promise<Locator> {
-    const primary = await this.usableLocator(root, scope.primary);
+    const primary = await this.usableLocator(root, scope.primary, 'primary');
     if (primary) return primary;
 
     for (const fallback of scope.fallbacks ?? []) {
@@ -326,25 +331,59 @@ export class HealingOrchestrator {
    * raw DOM count. Ambiguity still fails closed unless the project explicitly declares that
    * duplicate visible controls are semantically equivalent via `match: 'firstVisible'`.
    */
-  private async usableLocator(root: LocatorRoot, descriptor: LocatorDescriptor): Promise<Locator | undefined> {
+  private async usableLocator(
+    root: LocatorRoot,
+    descriptor: LocatorDescriptor,
+    phase: 'primary' | 'recovery' = 'recovery'
+  ): Promise<Locator | undefined> {
+    const timeoutMs = phase === 'primary'
+      ? this.positiveInteger(process.env.HEALING_PRIMARY_READY_TIMEOUT_MS, 1_500)
+      : this.positiveInteger(process.env.HEALING_RECOVERY_READY_TIMEOUT_MS, 400);
     try {
       const visible = resolveLocator(root, descriptor).visible();
+
+      // count() is intentionally not the readiness primitive because it returns immediately.
+      // Wait for at least one visible match first, then evaluate cardinality once the UI had its bounded window.
+      await visible.first().waitFor({ state: 'visible', timeout: timeoutMs });
       const count = await visible.count();
       if (count < 1) return undefined;
 
       if ((descriptor.match ?? 'unique') === 'unique' && count !== 1) {
         this.logger.warn('LOCATOR_AMBIGUOUS_VISIBLE_MATCHES', {
           descriptor,
-          visibleCount: count
+          visibleCount: count,
+          phase,
+          timeoutMs
         });
         return undefined;
       }
 
       const selected = descriptor.match === 'firstVisible' ? visible.first() : visible;
-      await selected.waitFor({ state: 'visible', timeout: 1_500 });
+      await selected.waitFor({ state: 'visible', timeout: Math.max(100, Math.min(timeoutMs, 500)) });
+
+      // Recheck uniqueness after the wait so a second control appearing during render cannot be silently selected.
+      const confirmedCount = await visible.count();
+      if ((descriptor.match ?? 'unique') === 'unique' && confirmedCount !== 1) {
+        this.logger.warn('LOCATOR_AMBIGUOUS_AFTER_READINESS', { descriptor, visibleCount: confirmedCount, phase, timeoutMs });
+        return undefined;
+      }
       return selected;
-    } catch {
+    } catch (error) {
+      this.debugDiagnostic('LOCATOR_READINESS_MISS', {
+        descriptor,
+        phase,
+        timeoutMs,
+        error: error instanceof Error ? error.name : 'UnknownError'
+      });
       return undefined;
+    }
+  }
+
+  private debugDiagnostic(event: string, data: unknown): void {
+    try {
+      this.logger.debug?.(event, data);
+    } catch {
+      // Readiness diagnostics are best-effort and must never change healing control flow.
     }
   }
 
@@ -384,7 +423,7 @@ export class HealingOrchestrator {
     const response = await ai.proposeLocator({
       planId: plan.id,
       businessName: plan.businessName,
-      accessibilitySnapshot: snapshot.slice(0, maxSnapshotChars),
+      accessibilitySnapshot: sanitizeAndTruncate(snapshot, maxSnapshotChars),
       allowedDescriptorTypes: ['role', 'label', 'testId', 'placeholder', 'text']
     });
 
@@ -408,7 +447,7 @@ export class HealingOrchestrator {
    * This keeps ordinary UI execution independent from AI provider configuration and avoids
    * provider/network startup cost when deterministic automation is healthy.
    */
-  private aiGateway(): AiGateway | undefined {
+  private aiGateway(): HealingAiGateway | undefined {
     if (!this.ai) return undefined;
     if (typeof this.ai !== 'function') return this.ai;
     if (!this.aiResolved) {

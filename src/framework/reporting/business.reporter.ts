@@ -6,6 +6,7 @@ import { buildExecutionFacts } from '../analytics/execution-facts';
 import type { AiRuntimeAuditRecord, AiRuntimeUsageSummary, BusinessAttachment, BusinessAttempt, BusinessStepDetail, BusinessTestResult, HealingAuditRecord, HealingSummary, KnownDefectFact } from '../analytics/report.types';
 import { classifyTestLayers } from '../analytics/test-layer.classifier';
 import { RunContext } from '../core/config/run.context';
+import { redact, sanitizeText } from '../logging/redactor';
 import { ProjectPaths } from '../core/config/project.paths';
 import { RuntimeConfig } from '../core/config/runtime.config';
 import { shouldIncludeInBusinessReport } from './business-report-scope';
@@ -96,12 +97,12 @@ export default class BusinessReporter implements Reporter {
     const runtime = RuntimeConfig.resolve();
     const runId = RunContext.get().runId;
     const results = [...this.attempts.values()].map(toFinalBusinessResult);
-    const healing = buildHealingSummary(readHealingRecords(runId, runtime.applicationName));
-    const aiUsage = buildAiUsageSummary(readAiRecords(runId, runtime.applicationName));
+    const healing = buildHealingSummary(readHealingRecords(runId, runtime.reportRoot));
+    const aiUsage = buildAiUsageSummary(readAiRecords(runId, runtime.reportRoot));
     const internalTestsIncluded = process.env.BUSINESS_REPORT_INCLUDE_INTERNAL === 'true';
 
     if (!results.length && this.excludedInternal.size > 0 && !internalTestsIncluded) {
-      const diagnosticsDir = path.resolve('reports', runtime.applicationName, 'framework-validation');
+      const diagnosticsDir = path.join(runtime.reportRoot, 'framework-validation');
       fs.mkdirSync(diagnosticsDir, { recursive: true });
       fs.writeFileSync(path.join(diagnosticsDir, 'last-run.json'), JSON.stringify({
         runId,
@@ -164,8 +165,8 @@ function flattenBusinessSteps(steps: TestStep[], prefix = ''): string[] {
   return output;
 }
 
-function readHealingRecords(runId: string, application: string): HealingAuditRecord[] {
-  const auditFile = path.resolve('reports', application, 'healing', 'healing-audit.jsonl');
+function readHealingRecords(runId: string, reportRoot: string): HealingAuditRecord[] {
+  const auditFile = path.join(reportRoot, 'healing', 'healing-audit.jsonl');
   if (!fs.existsSync(auditFile)) return [];
   const records: HealingAuditRecord[] = [];
   for (const line of fs.readFileSync(auditFile, 'utf8').split('\n')) {
@@ -178,8 +179,8 @@ function readHealingRecords(runId: string, application: string): HealingAuditRec
   return records;
 }
 
-function readAiRecords(runId: string, application: string): AiRuntimeAuditRecord[] {
-  const auditFile = path.resolve('reports', application, 'ai', 'ai-audit.jsonl');
+function readAiRecords(runId: string, reportRoot: string): AiRuntimeAuditRecord[] {
+  const auditFile = path.join(reportRoot, 'ai', 'ai-audit.jsonl');
   if (!fs.existsSync(auditFile)) return [];
   const records: AiRuntimeAuditRecord[] = [];
   for (const line of fs.readFileSync(auditFile, 'utf8').split('\n')) {
@@ -347,16 +348,11 @@ function readTags(test: TestCase): string[] {
 }
 
 function sanitizeError(value?: string): string | undefined {
-  return value
-    ?.replace(/\u001b\[[0-9;]*m/g, '')
-    .replace(/(authorization|token|password|api[-_]?key)\s*[:=]\s*[^,;\s]+/gi, '$1=[REDACTED]')
-    .replace(/bearer\s+[a-z0-9._-]+/gi, 'Bearer [REDACTED]');
+  return value === undefined
+    ? undefined
+    : sanitizeText(value.replace(/\u001b\[[0-9;]*m/g, ''));
 }
 
 function redactObject(value: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) {
-    out[key] = /(authorization|token|password|api[-_]?key|secret)/i.test(key) ? '[REDACTED]' : item;
-  }
-  return out;
+  return redact(value);
 }

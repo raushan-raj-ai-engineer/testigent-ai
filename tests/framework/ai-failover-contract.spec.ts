@@ -81,7 +81,7 @@ test.describe('AI provider selection and failover contract', () => {
   test('single mode can select Gemini explicitly without Ollama being injected', async () => {
     await withEnv({
       AI_ENABLED: 'true', AI_PROVIDER_MODE: 'single', AI_PROVIDER: 'gemini',
-      AI_ALLOW_CLOUD_EGRESS: 'true', GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-test-model',
+      AI_ALLOW_CLOUD_EGRESS: 'true', AI_ALLOWED_EXTERNAL_ORIGINS: 'https://generativelanguage.googleapis.com', GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-test-model',
       OLLAMA_MODEL: 'llama3.2'
     }, async () => {
       expect(resolveProviderOrder()).toEqual(['gemini']);
@@ -92,7 +92,7 @@ test.describe('AI provider selection and failover contract', () => {
     await withEnv({
       AI_ENABLED: 'true', AI_PROVIDER_MODE: 'failover', AI_PROVIDER: undefined,
       AI_PROVIDER_ORDER: 'gemini,ollama,openai', AI_ALLOW_CLOUD_EGRESS: 'true',
-      GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-test-model',
+      AI_ALLOWED_EXTERNAL_ORIGINS: 'https://generativelanguage.googleapis.com,https://api.openai.com', GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-test-model',
       OLLAMA_MODEL: 'llama3.2', OPENAI_API_KEY: 'test-key', OPENAI_MODEL: 'test-model'
     }, async () => {
       expect(resolveProviderOrder()).toEqual(['gemini', 'ollama', 'openai']);
@@ -102,7 +102,7 @@ test.describe('AI provider selection and failover contract', () => {
   test('failover mode fails fast when a listed provider is not configured', async () => {
     await withEnv({
       AI_ENABLED: 'true', AI_PROVIDER_MODE: 'failover', AI_PROVIDER_ORDER: 'gemini,openai',
-      AI_ALLOW_CLOUD_EGRESS: 'true', GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-test-model',
+      AI_ALLOW_CLOUD_EGRESS: 'true', AI_ALLOWED_EXTERNAL_ORIGINS: 'https://generativelanguage.googleapis.com', GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-test-model',
       OPENAI_API_KEY: undefined, OPENAI_MODEL: undefined
     }, async () => {
       expect(() => resolveProviderOrder()).toThrow("AI provider 'openai' is missing required configuration");

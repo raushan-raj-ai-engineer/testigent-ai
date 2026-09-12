@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { HealingOrchestrator } from '../../src/framework/healing/healing.orchestrator.js';
+import type { AiGateway } from '../../src/framework/ai/ai.gateway.js';
+import { HealingCache } from '../../src/framework/healing/healing.cache.js';
 import type { LocatorPlan } from '../../src/framework/healing/healing.types.js';
 
 /** Author: Raushan Raj */
@@ -18,7 +20,7 @@ test.describe('Healing-aware generation contract', () => {
 
   test('scoped locator plan stays inside its modal and uses deterministic fallback', async ({ page }) => {
     await page.setContent(`<button>Save</button><div id="user-modal"><button id="modal-save">Create</button></div>`);
-    const logger = { warn: () => undefined } as any;
+    const logger = { warn: () => undefined };
     const healer = new HealingOrchestrator(page, logger);
     const plan: LocatorPlan = {
       id: 'contract.modal.create',
@@ -27,47 +29,46 @@ test.describe('Healing-aware generation contract', () => {
       primary: { type: 'role', role: 'button', name: 'Missing' },
       fallbacks: [{ type: 'role', role: 'button', name: 'Create', exact: true }]
     };
+    const previousMode = process.env.HEALING_MODE;
     process.env.HEALING_MODE = 'runtime';
-    const locator = await healer.resolve(plan);
-    await expect(locator).toHaveAttribute('id', 'modal-save');
+    try {
+      const locator = await healer.resolve(plan);
+      await expect(locator).toHaveAttribute('id', 'modal-save');
+    } finally {
+      if (previousMode === undefined) delete process.env.HEALING_MODE; else process.env.HEALING_MODE = previousMode;
+    }
   });
 
   test('healing priority uses deterministic fallback before a previously cached locator', async ({ page }) => {
     const app = `healing-order-${Date.now()}-fallback`;
     const previousApp = process.env.APP;
+    const previousEnv = process.env.ENV;
     const previousMode = process.env.HEALING_MODE;
     process.env.APP = app;
+    process.env.ENV = 'qa';
     process.env.HEALING_MODE = 'runtime';
-
-    const { mkdir, writeFile, rm } = await import('node:fs/promises');
-    const { dirname, resolve } = await import('node:path');
-    const cachePath = resolve('.healing', app, 'locator-cache.json');
-    await mkdir(dirname(cachePath), { recursive: true });
-    await writeFile(cachePath, JSON.stringify({
-      'contract.priority': {
-        descriptor: { type: 'role', role: 'button', name: 'Cached', exact: true },
-        confidence: 0.99,
-        updatedAt: new Date().toISOString(),
-        validation: 'semantic',
-        verificationDescription: 'Synthetic previously validated recovery'
-      }
-    }), 'utf8');
+    const { rm } = await import('node:fs/promises');
+    const { resolve } = await import('node:path');
+    const plan: LocatorPlan = {
+      id: 'contract.priority',
+      businessName: 'Priority action',
+      primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
+      fallbacks: [{ type: 'role', role: 'button', name: 'Fallback', exact: true }]
+    };
+    new HealingCache().set(plan, {
+      descriptor: { type: 'role', role: 'button', name: 'Cached', exact: true },
+      source: 'ai', confidence: 0.99, reason: 'Synthetic previously validated recovery'
+    }, 'Synthetic previously validated recovery');
 
     try {
       await page.setContent('<button id="fallback">Fallback</button><button id="cached">Cached</button>');
-      const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
-      const plan: LocatorPlan = {
-        id: 'contract.priority',
-        businessName: 'Priority action',
-        primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
-        fallbacks: [{ type: 'role', role: 'button', name: 'Fallback', exact: true }]
-      };
-
+      const healer = new HealingOrchestrator(page, { warn: () => undefined });
       const locator = await healer.resolve(plan);
       await expect(locator).toHaveAttribute('id', 'fallback');
     } finally {
       await rm(resolve('.healing', app), { recursive: true, force: true });
       if (previousApp === undefined) delete process.env.APP; else process.env.APP = previousApp;
+      if (previousEnv === undefined) delete process.env.ENV; else process.env.ENV = previousEnv;
       if (previousMode === undefined) delete process.env.HEALING_MODE; else process.env.HEALING_MODE = previousMode;
     }
   });
@@ -75,44 +76,104 @@ test.describe('Healing-aware generation contract', () => {
   test('validated cache is used only after declared deterministic fallbacks fail', async ({ page }) => {
     const app = `healing-order-${Date.now()}-cache`;
     const previousApp = process.env.APP;
+    const previousEnv = process.env.ENV;
     const previousMode = process.env.HEALING_MODE;
     process.env.APP = app;
+    process.env.ENV = 'qa';
     process.env.HEALING_MODE = 'runtime';
-
-    const { mkdir, writeFile, rm } = await import('node:fs/promises');
-    const { dirname, resolve } = await import('node:path');
-    const cachePath = resolve('.healing', app, 'locator-cache.json');
-    await mkdir(dirname(cachePath), { recursive: true });
-    await writeFile(cachePath, JSON.stringify({
-      'contract.cache-after-fallback': {
-        descriptor: { type: 'role', role: 'button', name: 'Cached', exact: true },
-        confidence: 0.99,
-        updatedAt: new Date().toISOString(),
-        validation: 'semantic',
-        verificationDescription: 'Synthetic previously validated recovery'
-      }
-    }), 'utf8');
+    const { rm } = await import('node:fs/promises');
+    const { resolve } = await import('node:path');
+    const plan: LocatorPlan = {
+      id: 'contract.cache-after-fallback',
+      businessName: 'Cached action',
+      primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
+      fallbacks: [{ type: 'role', role: 'button', name: 'Also Missing', exact: true }]
+    };
+    new HealingCache().set(plan, {
+      descriptor: { type: 'role', role: 'button', name: 'Cached', exact: true },
+      source: 'ai', confidence: 0.99, reason: 'Synthetic previously validated recovery'
+    }, 'Synthetic previously validated recovery');
 
     try {
       await page.setContent('<button id="cached">Cached</button>');
-      const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
-      const plan: LocatorPlan = {
-        id: 'contract.cache-after-fallback',
-        businessName: 'Cached action',
-        primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
-        fallbacks: [{ type: 'role', role: 'button', name: 'Also Missing', exact: true }]
-      };
-
+      const healer = new HealingOrchestrator(page, { warn: () => undefined });
       const locator = await healer.resolve(plan);
       await expect(locator).toHaveAttribute('id', 'cached');
     } finally {
       await rm(resolve('.healing', app), { recursive: true, force: true });
       if (previousApp === undefined) delete process.env.APP; else process.env.APP = previousApp;
+      if (previousEnv === undefined) delete process.env.ENV; else process.env.ENV = previousEnv;
       if (previousMode === undefined) delete process.env.HEALING_MODE; else process.env.HEALING_MODE = previousMode;
     }
   });
 });
 
+test.describe('Primary locator readiness window', () => {
+  test('readiness miss diagnostics do not require an optional debug logger method', async ({ page }) => {
+    await page.setContent('<button id="fallback">Fallback Save</button>');
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
+    const plan: LocatorPlan = {
+      id: 'contract.readiness-partial-logger',
+      businessName: 'Fallback with partial logger',
+      primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
+      fallbacks: [{ type: 'role', role: 'button', name: 'Fallback Save', exact: true }]
+    };
+    const previousMode = process.env.HEALING_MODE;
+    process.env.HEALING_MODE = 'runtime';
+    try {
+      const locator = await healer.resolve(plan);
+      await expect(locator).toHaveAttribute('id', 'fallback');
+    } finally {
+      previousMode === undefined ? delete process.env.HEALING_MODE : process.env.HEALING_MODE = previousMode;
+    }
+  });
+
+  test('readiness diagnostics remain non-blocking when optional debug logging itself fails', async ({ page }) => {
+    await page.setContent('<button id="fallback-debug">Fallback Debug</button>');
+    const healer = new HealingOrchestrator(page, {
+      warn: () => undefined,
+      debug: () => { throw new Error('synthetic debug sink failure'); }
+    });
+    const plan: LocatorPlan = {
+      id: 'contract.readiness-debug-failure',
+      businessName: 'Fallback despite debug sink failure',
+      primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
+      fallbacks: [{ type: 'role', role: 'button', name: 'Fallback Debug', exact: true }]
+    };
+    const previousMode = process.env.HEALING_MODE;
+    process.env.HEALING_MODE = 'runtime';
+    try {
+      const locator = await healer.resolve(plan);
+      await expect(locator).toHaveAttribute('id', 'fallback-debug');
+    } finally {
+      previousMode === undefined ? delete process.env.HEALING_MODE : process.env.HEALING_MODE = previousMode;
+    }
+  });
+
+  test('delayed primary control succeeds without falling back or invoking AI', async ({ page }) => {
+    await page.setContent(`<button id="fallback">Fallback Save</button><script>setTimeout(() => { const b=document.createElement('button'); b.id='late-primary'; b.textContent='Save'; document.body.appendChild(b); }, 180)</script>`);
+    const warnings: string[] = [];
+    const logger = { warn: (event: string) => warnings.push(event), debug: () => undefined };
+    const healer = new HealingOrchestrator(page, logger);
+    const plan: LocatorPlan = {
+      id: 'contract.delayed-primary',
+      businessName: 'Delayed save',
+      primary: { type: 'role', role: 'button', name: 'Save', exact: true },
+      fallbacks: [{ type: 'role', role: 'button', name: 'Fallback Save', exact: true }]
+    };
+    const previous = { mode: process.env.HEALING_MODE, ready: process.env.HEALING_PRIMARY_READY_TIMEOUT_MS };
+    process.env.HEALING_MODE = 'runtime';
+    process.env.HEALING_PRIMARY_READY_TIMEOUT_MS = '800';
+    try {
+      const locator = await healer.resolve(plan);
+      await expect(locator).toHaveAttribute('id', 'late-primary');
+      expect(warnings).not.toContain('SELF_HEALING_UNVERIFIED_RESOLUTION');
+    } finally {
+      previous.mode === undefined ? delete process.env.HEALING_MODE : process.env.HEALING_MODE = previous.mode;
+      previous.ready === undefined ? delete process.env.HEALING_PRIMARY_READY_TIMEOUT_MS : process.env.HEALING_PRIMARY_READY_TIMEOUT_MS = previous.ready;
+    }
+  });
+});
 
 test.describe('Visibility-aware locator cardinality', () => {
   test('visibility-aware resolution ignores hidden duplicates for a unique locator', async ({ page }) => {
@@ -120,7 +181,7 @@ test.describe('Visibility-aware locator cardinality', () => {
       <button style="display:none">Create User</button>
       <button id="visible-create">Create User</button>
     `);
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.visible-unique',
       businessName: 'Visible Create User',
@@ -142,7 +203,7 @@ test.describe('Visibility-aware locator cardinality', () => {
       <button id="create-secondary" onclick="document.querySelector('#modal').style.display='block'">Create User</button>
       <div id="modal" style="display:none">Create form</div>
     `);
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.first-visible',
       businessName: 'Open create form',
@@ -167,7 +228,7 @@ test.describe('Visibility-aware locator cardinality', () => {
 
   test('duplicate visible controls still fail closed without explicit firstVisible policy', async ({ page }) => {
     await page.setContent('<button>Create User</button><button>Create User</button>');
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.ambiguous-visible',
       businessName: 'Ambiguous Create User',
@@ -193,7 +254,7 @@ test.describe('Lazy AI healing boundary', () => {
     process.env.HEALING_AI_ENABLED = 'true';
     let factoryCalls = 0;
     let aiCalls = 0;
-    const fakeAi = {
+    const fakeAi: Pick<AiGateway, 'proposeLocator'> = {
       proposeLocator: async () => {
         aiCalls += 1;
         return {
@@ -205,12 +266,12 @@ test.describe('Lazy AI healing boundary', () => {
           latencyMs: 1,
         };
       },
-    } as any;
+    };
     const factory = () => {
       factoryCalls += 1;
       return fakeAi;
     };
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any, factory);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined }, factory);
 
     try {
       await page.setContent('<button>Primary</button><button>Fallback</button><button>Recovered</button>');
@@ -252,7 +313,7 @@ test.describe('Semantic healing validation', () => {
       <div id="modal" class="hidden">Form</div>
       <style>.hidden { display:none }</style>
     `);
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.semantic-fallback',
       businessName: 'Open form',
@@ -284,17 +345,19 @@ test.describe('Semantic healing validation', () => {
     const app = `semantic-cache-${Date.now()}`;
     const previous = {
       app: process.env.APP,
+      env: process.env.ENV,
       mode: process.env.HEALING_MODE,
       ai: process.env.HEALING_AI_ENABLED
     };
     process.env.APP = app;
+    process.env.ENV = 'qa';
     process.env.HEALING_MODE = 'runtime';
     process.env.HEALING_AI_ENABLED = 'true';
 
     const { readFile, rm } = await import('node:fs/promises');
     const { resolve } = await import('node:path');
     let aiCalls = 0;
-    const fakeAi = {
+    const fakeAi: Pick<AiGateway, 'proposeLocator'> = {
       proposeLocator: async () => {
         aiCalls += 1;
         return {
@@ -306,8 +369,8 @@ test.describe('Semantic healing validation', () => {
           latencyMs: 1
         };
       }
-    } as any;
-    const logger = { warn: () => undefined } as any;
+    };
+    const logger = { warn: () => undefined };
     const plan: LocatorPlan = {
       id: 'contract.semantic-ai-cache',
       businessName: 'Open recovered form',
@@ -330,9 +393,10 @@ test.describe('Semantic healing validation', () => {
       await first.click(plan, { postCondition });
       expect(aiCalls).toBe(1);
 
-      const cache = JSON.parse(await readFile(resolve('.healing', app, 'locator-cache.json'), 'utf8'));
-      expect(cache[plan.id].validation).toBe('semantic');
-      expect(cache[plan.id].verificationDescription).toBe(postCondition.description);
+      const cache = JSON.parse(await readFile(resolve('.healing', app, 'qa', 'locator-cache.json'), 'utf8'));
+      expect(cache.schemaVersion).toBe(2);
+      expect(cache.records[plan.id].validation).toBe('semantic');
+      expect(cache.records[plan.id].verificationDescription).toBe(postCondition.description);
 
       await page.locator('#modal').evaluate(element => element.classList.add('hidden'));
       process.env.HEALING_AI_ENABLED = 'false';
@@ -344,6 +408,7 @@ test.describe('Semantic healing validation', () => {
       await rm(resolve('.healing', app), { recursive: true, force: true });
       await rm(resolve('reports', app), { recursive: true, force: true });
       if (previous.app === undefined) delete process.env.APP; else process.env.APP = previous.app;
+      if (previous.env === undefined) delete process.env.ENV; else process.env.ENV = previous.env;
       if (previous.mode === undefined) delete process.env.HEALING_MODE; else process.env.HEALING_MODE = previous.mode;
       if (previous.ai === undefined) delete process.env.HEALING_AI_ENABLED; else process.env.HEALING_AI_ENABLED = previous.ai;
     }
@@ -353,16 +418,18 @@ test.describe('Semantic healing validation', () => {
     const app = `semantic-reject-${Date.now()}`;
     const previous = {
       app: process.env.APP,
+      env: process.env.ENV,
       mode: process.env.HEALING_MODE,
       ai: process.env.HEALING_AI_ENABLED
     };
     process.env.APP = app;
+    process.env.ENV = 'qa';
     process.env.HEALING_MODE = 'runtime';
     process.env.HEALING_AI_ENABLED = 'true';
 
     const { readFile, rm } = await import('node:fs/promises');
     const { resolve } = await import('node:path');
-    const fakeAi = {
+    const fakeAi: Pick<AiGateway, 'proposeLocator'> = {
       proposeLocator: async () => ({
         descriptor: { type: 'role', role: 'button', name: 'Wrong action', exact: true },
         confidence: 0.99,
@@ -371,7 +438,7 @@ test.describe('Semantic healing validation', () => {
         model: 'fake-model',
         latencyMs: 1
       })
-    } as any;
+    };
     const plan: LocatorPlan = {
       id: 'contract.semantic-ai-reject',
       businessName: 'Open intended form',
@@ -380,7 +447,7 @@ test.describe('Semantic healing validation', () => {
 
     try {
       await page.setContent('<button>Wrong action</button><div id="modal" style="display:none">Form</div>');
-      const healer = new HealingOrchestrator(page, { warn: () => undefined } as any, fakeAi);
+      const healer = new HealingOrchestrator(page, { warn: () => undefined }, fakeAi);
       await expect(healer.click(plan, {
         postCondition: {
           description: 'Intended form becomes visible',
@@ -390,18 +457,19 @@ test.describe('Semantic healing validation', () => {
         }
       })).rejects.toThrow(/Post-condition failed/);
 
-      const cachePath = resolve('.healing', app, 'locator-cache.json');
+      const cachePath = resolve('.healing', app, 'qa', 'locator-cache.json');
       const { existsSync } = await import('node:fs');
       if (existsSync(cachePath)) {
         const cache = JSON.parse(await readFile(cachePath, 'utf8'));
-        expect(cache[plan.id]).toBeUndefined();
+        expect(cache.records?.[plan.id]).toBeUndefined();
       }
-      const audit = await readFile(resolve('reports', app, 'healing', 'healing-audit.jsonl'), 'utf8');
+      const audit = await readFile(resolve('reports', app, 'qa', process.env.RUN_ID!, 'healing', 'healing-audit.jsonl'), 'utf8');
       expect(audit).toContain('"outcome":"rejected"');
     } finally {
       await rm(resolve('.healing', app), { recursive: true, force: true });
       await rm(resolve('reports', app), { recursive: true, force: true });
       if (previous.app === undefined) delete process.env.APP; else process.env.APP = previous.app;
+      if (previous.env === undefined) delete process.env.ENV; else process.env.ENV = previous.env;
       if (previous.mode === undefined) delete process.env.HEALING_MODE; else process.env.HEALING_MODE = previous.mode;
       if (previous.ai === undefined) delete process.env.HEALING_AI_ENABLED; else process.env.HEALING_AI_ENABLED = previous.ai;
     }
@@ -411,7 +479,7 @@ test.describe('Semantic healing validation', () => {
 test.describe('Robust semantic locator recovery', () => {
   test('role namePattern tolerates Create/Add/New User copy changes without AI', async ({ page }) => {
     await page.setContent('<button id="entry">+ New User</button>');
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.semantic-role-pattern',
       businessName: 'Open Create User',
@@ -437,7 +505,7 @@ test.describe('Robust semantic locator recovery', () => {
       <button data-bs-target="#user-modal" onclick="document.querySelector('#user-modal').style.display='block'">Open</button>
       <div id="user-modal" style="display:none">User form</div>
     `);
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.suggest-deterministic-fallback',
       businessName: 'Open Create User',
@@ -464,7 +532,7 @@ test.describe('Robust semantic locator recovery', () => {
 
   test('failed resolution includes visible-control diagnostics', async ({ page }) => {
     await page.setContent('<button>Dashboard</button><a href="#">Profile</a>');
-    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any);
+    const healer = new HealingOrchestrator(page, { warn: () => undefined });
     const plan: LocatorPlan = {
       id: 'contract.resolution-diagnostics',
       businessName: 'Open Create User',

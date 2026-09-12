@@ -4,7 +4,8 @@ import {
   buildSummaryPrompt,
   fetchWithTimeout,
   HEALING_OUTPUT_SCHEMA,
-  parseHealingJson
+  parseHealingJson,
+  resolveAiTimeoutMs
 } from './ai-provider.utils';
 import { AiProviderError } from './ai-provider.error';
 
@@ -44,7 +45,7 @@ export class GeminiAiProvider implements AiProvider {
   private readonly apiKey = process.env.GEMINI_API_KEY ?? '';
   private readonly model = process.env.GEMINI_MODEL ?? '';
   private readonly baseUrl = (process.env.GEMINI_BASE_URL ?? 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
-  private readonly timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 30_000);
+  private readonly timeoutMs = resolveAiTimeoutMs();
   private readonly totalTimeoutMs = Number(process.env.AI_TOTAL_TIMEOUT_MS ?? 90_000);
   private readonly maxAttempts = Number(process.env.AI_RETRY_MAX_ATTEMPTS ?? 3);
   private readonly retryBaseDelayMs = Number(process.env.AI_RETRY_BASE_DELAY_MS ?? 1_000);

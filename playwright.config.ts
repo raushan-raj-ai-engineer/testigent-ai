@@ -3,8 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/test';
 import { RuntimeConfig, type SupportedBrowser } from './src/framework/core/config/runtime.config';
+import { RunContext } from './src/framework/core/config/run.context';
 import { requiredTagGroupsToRegExp, tagsToRegExp } from './src/framework/core/execution/execution.policy';
+import { resolveVisualEvidencePolicy } from './src/framework/logging/evidence.policy';
 
+RunContext.ensure();
 const runtime = RuntimeConfig.resolve();
 const policy = runtime.execution;
 const baseURL = process.env.APP_BASE_URL?.trim() || runtime.application.uiBaseUrl;
@@ -15,6 +18,7 @@ const storageState = configuredStorageState
 const usableStorageState = storageState && fs.existsSync(storageState) ? storageState : undefined;
 const reportRoot = runtime.reportRoot;
 const resultRoot = runtime.resultRoot;
+const visualEvidencePolicy = resolveVisualEvidencePolicy();
 const profileGrep = requiredTagGroupsToRegExp([
   policy.includeTags,
   policy.lane ? [`@lane:${policy.lane}`, `@${policy.lane}`] : [],
@@ -54,9 +58,9 @@ export default defineConfig({
   use: {
     baseURL,
     storageState: usableStorageState,
-    trace: runtime.playwright.trace,
-    screenshot: runtime.playwright.screenshot,
-    video: runtime.playwright.video,
+    trace: visualEvidencePolicy === 'standard' ? runtime.playwright.trace : 'off',
+    screenshot: visualEvidencePolicy === 'standard' ? runtime.playwright.screenshot : 'off',
+    video: visualEvidencePolicy === 'standard' ? runtime.playwright.video : 'off',
     actionTimeout: policy.actionTimeoutMs,
     navigationTimeout: policy.navigationTimeoutMs,
     ignoreHTTPSErrors: runtime.playwright.ignoreHTTPSErrors,

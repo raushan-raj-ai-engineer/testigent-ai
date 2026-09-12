@@ -53,7 +53,7 @@ function writeReport(root: string, name: string, results: BusinessTestResult[], 
   const dir = path.join(root, name);
   fs.mkdirSync(dir, { recursive: true });
   const facts = buildExecutionFacts({
-    runId: `run-${name}`,
+    runId: process.env.RUN_ID ?? `run-${name}`,
     environment: 'qa',
     application: 'demo',
     results,
@@ -77,7 +77,7 @@ function writeReport(root: string, name: string, results: BusinessTestResult[], 
 function writeMarker(root: string, name: string, lane: 'core' | 'ai', shardIndex: number, shardTotal: number, hasTests: boolean | null = true): void {
   const dir = path.join(root, name);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'ci-bundle.json'), JSON.stringify({ schemaVersion: 1, lane, shardIndex, shardTotal, hasTests }, null, 2));
+  fs.writeFileSync(path.join(dir, 'ci-bundle.json'), JSON.stringify({ schemaVersion: 1, lane, shardIndex, shardTotal, hasTests, application: process.env.APP, environment: process.env.ENV, runId: process.env.RUN_ID }, null, 2));
 }
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-contract-'));
@@ -137,7 +137,7 @@ knownDefect.error = 'Delete row remained visible.';
 knownDefect.stepDetails = [{ title: 'Delete user', category: 'test.step', durationMs: 300, status: 'failed', error: 'Delete row remained visible.', children: [] }];
 knownDefect.attachments = [{ name: 'failure-screenshot', contentType: 'image/png', reportPath: 'evidence/failure.png' }];
 const healingRecord: HealingAuditRecord = {
-  timestamp: new Date().toISOString(), runId: 'run-ai', testId: 'ai-healed', pageUrl: 'https://example.test/users', planId: 'create', businessName: 'Create',
+  timestamp: new Date().toISOString(), runId: process.env.RUN_ID ?? 'merged-contract', testId: 'ai-healed', pageUrl: 'https://example.test/users', planId: 'create', businessName: 'Create',
   decision: {
     source: 'ai',
     descriptor: { type: 'role', role: 'button', name: 'Create' },
@@ -148,7 +148,7 @@ const healingRecord: HealingAuditRecord = {
   verification: { description: 'Create action completed', passed: true, durationMs: 10 }
 };
 const aiRecord: AiRuntimeAuditRecord = {
-  timestamp: new Date().toISOString(), runId: 'run-ai', testId: 'ai-healed', purpose: 'healing', provider: 'contract', model: 'contract-model', status: 'success', latencyMs: 10
+  timestamp: new Date().toISOString(), runId: process.env.RUN_ID ?? 'merged-contract', testId: 'ai-healed', purpose: 'healing', provider: 'contract', model: 'contract-model', status: 'success', latencyMs: 10
 };
 const healing: HealingSummary = { count: 1, fallback: 0, cache: 0, ai: 1, affectedTests: 1, records: [healingRecord], attempts: [healingRecord], attemptCount: 1, rejected: 0, suggested: 0, unverified: 0 };
 
@@ -180,6 +180,7 @@ assert(merged.aggregation?.coreReports === 2 && merged.aggregation.aiReports ===
 const stepSummary = formatBusinessStepSummary(merged);
 assert(stepSummary.includes('Aggregated bundles: **3** (core 2, AI 1)') && stepSummary.includes('AI-specific results: **1**') && stepSummary.includes('CI-blocking issues: **0**'), 'GitHub step summary must render deterministic core/AI merged facts');
 assert(fs.existsSync(path.join(out, 'index.html')), 'merged dashboard must be generated');
+assert(fs.existsSync(history), 'explicit REPORT_HISTORY_FILE override must remain supported');
 const mergedKnown = merged.results.find(result => result.testId === 'known-delete');
 const mergedScreenshot = mergedKnown?.attachments?.find(item => item.contentType.startsWith('image/'));
 assert(Boolean(mergedScreenshot?.reportPath), 'known-defect failure screenshot must survive shard merge');
@@ -199,6 +200,26 @@ writeReport(sequentialRoot, 'sequential', [pass]);
 writeMarker(sequentialRoot, 'sequential', 'core', 1, 1);
 const sequential = mergeBusinessReports(sequentialRoot);
 assert(sequential.aggregation?.coreReports === 1 && sequential.aggregation.aiReports === 0, 'single sequential report must merge without requiring shard-specific configuration');
+
+// Merge identity must be derivable from validated report facts when a standalone merge command
+// is invoked without APP/ENV/RUN_ID in its process environment. This protects downloaded CI bundles
+// and manual merge workflows from depending on mutable workspace/latest-run state.
+const fallbackIdentityRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-identity-fallback-'));
+writeReport(fallbackIdentityRoot, 'core', [contractResult({ testId: 'identity-fallback', title: 'Identity fallback', status: 'passed', sourceFile: 'projects/demo/tests/ui/identity.spec.ts', tags: ['@ui'], layers: ['UI'], testType: 'UI_ONLY', durationMs: 10 })]);
+writeMarker(fallbackIdentityRoot, 'core', 'core', 1, 1);
+const savedIdentityEnv = { APP: process.env.APP, ENV: process.env.ENV, RUN_ID: process.env.RUN_ID, MERGED: process.env.MERGED_BUSINESS_REPORT_DIR, HISTORY: process.env.REPORT_HISTORY_FILE };
+delete process.env.APP;
+delete process.env.ENV;
+delete process.env.RUN_ID;
+process.env.MERGED_BUSINESS_REPORT_DIR = path.join(fallbackIdentityRoot, 'merged-output');
+process.env.REPORT_HISTORY_FILE = path.join(fallbackIdentityRoot, 'history.json');
+const fallbackIdentityMerged = mergeBusinessReports(fallbackIdentityRoot);
+assert(fallbackIdentityMerged.application === 'demo' && fallbackIdentityMerged.environment === 'qa' && fallbackIdentityMerged.runId === 'merged-contract', 'merge must derive APP/ENV/RUN_ID from report facts when environment identity is absent');
+if (savedIdentityEnv.APP === undefined) delete process.env.APP; else process.env.APP = savedIdentityEnv.APP;
+if (savedIdentityEnv.ENV === undefined) delete process.env.ENV; else process.env.ENV = savedIdentityEnv.ENV;
+if (savedIdentityEnv.RUN_ID === undefined) delete process.env.RUN_ID; else process.env.RUN_ID = savedIdentityEnv.RUN_ID;
+if (savedIdentityEnv.MERGED === undefined) delete process.env.MERGED_BUSINESS_REPORT_DIR; else process.env.MERGED_BUSINESS_REPORT_DIR = savedIdentityEnv.MERGED;
+if (savedIdentityEnv.HISTORY === undefined) delete process.env.REPORT_HISTORY_FILE; else process.env.REPORT_HISTORY_FILE = savedIdentityEnv.HISTORY;
 
 
 const overshardRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-overshard-'));
@@ -267,5 +288,15 @@ const aiNotApplicable = mergeBusinessReports(aiNotApplicableRoot);
 delete process.env.EXPECTED_CORE_WORKERS;
 delete process.env.EXPECT_AI_LANE;
 assert(aiNotApplicable.aggregation?.aiReports === 0 && aiNotApplicable.aggregation.aiResults === 0, 'AI lane with no @ai tests must be recorded as not applicable rather than treated as missing');
+
+const mixedIdentityRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-cross-run-'));
+writeReport(mixedIdentityRoot, 'current', [pass]);
+const priorRunId = process.env.RUN_ID;
+process.env.RUN_ID = 'foreign-run';
+writeReport(mixedIdentityRoot, 'foreign', [contractResult({ testId: 'foreign', title: 'Foreign run result', status: 'passed', sourceFile: 'projects/demo/tests/ui/foreign.spec.ts', tags: ['@ui'], layers: ['UI'], testType: 'UI_ONLY', durationMs: 10 })]);
+process.env.RUN_ID = priorRunId;
+let crossRunRejected = false;
+try { mergeBusinessReports(mixedIdentityRoot); } catch (error) { crossRunRejected = String(error).includes('Cross-execution business merge blocked'); }
+assert(crossRunRejected, 'business merge must reject artifacts from another run even when application/environment match');
 
 console.log(JSON.stringify({ ok: true, selected: merged.total, applicable: merged.executionEligible, executed: merged.executed, notApplicable: merged.notApplicable, healing: merged.healing.count, aiCalls: merged.aiUsage?.calls ?? 0, aiResults: merged.aggregation?.aiResults ?? 0, coreReports: merged.aggregation?.coreReports ?? 0, aiReports: merged.aggregation?.aiReports ?? 0, sourceReports: merged.aggregation?.sourceReports }, null, 2));

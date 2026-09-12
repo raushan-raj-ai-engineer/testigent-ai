@@ -8,7 +8,7 @@ Reusable code lives under `src/framework/core/auth.*`. Application-specific logi
 
 ## v1.3.1 regression note
 
-The bundled `sdet-practice` demo provider now uses the live demo identity casing `admin@test.com` and is covered by `tests/framework/sdet-auth-provider.contract.spec.ts`. That contract runs against a local HTTP server, so credential-form and storage-state regressions are caught without depending on the external SUT.
+The bundled `sdet-practice` provider requires explicit secret inputs and is covered by `tests/framework/sdet-auth-provider.contract.spec.ts`. That contract uses synthetic credentials against a local HTTP server, so form and storage-state regressions are caught without committing live/demo credentials or depending on the external SUT.
 
 ## Runtime flow
 
@@ -146,7 +146,7 @@ CI sets `APP` and `ENV`, installs the project, then runs `npm run test:project`.
 
 Recommended secret names for simple providers are `AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET` and `AUTH_REFRESH_TOKEN`. A project provider may use different secret names when required by its identity platform. Store them only in GitHub Actions Secrets, Azure protected variables/Key Vault, or an equivalent secret manager.
 
-The bundled `sdet-practice` example uses the public demo identity `admin@test.com` only as a fallback demonstration. Set `AUTH_USERNAME` and `AUTH_PASSWORD` in local/CI secret configuration whenever the target deployment differs; environment values always override the example fallback.
+The bundled `sdet-practice` provider intentionally has no committed credential fallback. Configure `AUTH_USERNAME` and `AUTH_PASSWORD` through local secret configuration, GitHub Actions Secrets, Azure protected variables/Key Vault, or an equivalent secret manager before authenticated execution.
 
 Avoid passing `.auth` files between unrelated CI jobs unless your organization explicitly approves that secret-bearing artifact flow. A short non-interactive provider refresh in each isolated CI runner is usually safer than uploading reusable browser state as a build artifact.
 

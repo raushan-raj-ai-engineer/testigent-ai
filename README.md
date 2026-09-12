@@ -9,7 +9,7 @@
 <p>
   <img alt="Playwright" src="https://img.shields.io/badge/Playwright-UI%20%7C%20API-2EAD33?logo=playwright&logoColor=white">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-Type--Safe-3178C6?logo=typescript&logoColor=white">
-  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white">
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white">
   <img alt="Multi Project" src="https://img.shields.io/badge/Architecture-Multi--Project-6C63FF">
   <img alt="GitHub Actions" src="https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white">
   <img alt="Azure Pipelines" src="https://img.shields.io/badge/CI-Azure%20Pipelines-0078D7?logo=azurepipelines&logoColor=white">
@@ -130,7 +130,7 @@ TestigentAI/
 
 ### Prerequisites
 
-- **Node.js 20+**
+- **Node.js 22.x**
 - npm
 - Git
 - Chromium for the recommended first run
@@ -308,11 +308,11 @@ Useful portfolio options:
 
 By default, TestigentAI **continues through all selected projects** even if one project fails, then exits non-zero at the end. This gives customers a complete estate-level result instead of hiding later project outcomes.
 
-Each product keeps its own auth state, test data and business report under `reports/<APP>/...`. Portfolio execution writes both a deterministic summary and a stakeholder-friendly estate view:
+Each product keeps its own auth state, test data and business report under `reports/<APP>/<ENV>/<RUN_ID>/...`. Portfolio execution writes both a deterministic summary and a stakeholder-friendly estate view:
 
 ```text
-reports/multi-project/summary.json   # CI / machine-readable source
-reports/multi-project/index.html    # business portfolio dashboard
+reports/multi-project/<RUN_ID>/summary.json   # run-scoped machine-readable source
+reports/multi-project/<RUN_ID>/index.html    # run-scoped business portfolio dashboard
 ```
 
 The portfolio dashboard keeps business language at the top: project gate, selected/executed/not-applicable/blocked scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical evidence remains inside each product report.
@@ -359,6 +359,8 @@ An authenticated product example that demonstrates:
 - PR/smoke execution
 - business-standard known-defect reporting
 - CI-safe non-AI and optional AI lanes
+
+Set `AUTH_USERNAME` and `AUTH_PASSWORD` through local secret configuration or protected CI variables before authenticated execution; the repository intentionally contains no credential fallback.
 
 ```bash
 npm run qa:use -- sdet-practice qa
@@ -891,6 +893,16 @@ Declarative actions are schema-controlled; arbitrary executable actions are reje
 
 ---
 
+### Migrate an existing Playwright suite incrementally
+
+TestigentAI does not require a bulk rewrite. Inventory an existing suite first:
+
+```bash
+APP=<project> ENV=<env> npm run qa:migrate -- path/to/existing/tests
+```
+
+The assessment is read-only and reports direct UI/API/DB/healing/AI hotspots under `reports/<APP>/<ENV>/migration/`. Move one slice at a time behind project facades/pages/workflows/repositories while preserving the existing assertions, then rerun architecture/type/project gates.
+
 ## Business-Standard Reporting
 
 TestigentAI separates **test-run mechanics**, **product quality** and **CI blocking**.
@@ -915,13 +927,13 @@ This avoids the common problem where an expected Playwright failure appears as a
 ### Report outputs
 
 ```text
-reports/<APP>/playwright-html/      technical Playwright report
-reports/<APP>/business/             product business report
-reports/<APP>/business-merged/      merged CI business report
-reports/multi-project/index.html    portfolio/customer business dashboard
-reports/multi-project/summary.json portfolio deterministic summary
-test-results/<APP>/                 screenshots / video / trace / context
-.report-history/<APP>/              trend history
+reports/<APP>/<ENV>/<RUN_ID>/playwright-html/   technical Playwright report
+reports/<APP>/<ENV>/<RUN_ID>/business/          product business report
+reports/<APP>/<ENV>/<RUN_ID>/business-merged/   merged CI business report
+reports/multi-project/<RUN_ID>/index.html        run-scoped portfolio/customer business dashboard
+reports/multi-project/<RUN_ID>/summary.json     run-scoped portfolio deterministic summary
+test-results/<APP>/<ENV>/<RUN_ID>/              run-scoped browser/output evidence
+.report-history/<APP>/<ENV>/                     lock-merged trend/duration history
 ```
 
 ### Open locally
@@ -940,6 +952,8 @@ npm run report:business:complete
 ```
 
 The interactive product dashboard supports KPI cards, filters, layer/status graphs, scenario drill-down, `test.step()` details and evidence links. Multi-project runs additionally produce a portfolio dashboard focused on estate health, quality risk, known defects, CI blockers, execution applicability, healing and AI usage; engineering evidence stays one click deeper in each product report.
+
+Run identity is immutable for a process and is established before Playwright resolves output paths. `.runtime/latest-run/<APP>/<ENV>.json` is only a convenience pointer for commands such as report opening; active workers never use it as their identity. Default visual evidence policy is `masked`: automatic trace/video/screenshots are disabled unless a project explicitly approves unmasked visual retention, while framework-managed failure screenshots can mask configured sensitive selectors.
 
 ---
 
@@ -1087,6 +1101,8 @@ reporting contracts
         ↓
 TypeScript typecheck
         ↓
+architect-review hardening regression suite
+        ↓
 framework regression suite
         ↓
 security check
@@ -1102,6 +1118,7 @@ npm run scenario:doctor
 npm run docs:comment-audit
 npm run reporting:contract
 npm run typecheck
+npm run test:review:hardening
 npm run test:framework:critical
 npm run security:check
 ```

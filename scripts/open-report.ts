@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { ProjectPaths } from '../src/framework/core/config/project.paths';
 
-const result = spawnSync('npx', ['playwright', 'show-report', ProjectPaths.htmlReport()], {
+const result = spawnSync('npx', ['playwright', 'show-report', ProjectPaths.latestHtmlReport()], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
 });

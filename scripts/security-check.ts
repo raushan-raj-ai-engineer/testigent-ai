@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
+import { evaluateSecurityAudit, type SecurityExceptionFile } from '../src/framework/security/advisory.policy';
 
 const result = spawnSync('npm', ['audit', '--json'], {
   encoding: 'utf8',
@@ -12,38 +14,35 @@ if (result.error) {
 }
 
 let audit: any;
-try {
-  audit = JSON.parse(result.stdout || '{}');
-} catch {
+try { audit = JSON.parse(result.stdout || '{}'); }
+catch {
   console.error('npm audit did not return valid JSON.');
   console.error(result.stderr || result.stdout);
   process.exit(1);
 }
 
-// npm audit normally exits non-zero when vulnerabilities are found. That is not
-// itself a transport failure; the parsed vulnerability list below decides policy.
 if (!audit.vulnerabilities && result.status !== 0) {
   console.error('npm audit failed before a vulnerability report was produced.');
   console.error(result.stderr || result.stdout);
   process.exit(1);
 }
 
-const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-const xlsxVersion = lock.packages?.['node_modules/xlsx']?.version;
-const findings = Object.entries(audit.vulnerabilities ?? {}).filter(([, value]: any) =>
-  ['high', 'critical'].includes(value.severity),
-);
+const policyPath = path.resolve(process.env.SECURITY_EXCEPTION_FILE ?? 'config/security-exceptions.json');
+if (!fs.existsSync(policyPath)) throw new Error(`Security exception policy is missing: ${policyPath}`);
+const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8')) as SecurityExceptionFile;
+const evaluated = evaluateSecurityAudit(audit, policy);
 
-const allowlisted = findings.filter(([name]) => name === 'xlsx' && xlsxVersion === '0.20.3');
-const blocking = findings.filter(([name]) => !(name === 'xlsx' && xlsxVersion === '0.20.3'));
-
-if (blocking.length) {
+if (evaluated.blocking.length) {
   console.error(JSON.stringify({
     ok: false,
-    blocking: blocking.map(([name, value]: any) => ({
-      name,
-      severity: value.severity,
-      via: value.via,
+    blocking: evaluated.blocking,
+    allowed: evaluated.allowed.map(item => ({
+      package: item.package,
+      advisoryId: item.advisoryId,
+      affectedRange: item.affectedRange,
+      owner: item.exception.owner,
+      expiresAt: item.exception.expiresAt,
+      rationale: item.exception.rationale,
     })),
   }, null, 2));
   process.exit(1);
@@ -51,10 +50,14 @@ if (blocking.length) {
 
 console.log(JSON.stringify({
   ok: true,
-  highOrCritical: findings.length,
-  allowlisted: allowlisted.map(([name]) => ({
-    name,
-    version: xlsxVersion,
-    reason: 'Vendored SheetJS 0.20.3 exception. Review docs/SOURCES.md before changing this version or policy.',
+  highOrCriticalAdvisories: evaluated.advisories.length,
+  allowed: evaluated.allowed.map(item => ({
+    package: item.package,
+    advisoryId: item.advisoryId,
+    affectedRange: item.affectedRange,
+    owner: item.exception.owner,
+    expiresAt: item.exception.expiresAt,
+    rationale: item.exception.rationale,
   })),
+  policy: path.relative(process.cwd(), policyPath),
 }, null, 2));

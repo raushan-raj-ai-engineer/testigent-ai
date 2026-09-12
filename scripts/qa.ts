@@ -23,6 +23,7 @@ function main(): void {
     case 'report': runNpm(['run', 'report:open'], selectedEnv()); return;
     case 'agents': initializeAgents(args); return;
     case 'heal': runNpm(['run', 'healing:maintenance'], selectedEnv()); return;
+    case 'migrate': runNpm(['run', 'migration:assess', '--', ...args], selectedEnv()); return;
     default: throw new Error(`Unknown qa command '${command}'. Run npm run qa -- help.`);
   }
 }
@@ -176,7 +177,8 @@ function printHelp(): void {
     `  npm run qa:validate -- --with-tests           Include Chromium project tests\n` +
     `  npm run qa:report                            Open the selected project's report\n` +
     `  npm run qa:agents -- [vscode|codex|claude|opencode]\n` +
-    `  npm run qa:heal                              Build source-healing maintenance proposal\n`);
+    `  npm run qa:heal                              Build source-healing maintenance proposal\n` +
+    `  npm run qa:migrate -- [path]                  Assess an existing suite for incremental adoption\n`);
 }
 
 try { main(); }

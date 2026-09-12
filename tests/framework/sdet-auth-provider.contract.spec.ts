@@ -17,11 +17,36 @@ test.describe('sdet-practice auth provider contract', () => {
     expect(config.auth?.verification?.unauthenticatedControl).toBeUndefined();
   });
 
-  test('uses the live demo username casing and produces browser storage state', async () => {
+  test('fails closed when required auth secrets are absent', async () => {
     const previousUsername = process.env.AUTH_USERNAME;
     const previousPassword = process.env.AUTH_PASSWORD;
     delete process.env.AUTH_USERNAME;
     delete process.env.AUTH_PASSWORD;
+    try {
+      const context: AuthProviderContext = {
+        application: 'sdet-practice',
+        environment: 'qa',
+        baseUrl: 'http://127.0.0.1:1',
+        apiBaseUrl: 'http://127.0.0.1:1',
+        reason: 'pre-run',
+        storageStatePath: path.join(os.tmpdir(), 'unused-state.json'),
+        sessionStoragePath: path.join(os.tmpdir(), 'unused-session.json'),
+        auth: { strategy: 'storageState', required: true },
+      };
+      await expect(authProvider.refresh(context)).rejects.toThrow(/AUTH_USERNAME/);
+    } finally {
+      if (previousUsername === undefined) delete process.env.AUTH_USERNAME; else process.env.AUTH_USERNAME = previousUsername;
+      if (previousPassword === undefined) delete process.env.AUTH_PASSWORD; else process.env.AUTH_PASSWORD = previousPassword;
+    }
+  });
+
+  test('uses explicit secret inputs and produces browser storage state', async () => {
+    const previousUsername = process.env.AUTH_USERNAME;
+    const previousPassword = process.env.AUTH_PASSWORD;
+    const contractUsername = 'contract-user@example.test';
+    const contractPassword = ['synthetic', 'contract', 'password'].join('-');
+    process.env.AUTH_USERNAME = contractUsername;
+    process.env.AUTH_PASSWORD = contractPassword;
 
     const requests: Array<{ username?: string; password?: string }> = [];
     const token = unsignedJwt({ sub: '1', role: 'ADMIN', exp: Math.floor(Date.now() / 1000) + 600 });
@@ -32,7 +57,7 @@ test.describe('sdet-practice auth provider contract', () => {
       request.on('end', () => {
         const form = new URLSearchParams(body);
         requests.push({ username: form.get('username') ?? undefined, password: form.get('password') ?? undefined });
-        if (request.url !== '/auth/login' || form.get('username') !== 'admin@test.com' || form.get('password') !== 'Admin@123') {
+        if (request.url !== '/auth/login' || form.get('username') !== contractUsername || form.get('password') !== contractPassword) {
           response.writeHead(401, { 'content-type': 'application/json' });
           response.end(JSON.stringify({ detail: 'Unauthorized' }));
           return;
@@ -65,7 +90,7 @@ test.describe('sdet-practice auth provider contract', () => {
       };
 
       const result = await authProvider.refresh(context);
-      expect(requests).toEqual([{ username: 'admin@test.com', password: 'Admin@123' }]);
+      expect(requests).toEqual([{ username: contractUsername, password: contractPassword }]);
       expect(result.providerId).toBe('sdet-practice-api-login');
       expect(result.expiresAt).toBeGreaterThan(Date.now());
       expect(result.storageState).toEqual({

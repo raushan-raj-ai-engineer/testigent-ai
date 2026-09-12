@@ -48,7 +48,7 @@ AI/healing facts ───┘
 
 ## History
 
-CI caches `.report-history/<APP>` and only the final merge appends a release-history point. Shards must not become independent trend points. This gives the trend chart one point per final CI run.
+CI caches `.report-history/<APP>/<ENV>` and only the final merge appends a release-history point. Shards must not become independent trend points. This gives the trend chart one point per final CI run.
 
 ## Evidence standard
 

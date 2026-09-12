@@ -9,6 +9,7 @@ import { createAiGateway } from '../../ai/ai-provider.factory';
 import { HealingOrchestrator } from '../../healing/healing.orchestrator';
 import { EnterpriseLogger } from '../../logging/enterprise.logger';
 import { BrowserObservability } from '../../logging/browser.observability';
+import { resolveVisualEvidencePolicy, visualEvidenceMaskLocators } from '../../logging/evidence.policy';
 import { RuntimeConfig, type ResolvedRuntimeConfig } from '../config/runtime.config';
 import { optionalDatabaseSkipReason, requiresDatabaseCapability } from '../config/capability.policy';
 import { RunContext } from '../config/run.context';
@@ -23,7 +24,6 @@ export interface EnterpriseFixtures {
   logger: EnterpriseLogger;
   healer: HealingOrchestrator;
   _capabilityGate: void;
-  _authStateBootstrap: void;
 }
 
 /**
@@ -34,13 +34,30 @@ export interface EnterpriseFixtures {
 export const test = base.extend<EnterpriseFixtures>({
   runtime: async ({}, use) => { await use(RuntimeConfig.resolve()); },
 
+  // Session-storage restoration belongs to the browser context lifecycle. Because this fixture is not auto,
+  // API/data/DB-only tests never request a browser/context and therefore remain browser-binary independent.
+  context: async ({ context, runtime }, use) => {
+    if (runtime.auth.strategy === 'storageState') {
+      const paths = resolveAuthStatePaths(runtime.auth);
+      const snapshot = paths.sessionStoragePath ? readSessionStorageSnapshot(paths.sessionStoragePath) : undefined;
+      await installSessionStorageSnapshot(context, snapshot);
+    }
+    await use(context);
+  },
+
   page: async ({ page }, use, testInfo) => {
     await use(page);
     const actualFailure = testInfo.status === 'failed' || testInfo.status === 'timedOut' || testInfo.errors.length > 0;
     if (!actualFailure || page.isClosed()) return;
+    const visualPolicy = resolveVisualEvidencePolicy();
+    if (visualPolicy === 'off') return;
     try {
       const screenshotPath = testInfo.outputPath('testigent-failure.png');
-      await page.screenshot({ path: screenshotPath, fullPage: true });
+      await page.screenshot({
+        path: screenshotPath,
+        fullPage: true,
+        ...(visualPolicy === 'masked' ? { mask: visualEvidenceMaskLocators(page) } : {})
+      });
       await testInfo.attach('failure-screenshot', { path: screenshotPath, contentType: 'image/png' });
     } catch (error) {
       testInfo.annotations.push({
@@ -57,16 +74,6 @@ export const test = base.extend<EnterpriseFixtures>({
     }
     await use();
   }, { auto: true }],
-
-  _authStateBootstrap: [async ({ context, runtime }, use) => {
-    if (runtime.auth.strategy === 'storageState') {
-      const paths = resolveAuthStatePaths(runtime.auth);
-      const snapshot = paths.sessionStoragePath ? readSessionStorageSnapshot(paths.sessionStoragePath) : undefined;
-      await installSessionStorageSnapshot(context, snapshot);
-    }
-    await use();
-  }, { auto: true }],
-
 
   logger: async ({ runtime }, use, testInfo) => {
     const logger = new EnterpriseLogger({

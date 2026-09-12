@@ -13,7 +13,7 @@ import { ProjectPaths } from '../src/framework/core/config/project.paths';
  * Benefit: Dashboard styling/client fixes can be regenerated independently from expensive automation execution.
  */
 function main(): void {
-  const reportDir = path.resolve(process.env.NOTIFY_REPORT_DIR ?? (process.env.REPORT_VARIANT === 'merged' ? path.join(ProjectPaths.reports(), 'business-merged') : ProjectPaths.businessReport()));
+  const reportDir = path.resolve(process.env.NOTIFY_REPORT_DIR ?? (process.env.REPORT_VARIANT === 'merged' ? path.join(ProjectPaths.latestReports(), 'business-merged') : ProjectPaths.latestBusinessReport()));
   const jsonPath = path.join(reportDir, 'business-report.json');
   if (!fs.existsSync(jsonPath)) throw new Error(`Missing ${jsonPath}. Run tests first.`);
   const facts = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as ExecutionFacts;

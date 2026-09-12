@@ -18,6 +18,7 @@ import type {
   VideoPolicy,
 } from './config.types';
 import { WorkspaceContext } from './workspace.context';
+import { assertSafeRunId } from './run.context';
 
 export type { PlaywrightRuntimeSettings, SupportedBrowser } from './config.types';
 
@@ -57,6 +58,8 @@ export class RuntimeConfig {
     });
     const playwright = this.resolvePlaywrightSettings(root, target.application, target.environment, env);
     const capabilities = this.resolveCapabilities(root, target.application, target.environment, env);
+    const runId = env.RUN_ID?.trim();
+    if (runId) assertSafeRunId(runId);
 
     return {
       applicationName: target.application,
@@ -68,8 +71,12 @@ export class RuntimeConfig {
       playwright,
       capabilities,
       projectRoot: path.resolve(root, 'projects', target.application),
-      reportRoot: path.resolve(root, 'reports', target.application),
-      resultRoot: path.resolve(root, 'test-results', target.application),
+      reportRoot: runId
+        ? path.resolve(root, 'reports', target.application, target.environment, runId)
+        : path.resolve(root, 'reports', target.application, target.environment),
+      resultRoot: runId
+        ? path.resolve(root, 'test-results', target.application, target.environment, runId)
+        : path.resolve(root, 'test-results', target.application, target.environment),
     };
   }
 

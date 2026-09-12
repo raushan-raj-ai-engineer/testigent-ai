@@ -1,5 +1,5 @@
 import type { AiHealingRequest, AiHealingResponse, AiProvider } from './ai.types';
-import { redact } from '../logging/redactor';
+import { redact, sanitizeText } from '../logging/redactor';
 import { AiAudit } from './ai.audit';
 import { AiProviderError } from './ai-provider.error';
 
@@ -45,7 +45,14 @@ export class AiGateway {
     const started = Date.now();
 
     try {
-      const result = await this.provider.proposeLocator(redact(request));
+      const providerResult = await this.provider.proposeLocator({
+        planId: sanitizeText(request.planId),
+        businessName: sanitizeText(request.businessName),
+        accessibilitySnapshot: sanitizeText(request.accessibilitySnapshot),
+        allowedDescriptorTypes: [...request.allowedDescriptorTypes]
+      });
+      // Provider output is untrusted evidence too. Sanitize it before it can reach healing logs/cache/reports.
+      const result = providerResult ? redact(providerResult) : undefined;
       this.audit.record({
         purpose: 'healing',
         status: result ? 'success' : 'no-result',
@@ -98,7 +105,8 @@ export class AiGateway {
     const started = Date.now();
 
     try {
-      const result = await this.provider.summarizeFailures(redact(payload));
+      const providerResult = await this.provider.summarizeFailures(redact(payload));
+      const result = providerResult ? sanitizeText(providerResult) : undefined;
       this.audit.record({
         purpose: 'reporting',
         status: result ? 'success' : 'no-result',

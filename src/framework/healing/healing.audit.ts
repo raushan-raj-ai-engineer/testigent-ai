@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { resolveApplicationScope } from '../core/config/application.scope';
 import type { HealingDecision, HealingOutcome, HealingVerificationEvidence, LocatorPlan } from './healing.types';
 import { redact } from '../logging/redactor';
 import { RunContext } from '../core/config/run.context';
+import { ProjectPaths } from '../core/config/project.paths';
 
 /**
  * Author: Raushan Raj
@@ -11,7 +11,7 @@ import { RunContext } from '../core/config/run.context';
  * Benefit: Reports can distinguish a genuine self-heal from a rejected locator guess; assertions are never hidden behind a false healing success.
  */
 export class HealingAudit {
-  constructor(private readonly filePath = path.resolve('reports', resolveApplicationScope(), 'healing', 'healing-audit.jsonl')) {}
+  constructor(private readonly filePath = path.join(ProjectPaths.reports(), 'healing', 'healing-audit.jsonl')) {}
 
   record(
     plan: LocatorPlan,

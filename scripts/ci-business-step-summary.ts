@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ExecutionFacts } from '../src/framework/analytics/report.types';
+import { ProjectPaths } from '../src/framework/core/config/project.paths';
 
 /**
  * Author: Raushan Raj
@@ -34,7 +35,7 @@ export function formatBusinessStepSummary(facts: ExecutionFacts): string {
  */
 export function renderBusinessStepSummary(reportFile?: string): string {
   const app = process.env.APP?.trim() || 'unknown-app';
-  const resolved = path.resolve(reportFile ?? process.env.FINAL_BUSINESS_REPORT_DIR ?? path.join('reports', app, 'business', 'business-report.json'));
+  const resolved = path.resolve(reportFile ?? process.env.FINAL_BUSINESS_REPORT_DIR ?? path.join(ProjectPaths.businessReport(app), 'business-report.json'));
   if (!fs.existsSync(resolved)) {
     return [
       '## TestigentAI merged quality report',

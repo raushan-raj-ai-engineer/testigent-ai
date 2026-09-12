@@ -1,5 +1,6 @@
 import type { AiHealingRequest, AiHealingResponse } from './ai.types';
 import type { LocatorDescriptor } from '../healing/healing.types';
+import { assertAiDestinationAllowed } from './ai-egress.policy';
 
 /**
  * Author: Raushan Raj
@@ -140,17 +141,65 @@ export function extractOpenAiResponseText(body: unknown): string | undefined {
   return undefined;
 }
 
-/**
- * Reusable framework function `fetchWithTimeout`.
- * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
- * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
- */
+/** Resolves the bounded per-attempt AI timeout and fails closed on invalid configuration. */
+export function resolveAiTimeoutMs(raw = process.env.AI_TIMEOUT_MS, fallback = 30_000): number {
+  const value = Number(raw ?? fallback);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`AI_TIMEOUT_MS must be a positive integer; received '${raw ?? ''}'.`);
+  }
+  return value;
+}
+
+/** Performs one bounded AI HTTP request while enforcing destination and redirect egress policy on every hop. */
 export async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const boundedTimeoutMs = resolveAiTimeoutMs(String(timeoutMs));
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), boundedTimeoutMs);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    let current = url;
+    let currentInit: RequestInit = { ...init, redirect: 'manual', signal: controller.signal };
+    const maxRedirects = positiveInteger(process.env.AI_MAX_REDIRECTS, 3);
+
+    for (let redirectCount = 0; ; redirectCount += 1) {
+      assertAiDestinationAllowed(current);
+      const response = await fetch(current, currentInit);
+      if (response.status < 300 || response.status >= 400) return response;
+
+      const location = response.headers.get('location');
+      if (!location) return response;
+      if (redirectCount >= maxRedirects) throw new Error(`AI_EGRESS_REDIRECT_LIMIT: exceeded ${maxRedirects} redirect(s).`);
+
+      const next = new URL(location, current).toString();
+      assertAiDestinationAllowed(next);
+      const currentOrigin = new URL(current).origin;
+      const nextOrigin = new URL(next).origin;
+      const crossOrigin = currentOrigin !== nextOrigin;
+      if (crossOrigin && process.env.AI_ALLOW_CROSS_ORIGIN_REDIRECTS !== 'true') {
+        throw new Error(`AI_EGRESS_REDIRECT_BLOCKED: cross-origin redirect ${currentOrigin} -> ${nextOrigin} requires AI_ALLOW_CROSS_ORIGIN_REDIRECTS=true.`);
+      }
+
+      const method = String(currentInit.method ?? 'GET').toUpperCase();
+      let headers = new Headers(currentInit.headers);
+      if (crossOrigin) {
+        // Even when explicitly enabled, never forward origin-bound credentials to a redirected host.
+        for (const name of ['authorization', 'cookie', 'proxy-authorization', 'x-api-key', 'api-key']) headers.delete(name);
+      }
+      if (response.status === 303 || ((response.status === 301 || response.status === 302) && method === 'POST')) {
+        headers.delete('content-type');
+        currentInit = { ...currentInit, method: 'GET', body: undefined, headers };
+      } else if (crossOrigin) {
+        currentInit = { ...currentInit, headers };
+      }
+      // Release the intermediate response before following another hop so redirect chains do not retain sockets/buffers.
+      try { await response.body?.cancel(); } catch { /* best-effort resource cleanup */ }
+      current = next;
+    }
   } finally {
     clearTimeout(timer);
   }
+}
+
+function positiveInteger(raw: string | undefined, fallback: number): number {
+  const value = Number(raw ?? fallback);
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
 }

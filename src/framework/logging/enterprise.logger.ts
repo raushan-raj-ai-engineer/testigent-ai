@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { redact } from './redactor';
+import { ProjectPaths } from '../core/config/project.paths';
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
@@ -13,7 +14,7 @@ export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 export class EnterpriseLogger {
   constructor(
     private readonly context: Record<string, unknown> = {},
-    private readonly filePath = path.resolve('reports/logs/execution.jsonl')
+    private readonly filePath = path.join(ProjectPaths.reports(), 'logs', 'execution.jsonl')
   ) {}
 
   child(context: Record<string, unknown>): EnterpriseLogger {

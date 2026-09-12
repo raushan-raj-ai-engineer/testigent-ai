@@ -10,6 +10,8 @@ import {
   splitProjectList,
   type MultiProjectTarget,
 } from '../src/framework/core/execution/multi-project';
+import { ProjectPaths } from '../src/framework/core/config/project.paths';
+import { RunContext } from '../src/framework/core/config/run.context';
 
 interface RunnerOptions {
   all: boolean;
@@ -43,6 +45,9 @@ interface ProjectRunResult extends MultiProjectTarget {
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
+  // One immutable portfolio identity is propagated to every child project run.
+  // This avoids reading a mutable latest-run pointer when another execution shares the checkout.
+  RunContext.ensure();
   const plan = resolveMultiProjectTargets({
     all: options.all,
     apps: options.apps,
@@ -137,7 +142,9 @@ function runProject(target: MultiProjectTarget, options: RunnerOptions): Project
   });
   if (result.error) throw result.error;
   const exitCode = result.status ?? 1;
-  const reportPath = path.resolve('reports', target.application, 'business', 'business-report.json');
+  const runId = env.RUN_ID?.trim();
+  if (!runId) throw new Error('Portfolio child execution is missing RUN_ID.');
+  const reportPath = path.join(ProjectPaths.businessReport(target.application, target.environment, runId), 'business-report.json');
   return {
     ...target,
     status: exitCode === 0 ? 'passed' : 'failed',
@@ -208,7 +215,9 @@ function writeSummary(results: ProjectRunResult[], options: RunnerOptions, dryRu
     healed: results.reduce((sum, result) => sum + (result.healed ?? 0), 0),
     aiCalls: results.reduce((sum, result) => sum + (result.aiCalls ?? 0), 0),
   };
-  const reportDirectory = path.resolve('reports', 'multi-project');
+  const runId = process.env.RUN_ID?.trim();
+  if (!runId) throw new Error('Portfolio summary is missing RUN_ID.');
+  const reportDirectory = path.resolve('reports', 'multi-project', runId);
   const file = path.join(reportDirectory, 'summary.json');
   const document: PortfolioSummaryDocument = {
     generatedAt: new Date().toISOString(),

@@ -164,4 +164,4 @@ For a failed business step, the business dashboard presents one primary screensh
 
 ## Portfolio reporting
 
-Multi-project/customer execution adds an estate-level business view under `reports/multi-project/index.html` while preserving each project dashboard as the detailed source. The portfolio page uses the same deterministic project reports and does not recalculate alternative pass/fail semantics. It highlights project gate, selected/executed scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical traces remain in project-level drill-down reports.
+Multi-project/customer execution adds an estate-level business view under `reports/multi-project/<RUN_ID>/index.html` while preserving each project dashboard as the detailed source. The portfolio page uses the same deterministic project reports and does not recalculate alternative pass/fail semantics. It highlights project gate, selected/executed scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical traces remain in project-level drill-down reports.

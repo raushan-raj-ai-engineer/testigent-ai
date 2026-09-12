@@ -1,5 +1,5 @@
 import type { AiHealingRequest, AiHealingResponse, AiProvider, AiProviderHealth } from './ai.types';
-import { buildHealingPrompt, buildSummaryPrompt, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
+import { resolveAiTimeoutMs, buildHealingPrompt, buildSummaryPrompt, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
 
 interface OllamaChatResponse { message?: { content?: string }; done?: boolean; model?: string }
 interface OllamaTagsResponse { models?: Array<{ name?: string; model?: string }> }
@@ -13,7 +13,7 @@ interface OllamaTagsResponse { models?: Array<{ name?: string; model?: string }>
 export class OllamaAiProvider implements AiProvider {
   private readonly baseUrl = (process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434').replace(/\/$/, '');
   private readonly model = process.env.OLLAMA_MODEL ?? 'llama3.2';
-  private readonly timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 30_000);
+  private readonly timeoutMs = resolveAiTimeoutMs();
   private readonly temperature = Number(process.env.OLLAMA_TEMPERATURE ?? 0.1);
   private readonly keepAlive = process.env.OLLAMA_KEEP_ALIVE ?? '5m';
   private readonly numCtx = Number(process.env.OLLAMA_NUM_CTX ?? 8192);

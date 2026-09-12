@@ -53,6 +53,7 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
 
   enforceBundleTopology(reports, markers);
   if (!reports.length) throw new Error(`No business-report.json files found under ${root}`);
+  const executionIdentity = enforceExecutionIdentity(reports, markers);
 
   const uniqueResults = new Map<string, BusinessTestResult>();
   const healingByKey = new Map<string, HealingAuditRecord>();
@@ -95,12 +96,11 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
 
   const aiUsage = buildAiUsageSummary([...aiByKey.values()]);
 
-  const first = reports[0].facts;
   const mergedResults = [...uniqueResults.values()];
   const merged = buildExecutionFacts({
-    runId: process.env.RUN_ID ?? first.runId,
-    environment: first.environment,
-    application: first.application,
+    runId: executionIdentity.runId,
+    environment: executionIdentity.environment,
+    application: executionIdentity.application,
     results: mergedResults,
     healing,
     aiUsage,
@@ -123,13 +123,61 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
     sourceDirectories: reports.map(report => path.relative(root, report.directory) || '.').sort()
   };
 
-  const history = new ReportHistoryStore().append(merged);
-  const outputDir = path.resolve(process.env.MERGED_BUSINESS_REPORT_DIR ?? path.join(ProjectPaths.reports(), 'business-merged'));
+  const historyFile = path.resolve(process.env.REPORT_HISTORY_FILE ?? path.join('.report-history', executionIdentity.application, executionIdentity.environment, 'business-history.json'));
+  const history = new ReportHistoryStore(historyFile).append(merged);
+  const outputDir = path.resolve(
+    process.env.MERGED_BUSINESS_REPORT_DIR
+      ?? path.join(ProjectPaths.reports(executionIdentity.application, executionIdentity.environment, executionIdentity.runId), 'business-merged')
+  );
   fs.rmSync(outputDir, { recursive: true, force: true });
   const written = writeBusinessDashboard(outputDir, merged, { history, reportUrl: cleanEnv('REPORT_PUBLIC_URL') });
   console.log(`Merged ${files.length} business report bundle(s) (${coreReports} core, ${aiReports} AI) into ${path.join(outputDir, 'index.html')}`);
   console.log(`Merged business scenarios: ${written.total} selected; ${written.executed}/${written.executionEligible} applicable scenarios executed; ${aiResults} AI-specific result(s); ${written.healing.count} validated healing event(s); ${written.aiUsage?.calls ?? 0} AI runtime call(s).`);
   return written;
+}
+
+
+function enforceExecutionIdentity(reports: LocatedReport[], markers: LocatedMarker[]): { application: string; environment: string; runId: string } {
+  if (!reports.length) throw new Error('Cannot validate execution identity without business reports.');
+  const first = reports[0]!.facts;
+  const expected = {
+    application: cleanEnv('APP') ?? first.application,
+    environment: cleanEnv('ENV') ?? first.environment,
+    runId: cleanEnv('RUN_ID') ?? first.runId
+  };
+  for (const [field, value] of Object.entries(expected)) {
+    if (!String(value ?? '').trim()) throw new Error(`Business report execution identity is missing '${field}'.`);
+  }
+
+  for (const report of reports) {
+    const actual = { application: report.facts.application, environment: report.facts.environment, runId: report.facts.runId };
+    for (const field of ['application', 'environment', 'runId'] as const) {
+      if (actual[field] !== expected[field]) {
+        throw new Error(`Cross-execution business merge blocked: ${path.relative(process.cwd(), report.file)} has ${field}='${actual[field]}' but expected '${expected[field]}'. Never merge artifacts from different applications, environments or run IDs.`);
+      }
+    }
+    for (const record of report.facts.healing?.attempts ?? report.facts.healing?.records ?? []) {
+      if (record.runId && record.runId !== expected.runId) {
+        throw new Error(`Cross-execution healing evidence blocked: ${path.relative(process.cwd(), report.file)} contains runId='${record.runId}' but expected '${expected.runId}'.`);
+      }
+    }
+    for (const record of report.facts.aiUsage?.records ?? []) {
+      if (record.runId && record.runId !== expected.runId) {
+        throw new Error(`Cross-execution AI evidence blocked: ${path.relative(process.cwd(), report.file)} contains runId='${record.runId}' but expected '${expected.runId}'.`);
+      }
+    }
+  }
+
+  for (const located of markers) {
+    const marker = located.marker;
+    for (const field of ['application', 'environment', 'runId'] as const) {
+      const value = marker[field];
+      if (value !== undefined && value !== expected[field]) {
+        throw new Error(`Cross-execution CI marker blocked: ${path.relative(process.cwd(), located.file)} has ${field}='${value}' but expected '${expected[field]}'.`);
+      }
+    }
+  }
+  return expected;
 }
 
 function enforceBundleTopology(reports: LocatedReport[], markers: LocatedMarker[]): void {

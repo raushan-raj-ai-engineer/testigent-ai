@@ -1,5 +1,5 @@
 import type { AiHealingRequest, AiHealingResponse, AiProvider, AiProviderHealth } from './ai.types';
-import { buildHealingPrompt, buildSummaryPrompt, extractOpenAiResponseText, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
+import { resolveAiTimeoutMs, buildHealingPrompt, buildSummaryPrompt, extractOpenAiResponseText, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
 
 /**
  * Author: Raushan Raj
@@ -11,7 +11,7 @@ export class AzureOpenAiProvider implements AiProvider {
   private readonly endpoint = (process.env.AZURE_OPENAI_ENDPOINT ?? '').replace(/\/$/, '');
   private readonly apiKey = process.env.AZURE_OPENAI_API_KEY ?? '';
   private readonly model = process.env.AZURE_OPENAI_MODEL ?? '';
-  private readonly timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 30_000);
+  private readonly timeoutMs = resolveAiTimeoutMs();
 
   async proposeLocator(request: AiHealingRequest): Promise<AiHealingResponse | undefined> {
     if (!this.endpoint || !this.apiKey || !this.model) return undefined;

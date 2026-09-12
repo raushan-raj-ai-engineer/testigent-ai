@@ -1,5 +1,5 @@
 import type { AiHealingRequest, AiHealingResponse, AiProvider, AiProviderHealth } from './ai.types';
-import { buildHealingPrompt, buildSummaryPrompt, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
+import { resolveAiTimeoutMs, buildHealingPrompt, buildSummaryPrompt, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
 
 interface AnthropicResponse { content?: Array<{ type?: string; text?: string }> }
 
@@ -13,7 +13,7 @@ export class AnthropicAiProvider implements AiProvider {
   private readonly apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   private readonly model = process.env.ANTHROPIC_MODEL ?? '';
   private readonly baseUrl = (process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com').replace(/\/$/, '');
-  private readonly timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 30_000);
+  private readonly timeoutMs = resolveAiTimeoutMs();
   private readonly maxTokens = Number(process.env.ANTHROPIC_MAX_TOKENS ?? 800);
 
   async proposeLocator(request: AiHealingRequest): Promise<AiHealingResponse | undefined> {

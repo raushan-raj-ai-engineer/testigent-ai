@@ -79,6 +79,7 @@ AI_ENABLED=true
 AI_PROVIDER_MODE=single
 AI_PROVIDER=gemini
 AI_ALLOW_CLOUD_EGRESS=true
+AI_ALLOWED_EXTERNAL_ORIGINS=https://generativelanguage.googleapis.com
 GEMINI_API_KEY=<secret>
 GEMINI_MODEL=gemini-3.8-flash
 HEALING_AI_ENABLED=true
@@ -107,6 +108,7 @@ AI_ENABLED=true
 AI_PROVIDER_MODE=failover
 AI_PROVIDER_ORDER=ollama,gemini
 AI_ALLOW_CLOUD_EGRESS=true
+AI_ALLOWED_EXTERNAL_ORIGINS=https://generativelanguage.googleapis.com
 OLLAMA_MODEL=llama3.2
 GEMINI_API_KEY=<secret>
 GEMINI_MODEL=gemini-3.8-flash
@@ -132,13 +134,14 @@ Provider failover occurs on provider/runtime error or no-result. Once a provider
 
 ## 5. Cloud egress guard
 
-Cloud AI providers require:
+Cloud AI providers require both cloud permission and an exact destination-origin allowlist:
 
 ```env
 AI_ALLOW_CLOUD_EGRESS=true
+AI_ALLOWED_EXTERNAL_ORIGINS=https://approved-provider.example.com
 ```
 
-This prevents accidental transmission of redacted test evidence to an external provider. The framework still applies its redaction boundary before AI calls.
+Provider names never grant egress by themselves. This prevents accidental transmission of redacted test evidence to an external provider. The framework still applies its redaction boundary before AI calls.
 
 ## 6. AI demo commands
 
@@ -179,6 +182,7 @@ AI_ENABLED=true
 AI_PROVIDER_MODE=single
 AI_PROVIDER=gemini
 AI_ALLOW_CLOUD_EGRESS=true
+AI_ALLOWED_EXTERNAL_ORIGINS=https://generativelanguage.googleapis.com
 GEMINI_MODEL=gemini-3.8-flash
 GEMINI_API_KEY=<CI secret>
 ```
@@ -190,6 +194,7 @@ AI_ENABLED=true
 AI_PROVIDER_MODE=failover
 AI_PROVIDER_ORDER=gemini,openai
 AI_ALLOW_CLOUD_EGRESS=true
+AI_ALLOWED_EXTERNAL_ORIGINS=https://generativelanguage.googleapis.com,https://api.openai.com
 GEMINI_API_KEY=<CI secret>
 GEMINI_MODEL=gemini-3.8-flash
 OPENAI_API_KEY=<CI secret>
@@ -208,7 +213,7 @@ MCP configuration remains independent of AI-provider selection. `.mcp.json`, `.v
 Every actual AI request writes operational metadata to:
 
 ```text
-reports/<project>/ai/ai-audit.jsonl
+reports/<project>/<environment>/<RUN_ID>/ai/ai-audit.jsonl
 ```
 
 By default the terminal also prints a concise line such as:

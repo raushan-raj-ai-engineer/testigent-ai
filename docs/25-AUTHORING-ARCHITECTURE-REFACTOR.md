@@ -135,7 +135,7 @@ Business specs must not read `DB_TYPE` or manually decide whether to skip. Tag a
 
 ## v1.2.2 semantic healing refinement
 
-Healing success is no longer inferred from "locator visible + click/fill completed". Critical Page Object actions can attach a business post-condition through `HealingActionOptions`. The runtime records `validated`, `rejected`, `suggested`, or `unverified` outcomes. Only validated AI recoveries enter `.healing/<project>/locator-cache.json`, and cache records carry a semantic-validation marker plus verification description. Legacy cache entries are intentionally ignored.
+Healing success is no longer inferred from "locator visible + click/fill completed". Critical Page Object actions can attach a business post-condition through `HealingActionOptions`. The runtime records `validated`, `rejected`, `suggested`, or `unverified` outcomes. Only validated AI recoveries enter `.healing/<project>/<environment>/locator-cache.json`, and cache records carry a semantic-validation marker plus verification description. Legacy cache entries are intentionally ignored.
 
 Reporting consumes the same outcome model: only validated records mark a test `PASSED WITH HEALING`; rejected attempts remain visible in the healing audit and do not inflate release KPIs or `qa:heal` source-maintenance frequency.
 
