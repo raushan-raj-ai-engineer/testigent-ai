@@ -1,0 +1,77 @@
+name: TestigentAI Release Compatibility
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: ${{ matrix.os }} / ${{ matrix.browser }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            browser: chromium
+          - os: ubuntu-latest
+            browser: firefox
+          - os: ubuntu-latest
+            browser: webkit
+          - os: macos-latest
+            browser: webkit
+          - os: windows-latest
+            browser: chromium
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      APP: demo
+      ENV: qa
+      PW_BROWSERS: ${{ matrix.browser }}
+      AI_ENABLED: 'false'
+      HEALING_AI_ENABLED: 'false'
+      EVIDENCE_VISUAL_POLICY: 'masked'
+    steps:
+      - name: Checkout release candidate
+        uses: actions/checkout@v7
+
+      - name: Setup supported Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install browser and Linux dependencies
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Install browser
+        if: runner.os != 'Linux'
+        run: npx playwright install ${{ matrix.browser }}
+
+      - name: Static and type validation
+        run: npm run release:static && npm run typecheck
+
+      - name: Architect-review and recovery regression
+        run: npx playwright test tests/framework/review-hardening-contract.spec.ts tests/framework/browser-free-fixtures.spec.ts tests/framework/healing-generation-contract.spec.ts --project=${{ matrix.browser }}
+
+      - name: Capture exact runtime/browser versions
+        env:
+          COMPAT_BROWSER: ${{ matrix.browser }}
+        run: node scripts/release-compatibility-probe.mjs
+
+      - name: Upload compatibility evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compatibility-${{ matrix.os }}-${{ matrix.browser }}
+          path: |
+            reports/release-compatibility
+            reports/demo/qa
+            test-results/demo/qa
+          if-no-files-found: warn
+          retention-days: 30

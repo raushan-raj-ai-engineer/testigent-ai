@@ -38,7 +38,7 @@ Source: Playwright, API testing — https://playwright.dev/docs/api-testing
 
 ## 6. Distributed CI should merge before publishing
 
-Playwright blob reports are designed to support merging distributed/sharded executions. The CI templates therefore shard the selected project, collect technical blob and business bundles, merge them once, validate the final dashboard and only then publish/send an optional stakeholder notification. Project report roots are isolated under `reports/<APP>`.
+Playwright blob reports are designed to support merging distributed/sharded executions. The CI templates therefore shard the selected project, collect technical blob and business bundles, merge them once, validate the final dashboard and only then publish/send an optional stakeholder notification. Project execution roots are isolated under `reports/<APP>/<ENV>/<RUN_ID>`.
 
 Sources: Playwright, Reporters — https://playwright.dev/docs/test-reporters ; Playwright, CI — https://playwright.dev/docs/ci
 
@@ -62,7 +62,7 @@ This separates platform health from product health without hiding either.
 
 ## 10. Dependency scanning needs accountable exceptions, not blanket ignores
 
-The repository vendors SheetJS `xlsx@0.20.3`. Upstream SheetJS security documentation should be consulted when scanners report findings against registry metadata. The `security:check` command blocks all HIGH/CRITICAL findings except the explicitly version-checked `xlsx@0.20.3` exception and points maintainers to the source note. If the package version changes or another package becomes HIGH/CRITICAL, the gate blocks.
+The repository vendors SheetJS `xlsx@0.20.3`. Upstream SheetJS security documentation should be consulted when scanners report findings against registry metadata. The `security:check` command blocks every HIGH/CRITICAL finding unless that exact advisory ID, package and affected range has an approved exception in `config/security-exceptions.json` with rationale, owner and expiry. No package/version-wide exception is inherited by future advisories; unresolved high/critical advisory chains fail closed.
 
 Source: SheetJS, Security — https://docs.sheetjs.com/docs/miscellany/security/
 

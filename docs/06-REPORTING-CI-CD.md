@@ -3,14 +3,20 @@
 Every project writes isolated output:
 
 ```text
-reports/<APP>/playwright-html/
-reports/<APP>/business/
-reports/<APP>/business-merged/
-test-results/<APP>/
-.report-history/<APP>/
+reports/<APP>/<ENV>/<RUN_ID>/playwright-html/
+reports/<APP>/<ENV>/<RUN_ID>/business/
+reports/<APP>/<ENV>/<RUN_ID>/business-merged/
+test-results/<APP>/<ENV>/<RUN_ID>/
+.report-history/<APP>/<ENV>/
 ```
 
 The business dashboard contains execution KPIs, status/layer graphs, searchable/filterable test explorer, step drill-down and materialized evidence. Email supports preview mode so SMTP is not required for local report validation.
+## Run isolation and latest-run behavior (v1.5.0)
+
+Every live execution is scoped by application, environment and immutable `RUN_ID`. Workers inherit the run ID established before Playwright configuration, so two QA/UAT or same-application executions can share a checkout without overwriting report/result/log/audit roots. `.runtime/latest-run/<APP>/<ENV>.json` is only a convenience pointer for user-facing report commands; running processes never derive identity from it. Cleanup removes only the current run directory.
+
+AI/healing audit records and framework logs live under the same run root. CI artifact upload/download paths must therefore preserve `<APP>/<ENV>/<RUN_ID>`.
+
 
 ## Business-standard status model (v1.2.6)
 
@@ -51,9 +57,9 @@ Use CI secret stores for credentials. Azure pipeline and GitHub workflow in the 
 When AI is actually invoked, the report records provider/model/status/latency metadata without storing prompts or secrets. The dashboard includes an **AI runtime audit** table and AI-call KPI. `report:business` includes the same provider/model evidence in the executive summary.
 
 ```text
-reports/<project>/ai/ai-audit.jsonl
-reports/<project>/business/business-report.json
-reports/<project>/business/EXECUTIVE_SUMMARY.md
+reports/<project>/<env>/<run-id>/ai/ai-audit.jsonl
+reports/<project>/<env>/<run-id>/business/business-report.json
+reports/<project>/<env>/<run-id>/business/EXECUTIVE_SUMMARY.md
 ```
 
 These are operational facts. They are kept separate from deterministic pass/fail and release-gate calculations.

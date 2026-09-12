@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { projectPreflight } from './project-check';
 import { RuntimeConfig } from '../src/framework/core/config/runtime.config';
+import { RunContext } from '../src/framework/core/config/run.context';
 import { AuthManager } from '../src/framework/core/auth.manager';
 import { laneRequiresBrowserAuth, requiredTagGroupsToRegExp, resolveExecutionPolicy, tagsToRegExp } from '../src/framework/core/execution/execution.policy';
 import { mergeGovernedFilters } from '../src/framework/core/execution/execution.cli-filters';
@@ -16,6 +17,9 @@ async function main(): Promise<void> {
   const custom = parseCustomArgs(process.argv.slice(2));
   if (custom.lane) process.env.TEST_LANE = custom.lane;
   if (custom.profile) process.env.TEST_PROFILE = custom.profile;
+
+  // Establish an immutable run identity before paths/config are resolved, then propagate it to Playwright workers.
+  RunContext.ensure();
 
   // Prepare/verify auth before Playwright workers are spawned. One refresh can then serve all workers on this runner.
   const runtime = RuntimeConfig.resolve();

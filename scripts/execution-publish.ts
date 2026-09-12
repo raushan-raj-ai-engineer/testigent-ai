@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   const runId = arg('run-id') ?? process.env.RUN_ID ?? `local-${Date.now()}`;
   const resultFile = arg('result');
   if (!target || !requirementId) {
-    throw new Error('Usage: EXECUTION_STATUS_PUBLISH_ENABLED=true npm run execution:publish -- --target jira --requirement PAY-142 [--result reports/<APP>/business/business-report.json]');
+    throw new Error('Usage: EXECUTION_STATUS_PUBLISH_ENABLED=true npm run execution:publish -- --target jira --requirement PAY-142 [--result reports/<APP>/<ENV>/<RUN_ID>/business/business-report.json]');
   }
 
   let raw: any = {};

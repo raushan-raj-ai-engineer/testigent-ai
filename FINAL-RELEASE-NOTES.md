@@ -1,3 +1,30 @@
+# TestigentAI v1.5.1 — Runtime contract closure after architect hardening
+
+- Fixed a runtime contract regression in `HealingOrchestrator.usableLocator()` where best-effort readiness diagnostics assumed every injected logger implemented `debug()`. Lightweight test/consumer loggers with only `warn()` could throw `TypeError: this.logger.debug is not a function` and stop deterministic healing.
+- Narrowed the healing logger dependency to the methods actually required: `warn()` is mandatory; `debug()` is optional and best-effort. Diagnostic logging failures can no longer alter locator-recovery control flow.
+- Narrowed the healing AI dependency to `proposeLocator()` instead of the concrete `AiGateway` class, so test doubles and alternate governed gateways are structurally type-checked without unsafe casts.
+- Narrowed `BaseApiClient` logging to the `info()` contract it actually uses.
+- Removed the mutable latest-run pointer from generic `ProjectPaths` write-path resolution. Latest-run lookup is now explicit through user-facing `latest*` helpers, preventing a new process without `RUN_ID` from silently writing into a previous execution.
+- Removed committed credential-shaped fallbacks from the SDET Practice sample provider. Authenticated sample execution now requires `AUTH_USERNAME` and `AUTH_PASSWORD` from local/protected CI secret configuration; its provider contract uses synthetic values only.
+- Removed unsafe logger `as any` casts from healing/review hardening tests and added an explicit regression proving readiness misses work with a logger that has no `debug()` method. Future logger-contract drift now surfaces at compile/test time rather than browser runtime.
+- Retains all v1.5.0 A1–A8 architect-review hardening, reporting/run isolation, egress, evidence, cache, CI and security controls.
+
+# TestigentAI v1.5.0 — Independent architect-review hardening and adoption readiness
+
+- Closed review findings A1–A8 at their root boundaries: shared sensitive-data sanitization, destination-based AI egress, browser-free API/data/DB fixtures, immutable run isolation, concurrent environment-scoped healing cache, bounded primary-locator readiness, reliable generic HTTP AI handling, and advisory-scoped security exceptions.
+- Added secure visual-evidence governance. Default `masked` mode disables automatic trace/video/screenshots that cannot reliably apply sensitive-region masks; framework-managed failure screenshots can mask configured selectors. Unmasked capture requires explicit approval.
+- Hardened AI redirects: every redirect is policy-checked; cross-origin redirects are blocked by default, and explicit opt-in strips authorization/cookie/API-key headers before following.
+- Removed implicit trust for official cloud-provider origins. Every external AI destination now requires both `AI_ALLOW_CLOUD_EGRESS=true` and an exact `AI_ALLOWED_EXTERNAL_ORIGINS` entry.
+- Sanitizes provider-returned healing reasons before they can reach cache, logs or reports, closing the outbound-only redaction blind spot.
+- Scoped reports/results/logs/AI audit/healing audit by `<APP>/<ENV>/<RUN_ID>` with a non-authoritative latest-run pointer; CI upload/merge/finalization paths now preserve the same identity.
+- Business report merge now fails closed on mixed application/environment/run identity, and multi-project portfolio execution propagates one immutable portfolio run ID.
+- Hardened `.report-history` as shared mutable state using application/environment scope plus lock/atomic merge behavior for business trends and duration planning.
+- Healing cache invalid-entry pruning re-checks under the write lock so a stale reader cannot delete a newer valid concurrent write. Explicit `REPORT_HISTORY_FILE` overrides remain supported for existing consumers.
+- Added a Node 22 release-compatibility workflow across Linux Chromium/Firefox/WebKit, macOS WebKit and Windows Chromium. It records exact Node/Playwright/browser versions rather than treating source checks as compatibility evidence.
+- Added `test:review:hardening` to `validate:final`, including canary redaction, egress/redirect, browser-free fixture, run/cache isolation, HTTP timeout/schema/configuration, advisory-regression contracts, and delayed-primary locator readiness.
+- Added `qa:migrate` / `migration:assess` for read-only incremental adoption assessment of existing Playwright suites rather than requiring a bulk rewrite.
+- Added architect-review closure and pilot metrics documentation. Customer/pilot evidence is deliberately not fabricated; market-readiness claims remain gated on measured adoption/benchmark results.
+
 # TestigentAI v1.4.2 — Multi-project capability isolation and dormant E2E sample hardening
 
 - Fixed a multi-project isolation defect where a machine/repository-level `DB_TYPE` value could override a project's configured `database.type=none` and accidentally activate `@db` scenarios in unrelated products.
@@ -14,7 +41,7 @@
 - UI healing remains available across the suite with the safe order primary locator -> deterministic fallback -> validated cache -> lazy AI fallback; AI is created only when deterministic recovery is exhausted.
 - Dedicated local/GitHub/Azure AI lanes now set the same explicit `ALLOW_AI_TESTS=true` selection contract.
 - Portfolio `--include-ai` performs one provider/configuration preflight before executing projects, while dry-run remains secret-free.
-- Added a lightweight business-first portfolio dashboard at `reports/multi-project/index.html` without changing existing per-project business/engineering reports.
+- Added a lightweight business-first portfolio dashboard at `reports/multi-project/<RUN_ID>/index.html` without changing existing per-project business/engineering reports.
 - Extended portfolio facts with executed/not-applicable/blocked scenarios, quality failures, known defects, CI blockers, validated healing and AI usage.
 - Extended the existing requirement-intelligence/proposal pipeline to author UI, API, database and mixed E2E automation using one workflow; no parallel agent framework or extra onboarding command surface was introduced.
 - Human approval remains the trust boundary before generated automation is promoted into normal project tests.
@@ -32,7 +59,7 @@
 - Added common `--env` and per-project `--env-map` environment selection.
 - Portfolio execution continues through failures by default and supports optional `--fail-fast`.
 - Added `--dry-run` execution-plan preview and `--include-ai` explicit AI-tag opt-in.
-- Added cross-project machine-readable summary at `reports/multi-project/summary.json`.
+- Added cross-project machine-readable summary at `reports/multi-project/<RUN_ID>/summary.json`.
 - Added framework contracts for dynamic discovery, mixed environments, group selection and fail-closed ambiguous environment handling.
 - Added dedicated multi-project documentation and product README guidance.
 ## v1.3.9 - Zero-selection and empty-shard reporting hardening

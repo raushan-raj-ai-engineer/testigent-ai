@@ -3,14 +3,13 @@ import type { ProjectAuthProvider } from '../../../src/framework/core/auth.provi
 
 /**
  * Project-owned fast auth provider. The reusable framework never knows this application's login endpoint or token key.
- * The SDET Practice credentials below are public demo credentials published by the SUT repository; AUTH_USERNAME/
- * AUTH_PASSWORD override them for private/local variants.
+ * Authentication credentials are always supplied through AUTH_USERNAME/AUTH_PASSWORD; no credential-shaped fallback is committed to source.
  */
 export const authProvider: ProjectAuthProvider = {
   id: 'sdet-practice-api-login',
   async refresh(context) {
-    const username = optionalSecret('AUTH_USERNAME') || 'admin@test.com';
-    const password = optionalSecret('AUTH_PASSWORD') || 'Admin@123';
+    const username = requiredSecret('AUTH_USERNAME');
+    const password = requiredSecret('AUTH_PASSWORD');
     const client = await request.newContext({ baseURL: context.apiBaseUrl });
     try {
       const response = await client.post('/auth/login', {
@@ -53,8 +52,11 @@ function jwtExpiryMs(token: string): number | undefined {
   }
 }
 
-function optionalSecret(name: string): string | undefined {
+function requiredSecret(name: string): string {
   const value = process.env[name]?.trim();
-  if (!value || value === `$(${name})`) return undefined;
+  if (!value || value === `$(${name})`) {
+    throw new Error(`SDET Practice auth requires ${name}. Configure it in local secrets or protected CI variables.`);
+  }
   return value;
 }
+

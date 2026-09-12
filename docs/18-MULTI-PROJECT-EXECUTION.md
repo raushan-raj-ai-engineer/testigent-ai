@@ -98,15 +98,20 @@ AI_ENABLED=true AI_PROVIDER_MODE=single AI_PROVIDER=<approved-provider> \
 Every project retains isolated reporting:
 
 ```text
-reports/<APP>/business/business-report.json
-reports/<APP>/playwright-html/
+reports/<APP>/<ENV>/<RUN_ID>/business/business-report.json
+reports/<APP>/<ENV>/<RUN_ID>/playwright-html/
 ```
 
 The portfolio runner also writes:
 
 ```text
-reports/multi-project/summary.json
-reports/multi-project/index.html
+reports/multi-project/<RUN_ID>/summary.json
+reports/multi-project/<RUN_ID>/index.html
 ```
 
 The JSON remains the deterministic source for CI. The HTML portfolio dashboard is business-first: estate health, selected/executed/not-applicable/blocked scenarios, quality failures, known-defect debt, CI blockers, validated healing, AI usage and drill-down links to each product report.
+
+
+## Concurrent shared-checkout isolation (v1.5.0)
+
+A project run owns `reports/<APP>/<ENV>/<RUN_ID>` and `test-results/<APP>/<ENV>/<RUN_ID>`. `RUN_ID` is created before Playwright config resolution and propagated to workers/child processes. Same-application QA and UAT runs therefore keep independent evidence, logs, healing/AI audits and test-data provenance. The `.runtime/latest-run` pointer is for convenience only and must never be treated as a running process identity.

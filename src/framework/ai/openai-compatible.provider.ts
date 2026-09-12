@@ -1,5 +1,6 @@
 import type { AiHealingRequest, AiHealingResponse, AiProvider, AiProviderHealth } from './ai.types';
-import { buildHealingPrompt, buildSummaryPrompt, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
+import { resolveAiTimeoutMs, buildHealingPrompt, buildSummaryPrompt, fetchWithTimeout, HEALING_OUTPUT_SCHEMA, parseHealingJson } from './ai-provider.utils';
+import { assertAiDestinationAllowed } from './ai-egress.policy';
 
 interface CompatibleResponse { choices?: Array<{ message?: { content?: string } }> }
 
@@ -14,7 +15,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
   private readonly apiKey = process.env.AI_COMPAT_API_KEY ?? '';
   private readonly model = process.env.AI_COMPAT_MODEL ?? '';
   private readonly mode = process.env.AI_COMPAT_STRUCTURED_MODE ?? 'json_schema';
-  private readonly timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 30_000);
+  private readonly timeoutMs = resolveAiTimeoutMs();
 
   async proposeLocator(request: AiHealingRequest): Promise<AiHealingResponse | undefined> {
     if (!this.baseUrl || !this.model) return undefined;
@@ -33,7 +34,12 @@ export class OpenAiCompatibleProvider implements AiProvider {
   async healthCheck(): Promise<AiProviderHealth> {
     if (!this.baseUrl) return { ok: false, provider: 'openai-compatible', model: this.model, message: 'AI_COMPAT_BASE_URL is not configured.' };
     if (!this.model) return { ok: false, provider: 'openai-compatible', message: 'AI_COMPAT_MODEL is not configured.' };
-    return { ok: true, provider: 'openai-compatible', model: this.model, message: `OpenAI-compatible provider configured at '${this.baseUrl}' with model '${this.model}'.` };
+    try {
+      const decision = assertAiDestinationAllowed(this.baseUrl);
+      return { ok: true, provider: 'openai-compatible', model: this.model, message: `OpenAI-compatible destination approved at '${decision.origin}' with model '${this.model}'.` };
+    } catch (error) {
+      return { ok: false, provider: 'openai-compatible', model: this.model, message: error instanceof Error ? error.message : String(error) };
+    }
   }
 
   private async chat(system: string, user: string, structured: boolean): Promise<string | undefined> {

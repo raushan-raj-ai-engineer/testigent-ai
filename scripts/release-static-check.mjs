@@ -135,6 +135,20 @@ for (const required of [
   'docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md',
   'docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md',
   'docs/30-RECOVERY-ARCHITECTURE.md',
+  'docs/31-ARCHITECT-REVIEW-CLOSURE-v1.5.0.md',
+  'docs/32-PILOT-ADOPTION-AND-METRICS.md',
+  'docs/33-RELEASE-COMPATIBILITY-MATRIX.md',
+  'docs/34-v1.5.0-VALIDATION-EVIDENCE.md',
+  '.github/workflows/release-compatibility.yml',
+  'scripts/release-compatibility-probe.mjs',
+  'config/security-exceptions.json',
+  'src/framework/ai/ai-egress.policy.ts',
+  'src/framework/logging/evidence.policy.ts',
+  'src/framework/logging/evidence.retention.ts',
+  'src/framework/security/advisory.policy.ts',
+  'tests/framework/review-hardening-contract.spec.ts',
+  'tests/framework/browser-free-fixtures.spec.ts',
+  'scripts/migration-assess.ts',
   'src/framework/reporting/portfolio-dashboard.writer.ts',
   'tests/framework/portfolio-reporting.spec.ts',
   'scripts/qa.ts',
@@ -183,6 +197,9 @@ try {
   const finalValidationContract = `${pkg.scripts?.['validate:final'] ?? ''} ${pkg.scripts?.['validate:final:steps'] ?? ''}`;
   if (!finalValidationContract.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
+  if (pkg.engines?.node !== '>=22 <23' || fs.readFileSync(path.join(root, '.nvmrc'), 'utf8').trim() !== '22') issues.push('release runtime must be consistently pinned to Node 22 in package engines and .nvmrc');
+  const copilotSetup = fs.readFileSync(path.join(root, '.github/workflows/copilot-setup-steps.yml'), 'utf8');
+  if (!copilotSetup.includes("node-version-file: '.nvmrc'")) issues.push('Copilot setup workflow must use the same .nvmrc release runtime');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
 }
@@ -292,6 +309,7 @@ try {
   const bundleValidator = fs.readFileSync(path.join(root, 'scripts/validate-ci-business-bundle.ts'), 'utf8');
   const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
   const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
   if (!reportTypes.includes('executionEligible') || !reportTypes.includes('notApplicable') || !reportTypes.includes('blockedSkipped')) issues.push('reporting applicability/execution fact contract missing');
   if (!skipClassifier.includes("'NOT_APPLICABLE'") || !skipClassifier.includes("'BLOCKED'")) issues.push('skip disposition contract missing');
   if (!executionFacts.includes('total - notApplicable') || !executionFacts.includes("item.status !== 'skipped'")) issues.push('execution coverage/layer facts must exclude not-applicable/skipped scenarios correctly');
@@ -324,6 +342,7 @@ try {
   const newTest = fs.readFileSync(path.join(root, 'scripts/new-test.ts'), 'utf8');
   const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
   const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
   if (!portfolioRunner.includes('writePortfolioDashboard') || !portfolioRunner.includes('Known defects') && !portfolioWriter.includes('Known defects')) issues.push('business-friendly portfolio dashboard contract missing');
   if (!portfolioRunner.includes('resolveProviderOrder') || !portfolioRunner.includes('--include-ai requires AI_ENABLED=true')) issues.push('portfolio AI provider preflight contract missing');
   if (!githubWorkflow.includes("ALLOW_AI_TESTS: 'true'") || !azurePipeline.includes('ALLOW_AI_TESTS=true')) issues.push('dedicated CI AI lane must explicitly allow @ai tests');
@@ -362,6 +381,67 @@ try {
   if (!pkg.scripts?.['auth:prepare'] || !pkg.scripts?.['auth:check']) issues.push('auth lifecycle CLI scripts missing');
 } catch (error) {
   issues.push(`unable to validate auth lifecycle contracts: ${error.message}`);
+}
+
+
+// Independent architect-review hardening contracts (v1.5.0+).
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const redactor = fs.readFileSync(path.join(root, 'src/framework/logging/redactor.ts'), 'utf8');
+  const apiClient = fs.readFileSync(path.join(root, 'src/framework/api/base-api.client.ts'), 'utf8');
+  const aiGateway = fs.readFileSync(path.join(root, 'src/framework/ai/ai.gateway.ts'), 'utf8');
+  const egress = fs.readFileSync(path.join(root, 'src/framework/ai/ai-egress.policy.ts'), 'utf8');
+  const providerUtils = fs.readFileSync(path.join(root, 'src/framework/ai/ai-provider.utils.ts'), 'utf8');
+  const httpProvider = fs.readFileSync(path.join(root, 'src/framework/ai/http-ai.provider.ts'), 'utf8');
+  const fixture = fs.readFileSync(path.join(root, 'src/framework/core/fixtures/enterprise.fixture.ts'), 'utf8');
+  const runContext = fs.readFileSync(path.join(root, 'src/framework/core/config/run.context.ts'), 'utf8');
+  const runtimeConfig = fs.readFileSync(path.join(root, 'src/framework/core/config/runtime.config.ts'), 'utf8');
+  const projectPaths = fs.readFileSync(path.join(root, 'src/framework/core/config/project.paths.ts'), 'utf8');
+  const cache = fs.readFileSync(path.join(root, 'src/framework/healing/healing.cache.ts'), 'utf8');
+  const healer = fs.readFileSync(path.join(root, 'src/framework/healing/healing.orchestrator.ts'), 'utf8');
+  const security = fs.readFileSync(path.join(root, 'src/framework/security/advisory.policy.ts'), 'utf8');
+  const securityConfig = JSON.parse(fs.readFileSync(path.join(root, 'config/security-exceptions.json'), 'utf8'));
+  const reviewTests = fs.readFileSync(path.join(root, 'tests/framework/review-hardening-contract.spec.ts'), 'utf8');
+  const browserFree = fs.readFileSync(path.join(root, 'tests/framework/browser-free-fixtures.spec.ts'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'scripts/migration-assess.ts'), 'utf8');
+  const reportHistory = fs.readFileSync(path.join(root, 'src/framework/reporting/report-history.store.ts'), 'utf8');
+  const durationHistory = fs.readFileSync(path.join(root, 'src/framework/execution/duration-history.store.ts'), 'utf8');
+  const evidencePolicy = fs.readFileSync(path.join(root, 'src/framework/logging/evidence.policy.ts'), 'utf8');
+  const evidenceRetention = fs.readFileSync(path.join(root, 'src/framework/logging/evidence.retention.ts'), 'utf8');
+  const mergeReports = fs.readFileSync(path.join(root, 'scripts/merge-business-reports.ts'), 'utf8');
+  const portfolioRunner = fs.readFileSync(path.join(root, 'scripts/test-projects.ts'), 'utf8');
+  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
+  const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
+
+  if (!sdetAuthProvider.includes("requiredSecret('AUTH_USERNAME')") || !sdetAuthProvider.includes("requiredSecret('AUTH_PASSWORD')")) issues.push('A1 sample auth provider must not commit credential-shaped fallbacks');
+  if (!redactor.includes('sanitizeText') || !redactor.includes('sanitizeUrl') || !redactor.includes('sanitizeAndTruncate')) issues.push('A1 shared free-text/URL/sanitize-before-truncate redaction contract missing');
+  if (!apiClient.includes('sanitizeAndTruncate(body') || !apiClient.includes('sanitizeUrl(url)')) issues.push('A1 API evidence must sanitize URL/body before persistence');
+  if (!aiGateway.includes('accessibilitySnapshot: sanitizeText') || !aiGateway.includes('allowedDescriptorTypes')) issues.push('A1 outbound AI evidence allowlist/sanitization contract missing');
+  if (!evidencePolicy.includes("EVIDENCE_VISUAL_POLICY ?? 'masked'") || !evidencePolicy.includes('EVIDENCE_ALLOW_UNMASKED_VISUALS') || !evidenceRetention.includes('EVIDENCE_RETENTION_DAYS')) issues.push('A1 secure visual-evidence masking/retention policy missing');
+  if (!egress.includes('assertAiDestinationAllowed') || !egress.includes('AI_ALLOWED_EXTERNAL_ORIGINS') || egress.includes('BUILTIN_EXTERNAL_ORIGINS') || !providerUtils.includes("redirect: 'manual'") || !providerUtils.includes('assertAiDestinationAllowed') || !providerUtils.includes('AI_EGRESS_REDIRECT_BLOCKED') || !providerUtils.includes("'authorization', 'cookie', 'proxy-authorization'") || !providerUtils.includes('headers.delete(name)')) issues.push('A2 exact destination/redirect egress enforcement contract missing');
+  if (!githubWorkflow.includes('AI_ALLOWED_EXTERNAL_ORIGINS:') || !azurePipeline.includes('AI_ALLOWED_EXTERNAL_ORIGINS:')) issues.push('A2 CI must propagate explicit external AI origin allowlists');
+  if (/\{\s*auto:\s*true\s*\}/.test(fixture) && fixture.includes('_authStateBootstrap')) issues.push('A3 automatic auth fixture must not force browser/context for non-UI tests');
+  if (!fixture.includes('context: async') || !browserFree.includes('API/data/DB fixture graph does not request browser or context')) issues.push('A3 demand-driven context/browser-free regression contract missing');
+  const browserFreeScript = String(pkg.scripts?.['test:review:browser-free'] ?? '');
+  const githubBrowserFree = githubWorkflow.indexOf('npm run test:review:browser-free');
+  const githubBrowserInstall = githubWorkflow.indexOf('npx playwright install --with-deps chromium');
+  const azureBrowserFree = azurePipeline.indexOf('npm run test:review:browser-free');
+  const azureBrowserInstall = azurePipeline.indexOf('npx playwright install --with-deps chromium');
+  if (!browserFreeScript.includes('browser-free-fixtures.spec.ts') || !browserFreeScript.includes('PLAYWRIGHT_BROWSERS_PATH=.runtime/browser-free-proof') || githubBrowserFree < 0 || githubBrowserInstall < 0 || githubBrowserFree > githubBrowserInstall || azureBrowserFree < 0 || azureBrowserInstall < 0 || azureBrowserFree > azureBrowserInstall) issues.push('A3 browser-free acceptance must execute in CI before browser binaries are installed');
+  if (!runContext.includes("'.runtime', 'runs'") || !runContext.includes("'.runtime', 'latest-run'") || !runtimeConfig.includes("'reports', target.application, target.environment, runId") || !projectPaths.includes('assertSafeRunId') || !projectPaths.includes("const id = runId?.trim() || process.env.RUN_ID?.trim();") || !projectPaths.includes('static latestRunId') || !projectPaths.includes("const current = process.env.RUN_ID?.trim();")) issues.push('A4 immutable run-scoped artifact/path validation contract missing');
+  if (!mergeReports.includes('enforceExecutionIdentity') || !mergeReports.includes('Cross-execution business merge blocked') || !portfolioRunner.includes('RunContext.ensure()') || !portfolioRunner.includes('target.environment, runId')) issues.push('A4 merge/portfolio consumers must preserve immutable execution identity');
+  if (!cache.includes('schemaVersion: 2') || !cache.includes('planRevision') || !cache.includes("openSync(this.lockPath, 'wx')") || !cache.includes('expiresAt') || !cache.includes('pruneIfStillInvalid')) issues.push('A5 healing-cache provenance/expiry/concurrency contract missing');
+  if (!healer.includes('HEALING_PRIMARY_READY_TIMEOUT_MS') || !healer.includes("waitFor({ state: 'visible'")) issues.push('A6 bounded primary locator readiness contract missing');
+  if (!httpProvider.includes('AiProviderError') || !httpProvider.includes('fetchWithTimeout') || !httpProvider.includes("'invalid-response'") || !providerUtils.includes('resolveAiTimeoutMs')) issues.push('A7 generic HTTP timeout/schema/error contract missing');
+  if (!security.includes('advisoryId') || !security.includes('expiresAt') || !security.includes('unresolved:${packageName}') || securityConfig.schemaVersion !== 1 || !Array.isArray(securityConfig.exceptions)) issues.push('A8 advisory-scoped/fail-closed security exception policy missing');
+  if (!pkg.scripts?.['test:review:hardening'] || !String(pkg.scripts?.['validate:final:steps'] ?? '').includes('test:review:hardening') || !String(pkg.scripts?.['test:review:hardening'] ?? '').includes('healing-generation-contract.spec.ts')) issues.push('architect-review regression suite must gate A1-A8 including delayed-primary recovery');
+  if (!reviewTests.includes('A1 removes canary secrets') || !reviewTests.includes('A8 a new advisory')) issues.push('architect-review executable acceptance coverage missing');
+  if (!pkg.scripts?.['migration:assess'] || !pkg.scripts?.['qa:migrate'] || !migration.includes('adoption aid')) issues.push('existing-Playwright migration assessment path missing');
+  if (!pkg.scripts?.['release:compat:probe'] || !fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8').includes('Architect-review and recovery regression')) issues.push('release compatibility evidence workflow/probe missing');
+  if (!reportHistory.includes("'.report-history', application, environment") || !reportHistory.includes("openSync(lock, 'wx')") || !durationHistory.includes("'.report-history', app, env") || !durationHistory.includes("openSync(lock, 'wx')")) issues.push('shared history must be environment-scoped and lock-protected');
+} catch (error) {
+  issues.push(`unable to validate architect-review hardening contracts: ${error.message}`);
 }
 
 for (const file of walk(root).filter(f => f.endsWith('.json'))) {

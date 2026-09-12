@@ -29,6 +29,9 @@ variables:
   AI_PROVIDER: ''
   AI_PROVIDER_ORDER: ''
   AI_ALLOW_CLOUD_EGRESS: 'false'
+  AI_ALLOWED_PRIVATE_ORIGINS: ''
+  AI_ALLOWED_EXTERNAL_ORIGINS: ''
+  AI_ALLOW_CROSS_ORIGIN_REDIRECTS: 'false'
   GEMINI_MODEL: ''
   OPENAI_MODEL: ''
   AZURE_OPENAI_ENDPOINT: ''
@@ -50,6 +53,8 @@ stages:
       inputs: { versionSpec: '$(NODE_VERSION)' }
     - script: npm ci
       displayName: Install locked dependencies
+    - script: npm run test:review:browser-free
+      displayName: Prove browser-free API/data/DB fixture lane
     - script: npx playwright install --with-deps chromium
       displayName: Install Chromium
     - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run validate:final
@@ -100,6 +105,9 @@ stages:
         AI_PROVIDER: $(AI_PROVIDER)
         AI_PROVIDER_ORDER: $(AI_PROVIDER_ORDER)
         AI_ALLOW_CLOUD_EGRESS: $(AI_ALLOW_CLOUD_EGRESS)
+        AI_ALLOWED_PRIVATE_ORIGINS: $(AI_ALLOWED_PRIVATE_ORIGINS)
+        AI_ALLOWED_EXTERNAL_ORIGINS: $(AI_ALLOWED_EXTERNAL_ORIGINS)
+        AI_ALLOW_CROSS_ORIGIN_REDIRECTS: $(AI_ALLOW_CROSS_ORIGIN_REDIRECTS)
         GEMINI_MODEL: $(GEMINI_MODEL)
         GEMINI_API_KEY: $(GEMINI_API_KEY)
         OPENAI_MODEL: $(OPENAI_MODEL)
@@ -123,13 +131,13 @@ stages:
     - task: PublishPipelineArtifact@1
       condition: always()
       inputs:
-        targetPath: 'reports/$(APP)/blob-report'
+        targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/blob-report'
         artifact: 'blob-$(APP)-$(System.JobPositionInPhase)-$(Build.BuildId)'
       displayName: Publish technical blob
     - task: PublishPipelineArtifact@1
       condition: always()
       inputs:
-        targetPath: 'reports/$(APP)/business'
+        targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/business'
         artifact: 'business-$(APP)-$(System.JobPositionInPhase)-$(Build.BuildId)'
       displayName: Publish business shard bundle
 
@@ -171,6 +179,9 @@ stages:
           AI_PROVIDER: $(AI_PROVIDER)
           AI_PROVIDER_ORDER: $(AI_PROVIDER_ORDER)
           AI_ALLOW_CLOUD_EGRESS: $(AI_ALLOW_CLOUD_EGRESS)
+          AI_ALLOWED_PRIVATE_ORIGINS: $(AI_ALLOWED_PRIVATE_ORIGINS)
+          AI_ALLOWED_EXTERNAL_ORIGINS: $(AI_ALLOWED_EXTERNAL_ORIGINS)
+          AI_ALLOW_CROSS_ORIGIN_REDIRECTS: $(AI_ALLOW_CROSS_ORIGIN_REDIRECTS)
           GEMINI_MODEL: $(GEMINI_MODEL)
           GEMINI_API_KEY: $(GEMINI_API_KEY)
           OPENAI_MODEL: $(OPENAI_MODEL)
@@ -194,19 +205,19 @@ stages:
       - task: PublishPipelineArtifact@1
         condition: and(always(), eq(variables['HAS_AI_TESTS'], 'true'))
         inputs:
-          targetPath: 'reports/$(APP)/blob-report'
+          targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/blob-report'
           artifact: 'blob-$(APP)-ai-$(Build.BuildId)'
         displayName: Publish AI technical blob
       - task: PublishPipelineArtifact@1
         condition: always()
         inputs:
-          targetPath: 'reports/$(APP)/business'
+          targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/business'
           artifact: 'business-$(APP)-ai-$(Build.BuildId)'
         displayName: Publish AI business bundle
       - task: PublishPipelineArtifact@1
         condition: and(always(), eq(variables['HAS_AI_TESTS'], 'true'))
         inputs:
-          targetPath: 'reports/$(APP)/ai'
+          targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/ai'
           artifact: 'ai-audit-$(APP)-$(Build.BuildId)'
         displayName: Publish AI audit
 
@@ -246,19 +257,19 @@ stages:
         mkdir -p all-blob-reports all-business-reports
         find "$(Pipeline.Workspace)/all-blob-reports" -type f -name '*.zip' -exec cp {} all-blob-reports/ \;
         find "$(Pipeline.Workspace)/all-business-reports" -type f -exec cp --parents {} all-business-reports/ \; || true
-        APP="$(APP)" npm run report:merge:technical
-        APP="$(APP)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_WORKERS="${{ parameters.shards }}" EXPECT_AI_LANE="${{ parameters.runAi }}" npm run report:merge:business -- all-business-reports
-        APP="$(APP)" npm run ci:business:finalize
-        APP="$(APP)" AI_ENABLED=false npm run report:business
-        APP="$(APP)" npm run ci:business:validate
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run report:merge:technical
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_WORKERS="${{ parameters.shards }}" EXPECT_AI_LANE="${{ parameters.runAi }}" npm run report:merge:business -- all-business-reports
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run ci:business:finalize
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" AI_ENABLED=false npm run report:business
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run ci:business:validate
       displayName: Merge and validate project reports
     - task: PublishPipelineArtifact@1
       condition: always()
       inputs:
-        targetPath: 'reports/$(APP)'
+        targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)'
         artifact: 'reports-$(APP)-$(Build.BuildId)'
       displayName: Publish final project reports
-    - bash: APP="$(APP)" npm run ci:mail
+    - bash: APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run ci:mail
       condition: eq(variables['BUSINESS_EMAIL_ENABLED'], 'true')
       displayName: Optional one-time stakeholder notification
       env:

@@ -1,11 +1,6 @@
 /** Application-knowledge redaction and path normalization. Author: Raushan Raj */
-import { redact } from '../../logging/redactor.js';
+import { redact, sanitizeText } from '../../logging/redactor.js';
 
-const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
-const JWT = /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g;
-const BEARER = /\bBearer\s+[A-Za-z0-9._~+\/-]+=*\b/gi;
-const LONG_SECRET = /\b[A-Za-z0-9_-]{32,}\b/g;
-const CARD_LIKE = /\b(?:\d[ -]*?){12,19}\b/g;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const NUMERIC_ID = /^\d{2,}$/;
 const LONG_ID = /^[A-Za-z0-9_-]{20,}$/;
@@ -16,14 +11,7 @@ const LONG_ID = /^[A-Za-z0-9_-]{20,}$/;
  * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
  */
 export function redactKnowledgeText(value: string): string {
-  return value
-    .replace(EMAIL, '[EMAIL_REDACTED]')
-    .replace(JWT, '[TOKEN_REDACTED]')
-    .replace(BEARER, 'Bearer [REDACTED]')
-    .replace(CARD_LIKE, '[NUMBER_REDACTED]')
-    .replace(LONG_SECRET, '[TOKEN_REDACTED]')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return sanitizeText(value).replace(/\s+/g, ' ').trim();
 }
 
 /**

@@ -12,7 +12,7 @@ import { ProjectPaths } from '../src/framework/core/config/project.paths';
  * Benefit: Notification is separated from Playwright execution, preventing duplicate shard emails and false test failures caused by mail outages.
  */
 async function main(): Promise<void> {
-  const reportDir = path.resolve(process.argv[2] ?? process.env.NOTIFY_REPORT_DIR ?? ProjectPaths.businessReport());
+  const reportDir = path.resolve(process.argv[2] ?? process.env.NOTIFY_REPORT_DIR ?? ProjectPaths.latestBusinessReport());
   const jsonPath = path.join(reportDir, 'business-report.json');
   const dashboardPath = path.join(reportDir, 'index.html');
   if (!fs.existsSync(jsonPath) || !fs.existsSync(dashboardPath)) throw new Error(`Business report is incomplete under ${reportDir}. Run tests/report merge first.`);

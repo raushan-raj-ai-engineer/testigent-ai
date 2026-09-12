@@ -65,7 +65,7 @@ The project is automatically discoverable by the portfolio runner once its confi
 npm run test:projects -- --all --env=qa --dry-run --project=chromium
 ```
 
-If this product belongs to a customer estate, add it to `config/project-groups.json`. No framework-core edit is required. Portfolio execution produces a machine-readable summary and a business-first dashboard under `reports/multi-project/`.
+If this product belongs to a customer estate, add it to `config/project-groups.json`. No framework-core edit is required. Portfolio execution produces a machine-readable summary and a business-first dashboard under `reports/multi-project/<RUN_ID>/`.
 
 ## 7. Validate before PR
 

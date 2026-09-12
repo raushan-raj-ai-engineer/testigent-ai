@@ -1,18 +1,16 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import { RunContext } from '../config/run.context';
+import { enforceLocalEvidenceRetention } from '../../logging/evidence.retention';
 
 /**
  * Author: Raushan Raj
- * Business Use: Creates one stable run identity before workers start.
- * How to use: Configured as Playwright globalSetup; CI may provide RUN_ID, GITHUB_RUN_ID or BUILD_BUILDID.
- * Benefit: UI/API/DB/healing logs from parallel workers can be correlated to the same execution.
+ * Business Use: Persists immutable run identity and enforces local generated-evidence retention before execution.
+ * How to use: Configured as Playwright globalSetup; CI may provide RUN_ID or the framework creates one locally.
+ * Benefit: Parallel workers share one identity without mutable global state, and old run evidence has an explicit lifecycle.
  */
 export default async function globalSetup(): Promise<void> {
-  const runId = process.env.RUN_ID
-    ?? (process.env.GITHUB_RUN_ID ? `github-${process.env.GITHUB_RUN_ID}` : undefined)
-    ?? (process.env.BUILD_BUILDID ? `azure-${process.env.BUILD_BUILDID}` : undefined)
-    ?? `local-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-  const file = path.resolve('.runtime/run-context.json');
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ runId, startedAt: new Date().toISOString() }, null, 2));
+  const current = RunContext.persistCurrent();
+  const retention = enforceLocalEvidenceRetention(current);
+  if (retention.removedRunIds.length) {
+    console.log(`[evidence-retention] removed ${retention.removedRunIds.length} expired local run(s): ${retention.removedRunIds.join(', ')}`);
+  }
 }

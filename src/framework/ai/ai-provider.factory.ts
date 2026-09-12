@@ -8,6 +8,7 @@ import { HttpAiProvider } from './http-ai.provider';
 import { OllamaAiProvider } from './ollama-ai.provider';
 import { OpenAiCompatibleProvider } from './openai-compatible.provider';
 import { OpenAiProvider } from './openai-ai.provider';
+import { assertAiDestinationAllowed } from './ai-egress.policy';
 
 export type SupportedAiProvider = 'ollama' | 'openai' | 'anthropic' | 'azure-openai' | 'gemini' | 'openai-compatible' | 'http';
 export type AiProviderMode = 'single' | 'failover';
@@ -91,10 +92,6 @@ export function createSingleProvider(name: SupportedAiProvider): AiProvider {
 }
 
 function assertProviderConfiguredAndAllowed(name: SupportedAiProvider): void {
-  if (isCloudProvider(name) && process.env.AI_ALLOW_CLOUD_EGRESS !== 'true') {
-    throw new Error(`AI provider '${name}' requires AI_ALLOW_CLOUD_EGRESS=true.`);
-  }
-
   const required: Partial<Record<SupportedAiProvider, string[]>> = {
     openai: ['OPENAI_API_KEY', 'OPENAI_MODEL'],
     'azure-openai': ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_MODEL'],
@@ -108,6 +105,8 @@ function assertProviderConfiguredAndAllowed(name: SupportedAiProvider): void {
   if (missing.length > 0) {
     throw new Error(`AI provider '${name}' is missing required configuration: ${missing.join(', ')}.`);
   }
+
+  for (const destination of configuredDestinations(name)) assertAiDestinationAllowed(destination);
 }
 
 function normalizeMode(value: string): AiProviderMode {
@@ -133,13 +132,19 @@ function normalizeProvider(value: string): SupportedAiProvider {
 }
 
 function enforceCloudEgressPolicy(name: SupportedAiProvider): void {
-  if (isCloudProvider(name) && process.env.AI_ALLOW_CLOUD_EGRESS !== 'true') {
-    throw new Error(`AI provider '${name}' requires AI_ALLOW_CLOUD_EGRESS=true. This guard prevents accidental external transmission of test evidence.`);
-  }
+  for (const destination of configuredDestinations(name)) assertAiDestinationAllowed(destination);
 }
 
-function isCloudProvider(name: SupportedAiProvider): boolean {
-  return ['openai', 'anthropic', 'azure-openai', 'gemini'].includes(name);
+function configuredDestinations(name: SupportedAiProvider): string[] {
+  switch (name) {
+    case 'ollama': return [process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434'];
+    case 'openai': return [process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1'];
+    case 'anthropic': return [process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com'];
+    case 'azure-openai': return process.env.AZURE_OPENAI_ENDPOINT ? [process.env.AZURE_OPENAI_ENDPOINT] : [];
+    case 'gemini': return [process.env.GEMINI_BASE_URL ?? 'https://generativelanguage.googleapis.com/v1beta'];
+    case 'openai-compatible': return process.env.AI_COMPAT_BASE_URL ? [process.env.AI_COMPAT_BASE_URL] : [];
+    case 'http': return process.env.AI_ENDPOINT ? [process.env.AI_ENDPOINT] : [];
+  }
 }
 
 function unique<T>(values: T[]): T[] {

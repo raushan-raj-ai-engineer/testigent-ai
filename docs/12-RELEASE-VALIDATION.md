@@ -20,12 +20,38 @@ npm run validate:final
 6. `docs:comment-audit` — reusable-export JSDoc contract.
 7. `reporting:contract` — business-reporting and merged-report contracts.
 8. `typecheck` — TypeScript compile validation.
-9. `test:framework:critical` — framework regression suite.
-10. `security:check` — HIGH/CRITICAL npm audit policy.
+9. `test:review:hardening` — browser-free architect-review regression gate for redaction, egress, run/cache isolation, HTTP AI reliability and advisory exceptions.
+10. `test:framework:critical` — full framework regression suite, including delayed-primary healing behavior.
+11. `security:check` — HIGH/CRITICAL npm audit policy with advisory-scoped exception governance.
 
 The release context belongs only to this certification runner. Normal project-aware commands remain strict and still require an explicit project/environment selection.
 
-The only explicit security exception is the vendored `xlsx@0.20.3` package. The exception is version-locked and documented in `docs/SOURCES.md`; any other HIGH/CRITICAL finding blocks the release.
+Security exceptions are defined in `config/security-exceptions.json` and must name the exact package, advisory ID, affected range, rationale, owner and expiry. There is no package/version-wide allowlist. A new advisory for an already-excepted package/version blocks the gate until that exact advisory is independently reviewed and approved.
+
+## v1.5.0 architect-review hardening gate
+
+The following contracts are release-blocking and map directly to the independent v1.4.2 review:
+
+- **Sensitive evidence:** JSON bodies are recursively redacted before truncation; URL userinfo/query secrets and free-text credentials/PII are sanitized; AI payloads use explicit allowlists. Visual evidence defaults to `EVIDENCE_VISUAL_POLICY=masked`; unmasked trace/video/screenshot capture requires explicit opt-in.
+- **AI destination policy:** all adapters validate resolved destination origin and transport before network activity and on redirects. Loopback is allowed by default; private/custom/external origins require explicit policy. Provider labels never imply locality.
+- **Browser-free lanes:** API/data/DB fixture use must not request `browser` or `context`; session-storage restoration is attached only to the UI context fixture.
+- **Run isolation:** reports/results/logs/audits are scoped by `<APP>/<ENV>/<RUN_ID>` and `.runtime/latest-run` is non-authoritative convenience state only.
+- **Healing cache:** entries include application, environment, locator-plan revision and expiry; writes are lock-protected and atomically published; malformed/legacy cache is rejected with diagnostics.
+- **Locator readiness:** primary locators receive a bounded readiness window before fallback/cache/AI recovery. Ambiguous visible matches still fail closed.
+- **HTTP AI reliability:** generic HTTP uses the shared egress/redirect/timeout layer, schema validation and categorized errors; it does not silently retry outside usage accounting.
+- **Security advisories:** exceptions are exact-advisory, owned and expiring; same-package future advisories remain blocking.
+
+Run the focused gate independently with:
+
+```bash
+APP=demo ENV=qa npm run test:review:hardening
+```
+
+The full `validate:final` chain includes it automatically.
+
+### Evidence retention and screenshots
+
+Default `masked` mode disables Playwright automatic trace/video/screenshots because those artifacts cannot reliably apply the framework's configured sensitive-region masks. Framework-managed failure screenshots use `EVIDENCE_MASK_SELECTORS`. Local run artifacts default to a 14-day lifecycle via `EVIDENCE_RETENTION_DAYS`; set `0` only when another approved retention mechanism owns cleanup. CI artifact retention remains configured in the CI platform. Use `EVIDENCE_VISUAL_POLICY=standard` only together with `EVIDENCE_ALLOW_UNMASKED_VISUALS=true` when the project has an approved capture/retention policy. `off` disables framework visual capture.
 
 ## Project validation
 
@@ -79,6 +105,7 @@ AI_ENABLED=true
 AI_PROVIDER_MODE=single
 AI_PROVIDER=gemini
 AI_ALLOW_CLOUD_EGRESS=true
+AI_ALLOWED_EXTERNAL_ORIGINS=https://generativelanguage.googleapis.com
 GEMINI_API_KEY=<secret>
 GEMINI_MODEL=gemini-3.8-flash
 ```
@@ -150,3 +177,7 @@ APP=sdet-practice ENV=qa npm run auth:check
 ```
 
 See `docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md`.
+## v1.5.1 runtime collaborator-contract gate
+
+v1.5.1 adds browser-backed regressions proving locator-readiness diagnostics remain non-blocking when an injected logger omits `debug()` or when the debug sink throws. It also verifies that `.runtime/latest-run` is not an implicit generic write identity and that a current `RUN_ID` wins over the convenience pointer. See `docs/36-v1.5.1-RUNTIME-CONTRACT-CLOSURE.md` and `docs/37-v1.5.1-DEEP-REVIEW-VALIDATION.md`.
+

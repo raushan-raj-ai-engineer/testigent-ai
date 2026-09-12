@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { ProjectPaths } from '../src/framework/core/config/project.paths';
 
 /**
  * Author: Raushan Raj
@@ -18,7 +19,7 @@ export function writeCiReportBundleMarker(args = process.argv.slice(2)): string 
   const normalized = hasTestsRaw.trim().toLowerCase();
   const app = process.env.APP?.trim();
   if (!app) throw new Error('APP is required to write a CI report bundle marker.');
-  const dir = path.resolve('reports', app, 'business');
+  const dir = ProjectPaths.businessReport(app, process.env.ENV, process.env.RUN_ID);
   fs.mkdirSync(dir, { recursive: true });
   const hasTests = normalized === 'auto'
     ? detectBusinessTests(dir)

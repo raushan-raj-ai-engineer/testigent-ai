@@ -24,7 +24,7 @@ const mode = (process.argv[4] ?? process.env.AUTHORING_MODE ?? 'agents').toLower
 const target = WorkspaceContext.resolve();
 const app = target.application;
 const runtimeDir = path.resolve('.runtime', 'authoring');
-const reportDir = path.resolve('reports', app, 'productivity');
+const reportDir = path.resolve('reports', app, target.environment, 'productivity');
 const eventsFile = path.join(reportDir, 'authoring-events.jsonl');
 
 if (command === 'start') {

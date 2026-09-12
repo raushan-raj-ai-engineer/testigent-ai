@@ -12,7 +12,7 @@ import { ProjectPaths } from '../src/framework/core/config/project.paths';
  * Benefit: Business can trust quality gate, layer coverage and counts even when an LLM is unavailable or wrong.
  */
 async function main(): Promise<void> {
-  const reportDir = ProjectPaths.businessReport();
+  const reportDir = ProjectPaths.latestBusinessReport();
   const input = path.join(reportDir, 'business-report.json');
   if (!fs.existsSync(input)) throw new Error('Business report JSON not found. Run tests first.');
   const facts = JSON.parse(fs.readFileSync(input, 'utf8')) as ExecutionFacts;
