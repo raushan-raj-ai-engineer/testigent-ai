@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { ApplicationRegistry } from '../src/framework/core/config/application.registry';
 import { RuntimeConfig } from '../src/framework/core/config/runtime.config';
 import { hasPersistedAuthState, resolveAuthStatePaths } from '../src/framework/core/auth.state';
+import { AuthManager } from '../src/framework/core/auth.manager';
 import { WorkspaceContext } from '../src/framework/core/config/workspace.context';
 
 const [command = 'help', ...args] = process.argv.slice(2);
@@ -68,27 +69,34 @@ function doctor(): void {
   const authPaths = resolveAuthStatePaths(runtime.auth);
   const storageState = authPaths.storageStatePath;
   const authReady = runtime.auth.strategy !== 'storageState' || runtime.auth.required === false || hasPersistedAuthState(authPaths);
+  const authDescription = new AuthManager(runtime).describe();
+  const authAutoRecoverable = runtime.auth.strategy === 'storageState'
+    && runtime.auth.required !== false
+    && authDescription.autoRefresh === true
+    && typeof authDescription.providerModule === 'string';
 
   const databaseReady = !runtime.capabilities.database.required || runtime.capabilities.database.enabled;
-  const ok = missing.length === 0 && authReady && databaseReady;
+  const ok = missing.length === 0 && (authReady || authAutoRecoverable) && databaseReady;
   console.log(JSON.stringify({
     ok,
     application: runtime.applicationName,
     environment: runtime.environment,
     missing: missing.map(file => path.relative(process.cwd(), file)),
     auth: {
-      strategy: runtime.auth.strategy,
-      required: runtime.auth.required ?? false,
+      ...authDescription,
       ready: authReady,
+      autoRecoverable: authAutoRecoverable,
       storageState: storageState ? path.relative(process.cwd(), storageState) : undefined,
     },
     capabilities: runtime.capabilities,
     agentSeed: path.relative(process.cwd(), path.join(runtime.projectRoot, 'tests', '_agent', 'seed.spec.ts')),
     next: missing.length
       ? 'Repair missing project contract files before authoring.'
-      : !authReady
+      : !authReady && !authAutoRecoverable
         ? 'Create/refresh the configured auth storage state before UI authoring or execution.'
-        : !databaseReady
+        : !authReady && authAutoRecoverable
+          ? 'Ready; required auth will be prepared automatically before UI/E2E execution.'
+          : !databaseReady
           ? 'Configure the required database capability and secret connection variables before execution.'
           : 'Ready for qa:new / qa:test.',
   }, null, 2));
@@ -158,7 +166,9 @@ function printHelp(): void {
     `  npm run qa:use -- <project> <environment>   Select local project once\n` +
     `  npm run qa:status                            Show resolved configuration\n` +
     `  npm run qa:doctor                            Check project readiness\n` +
-    `  npm run qa:auth                              Capture/refresh local auth state\n` +
+    `  npm run qa:auth                              Interactively capture/refresh local auth state\n` +
+    `  npm run auth:prepare                         Verify/auto-refresh reusable project auth\n` +
+    `  npm run auth:check                           Check auth freshness without refreshing\n` +
     `  npm run qa:new -- <requirement>              Prepare agent-assisted test authoring\n` +
     `  npm run qa:test -- [Playwright args]          Run selected project\n` +
     `  npm run qa:validate                           Run static/type/config quality gates\n` +

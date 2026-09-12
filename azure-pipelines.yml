@@ -80,8 +80,13 @@ stages:
           npm run test:project -- --project=chromium --shard="${SHARD_INDEX}/${SHARD_TOTAL}" --grep-invert="@ai"
       displayName: Run project shard
       env:
-        # For auth-required projects, create the configured storage-state file before this step
-        # from an approved Secure File / Key Vault backed process. Never commit auth state.
+        # Auth-required projects may refresh automatically through their project-owned provider.
+        # Map private provider inputs from protected variables / Key Vault; never commit auth state.
+        AUTH_USERNAME: $(AUTH_USERNAME)
+        AUTH_PASSWORD: $(AUTH_PASSWORD)
+        AUTH_CLIENT_ID: $(AUTH_CLIENT_ID)
+        AUTH_CLIENT_SECRET: $(AUTH_CLIENT_SECRET)
+        AUTH_REFRESH_TOKEN: $(AUTH_REFRESH_TOKEN)
         AI_ENABLED: $(AI_ENABLED)
         HEALING_AI_ENABLED: $(HEALING_AI_ENABLED)
         HEALING_MODE: $(HEALING_MODE)
@@ -137,6 +142,11 @@ stages:
             npm run test:project -- --project=chromium --grep="@ai"
         displayName: Run dedicated AI/healing tests
         env:
+          AUTH_USERNAME: $(AUTH_USERNAME)
+          AUTH_PASSWORD: $(AUTH_PASSWORD)
+          AUTH_CLIENT_ID: $(AUTH_CLIENT_ID)
+          AUTH_CLIENT_SECRET: $(AUTH_CLIENT_SECRET)
+          AUTH_REFRESH_TOKEN: $(AUTH_REFRESH_TOKEN)
           AI_PROVIDER_MODE: $(AI_PROVIDER_MODE)
           AI_PROVIDER: $(AI_PROVIDER)
           AI_PROVIDER_ORDER: $(AI_PROVIDER_ORDER)

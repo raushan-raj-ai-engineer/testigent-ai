@@ -10,6 +10,8 @@ import {
   captureSessionStorage,
   installSessionStorageSnapshot,
   resolveAuthStatePaths,
+  inferConfiguredAuthExpiry,
+  writeAuthStateMetadata,
   writeSessionStorageSnapshot,
 } from '../src/framework/core/auth.state.js';
 import { verifyAuthenticatedPage } from '../src/framework/core/auth.verifier.js';
@@ -50,7 +52,7 @@ async function main(): Promise<void> {
     const tempStorage = `${paths.storageStatePath}.tmp-${process.pid}`;
     const tempSession = `${paths.sessionStoragePath}.tmp-${process.pid}`;
     fs.mkdirSync(path.dirname(paths.storageStatePath), { recursive: true });
-    await context.storageState({ path: tempStorage });
+    await context.storageState({ path: tempStorage, indexedDB: true, opfs: true, credentials: true });
     const sessionSnapshot = await captureSessionStorage(page);
     writeSessionStorageSnapshot(tempSession, sessionSnapshot);
 
@@ -71,10 +73,20 @@ async function main(): Promise<void> {
       await verifyContext.close();
     }
 
-    fs.copyFileSync(tempStorage, paths.storageStatePath);
-    fs.copyFileSync(tempSession, paths.sessionStoragePath);
-    fs.rmSync(tempStorage, { force: true });
-    fs.rmSync(tempSession, { force: true });
+    promoteVerifiedFile(tempStorage, paths.storageStatePath);
+    promoteVerifiedFile(tempSession, paths.sessionStoragePath);
+    const now = new Date().toISOString();
+    if (paths.metadataPath) {
+      writeAuthStateMetadata(paths.metadataPath, {
+        version: 1,
+        application: app,
+        environment: env,
+        refreshedAt: now,
+        verifiedAt: now,
+        expiresAt: inferConfiguredAuthExpiry(paths, auth.verification)?.toISOString(),
+        providerId: 'interactive-manual',
+      });
+    }
     console.log(`Auth state verified and saved locally: ${paths.storageStatePath}`);
     console.log(`Session storage companion saved locally: ${paths.sessionStoragePath}`);
     console.log('Security: auth files are gitignored because they can contain session secrets.');
@@ -87,6 +99,18 @@ async function main(): Promise<void> {
       try { if (fs.existsSync(candidate)) fs.rmSync(candidate, { force: true }); } catch { /* best effort */ }
     }
     await browser.close();
+  }
+}
+
+
+function promoteVerifiedFile(source: string, destination: string): void {
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  try {
+    fs.renameSync(source, destination);
+  } catch {
+    // Windows may reject rename-over-existing; candidate was already verified, so copy is a safe fallback.
+    fs.copyFileSync(source, destination);
+    fs.rmSync(source, { force: true });
   }
 }
 

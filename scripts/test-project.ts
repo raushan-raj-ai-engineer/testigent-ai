@@ -1,17 +1,32 @@
 import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
 import { projectPreflight } from './project-check';
-import { requiredTagGroupsToRegExp, resolveExecutionPolicy, tagsToRegExp } from '../src/framework/core/execution/execution.policy';
+import { RuntimeConfig } from '../src/framework/core/config/runtime.config';
+import { AuthManager } from '../src/framework/core/auth.manager';
+import { laneRequiresBrowserAuth, requiredTagGroupsToRegExp, resolveExecutionPolicy, tagsToRegExp } from '../src/framework/core/execution/execution.policy';
 import { mergeGovernedFilters } from '../src/framework/core/execution/execution.cli-filters';
 import type { ExecutionProfileName, TestLane } from '../src/framework/core/execution/execution.types';
 
 interface CustomArgs { lane?: TestLane; profile?: string; passthrough: string[]; }
 
 /** Runs a project with TestigentAI custom profile/lane options while preserving native Playwright CLI flags. */
-function main(): void {
+async function main(): Promise<void> {
   const custom = parseCustomArgs(process.argv.slice(2));
   if (custom.lane) process.env.TEST_LANE = custom.lane;
   if (custom.profile) process.env.TEST_PROFILE = custom.profile;
+
+  // Prepare/verify auth before Playwright workers are spawned. One refresh can then serve all workers on this runner.
+  const runtime = RuntimeConfig.resolve();
+  const previewPolicy = resolveRunnerPolicy(runtime.applicationName, runtime.environment, custom.lane, runtime.execution.profile);
+  if (laneRequiresBrowserAuth(previewPolicy.lane) && runtime.auth.strategy === 'storageState' && runtime.auth.required !== false) {
+    const auth = await new AuthManager(runtime).prepareForRun({ required: true, allowRefresh: true });
+    if (!auth.ready) {
+      throw new Error(
+        `AUTH_PREPARE_FAILED: ${auth.reason ?? 'authentication is not ready'}\n` +
+        `Run 'APP=${runtime.applicationName} ENV=${runtime.environment} npm run auth:prepare' or 'npm run qa:auth' for manual capture.`,
+      );
+    }
+  }
 
   const info = projectPreflight({ lane: custom.lane });
   const policy = resolveRunnerPolicy(info.application, info.environment, info.lane, info.profile);
@@ -70,5 +85,4 @@ function resolveRunnerPolicy(
   return resolveExecutionPolicy({ application, environment, lane, profile });
 }
 
-
-try { main(); } catch (error) { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
+main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });

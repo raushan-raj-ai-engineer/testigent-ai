@@ -10,14 +10,20 @@ npx playwright install chromium
 npm run validate:final
 ```
 
-`validate:final` runs, in order:
+`validate:final` runs the complete release chain inside a deterministic `APP=demo`, `ENV=qa` context:
 
 1. `release:static` — stale paths, unresolved internal imports, JSON validity and project contract checks.
 2. `architecture:check` — reusable-core isolation, sibling-project isolation and backup-artifact checks.
-3. `framework:health` — selected environment/project configuration health.
-4. `typecheck` — TypeScript compile validation.
-5. `test:framework:critical` — framework regression suite.
-6. `security:check` — HIGH/CRITICAL npm audit policy.
+3. `framework:health` — health check of the bundled reference project.
+4. `scale:audit` — execution-profile, lane and scale-governance validation.
+5. `scenario:doctor` — declarative schema/capability/editor-integration drift check.
+6. `docs:comment-audit` — reusable-export JSDoc contract.
+7. `reporting:contract` — business-reporting and merged-report contracts.
+8. `typecheck` — TypeScript compile validation.
+9. `test:framework:critical` — framework regression suite.
+10. `security:check` — HIGH/CRITICAL npm audit policy.
+
+The release context belongs only to this certification runner. Normal project-aware commands remain strict and still require an explicit project/environment selection.
 
 The only explicit security exception is the vendored `xlsx@0.20.3` package. The exception is version-locked and documented in `docs/SOURCES.md`; any other HIGH/CRITICAL finding blocks the release.
 
@@ -29,14 +35,15 @@ For a project that does not require authentication:
 APP=demo ENV=qa npm run validate:project
 ```
 
-For an authenticated project, capture state once when needed:
+For an authenticated project with lifecycle auto-refresh, prefer the non-interactive readiness flow:
 
 ```bash
-APP=sdet-practice ENV=qa APPLICATION_EXPLORATION_ENABLED=true npm run app:auth
+APP=sdet-practice ENV=qa npm run auth:check
+APP=sdet-practice ENV=qa npm run auth:prepare
 APP=sdet-practice ENV=qa npm run validate:project
 ```
 
-The generic project runner resolves the project test directory and configured storage-state path automatically.
+`test:project` also prepares required UI/E2E auth automatically before Playwright workers start. MFA/manual-only projects can still use `APPLICATION_EXPLORATION_ENABLED=true npm run app:auth`. The generic project runner resolves the project test directory and configured storage-state path automatically.
 
 ## Known application defects
 
@@ -55,7 +62,7 @@ Before packaging this release, the deep-review gate must confirm:
 - package lock remains unchanged unless a dependency change is intentional;
 - generated runtime/auth/report/cache folders and optional pre-generated coding-agent trees are cleaned from the release archive.
 
-A clean dependency install and runtime Playwright regression should always be executed on the target development/CI environment using `npm run validate:final` because browser binaries, registry access and remote AUT availability are environment-dependent.
+A clean dependency install and runtime Playwright regression should always be executed on the target development/CI environment using `npm run validate:final` because browser binaries, registry access and remote AUT availability are environment-dependent. The final release gate deliberately wraps the complete validation chain in the bundled `demo/qa` release context, so workspace-aware gates such as framework health and scenario doctor are deterministic on a clean checkout and do not require a saved workspace or APP/ENV. Normal runtime commands remain strict; validate each real application separately with `APP=<project> ENV=<env> npm run validate:project`.
 
 ## AI configuration validation
 
@@ -132,3 +139,14 @@ npm run qa:validate -- --with-tests
 ```
 
 The healing contract must prove that a wrong actionable locator is rejected, rejected AI output is not cached, a validated AI recovery is cached with semantic-validation metadata, and the next equivalent run can reuse that cache without another AI call. Business reporting must count only validated recoveries as self-healed while still displaying rejected/suggested/unverified audit evidence.
+
+## v1.3.x auth lifecycle gate
+
+The release must include `tests/framework/auth-lifecycle.spec.ts` plus `tests/framework/sdet-auth-provider.contract.spec.ts`, and the static gate must enforce the reusable manager/provider/lock contracts. The regression suite covers missing-state refresh, concurrent single-flight refresh, hot navigation recovery, pre-action near-expiry refresh, and JWT-expiry planning. Auth provider output must be verified in a fresh browser context before atomic promotion, and browser/session state must remain gitignored.
+
+```bash
+APP=demo ENV=qa npm run test:framework:critical
+APP=sdet-practice ENV=qa npm run auth:check
+```
+
+See `docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md`.

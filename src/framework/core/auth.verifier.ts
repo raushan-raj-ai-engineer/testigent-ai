@@ -6,13 +6,7 @@ export interface AuthVerificationResult {
   reason?: string;
 }
 
-/**
- * Verifies that the current page satisfies the configured project
- * authentication contract.
- *
- * Verification happens before locator healing so an expired or invalid
- * session cannot be misclassified as a selector failure.
- */
+/** Evaluates the configured browser-level auth proof without assuming any project-specific login implementation. */
 export async function verifyAuthenticatedPage(
   page: Page,
   verification: ProjectAuthVerificationConfig | undefined,
@@ -62,13 +56,7 @@ export async function verifyAuthenticatedPage(
   return { ok: true };
 }
 
-/**
- * Enforces the configured authentication contract and fails fast when the
- * restored browser session is not authenticated.
- *
- * Authentication failures are surfaced as authentication errors instead of
- * being forwarded to the self-healing locator pipeline.
- */
+/** Throws a deterministic auth-session error when the configured browser-level verification contract is not satisfied. */
 export async function assertAuthenticatedPage(
   page: Page,
   verification: ProjectAuthVerificationConfig | undefined,
@@ -77,7 +65,7 @@ export async function assertAuthenticatedPage(
   if (!result.ok) {
     throw new Error(
       `AUTH_SESSION_INVALID: ${result.reason ?? 'Authentication verification failed.'} ` +
-      `Refresh the configured auth state with 'npm run qa:auth' before UI execution.`,
+      `Prepare the configured auth state with 'npm run auth:prepare' or use 'npm run qa:auth' for manual capture.`,
     );
   }
 }

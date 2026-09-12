@@ -49,7 +49,14 @@ async function createFrameworkSkeleton(root: string): Promise<void> {
   })) {
     await mkdir(join(root, 'projects', project, 'config'), { recursive: true });
     await writeFile(join(root, 'projects', project, 'config', 'qa.json'), JSON.stringify({ environment: 'qa', application }, null, 2));
+    await initializeProjectFixture(root, project);
   }
+}
+
+async function initializeProjectFixture(root: string, project: string): Promise<void> {
+  const fixtureDir = join(root, 'projects', project, 'fixtures');
+  await mkdir(fixtureDir, { recursive: true });
+  await writeFile(join(fixtureDir, 'test.fixture.ts'), "export const test = {};\n");
 }
 
 async function writePaymentRequirement(root: string, extraTags = ''): Promise<string> {
@@ -149,9 +156,7 @@ test('explicit new APP plus an unmapped new URL generates in that application in
     const requirement = await readMarkdownRequirement(await writePaymentRequirement(root));
     const analysis = await analyzeRequirement(root, requirement);
     expect(analysis.applicationResolution?.app).toBe('claims'); expect(analysis.applicationResolution?.source).toBe('explicit-new-app');
-    // Temporary project must satisfy the same fixture contract as a real initialized project.
-    await ensureProjectFixture(root, 'claims');
-
+    await initializeProjectFixture(root, 'claims');
     const generated = await generateFrameworkProposal(root, analysis);
     expect(generated.manifest.targetApplication).toBe('claims');
     expect(generated.manifest.created.some(item => item.path.includes('projects/claims/src/pages/payment.page.ts'))).toBe(true);
@@ -167,9 +172,6 @@ test('feature reuse may suppress only the matching abstraction in the resolved a
   try {
     const requirement = await readMarkdownRequirement(await writePaymentRequirement(root));
     const analysis = await analyzeRequirement(root, requirement);
-    // Temporary project must satisfy the same fixture contract as a real initialized project.
-    await ensureProjectFixture(root, 'billing');
-
     const output = await generateFrameworkProposal(root, analysis);
     expect(output.manifest.created.some(item => item.path.includes('projects/billing/src/pages/payment.page.ts'))).toBe(true);
     expect(output.manifest.reused.some(item => item.path.includes('projects/crm/'))).toBe(false);
@@ -181,9 +183,6 @@ test('generator reruns safely and never overwrites human-owned files', async () 
   const restore = saveEnv(['APP', 'ENV']); process.env.APP = 'demo'; process.env.ENV = 'qa';
   try {
     const requirement = await readMarkdownRequirement(await writePaymentRequirement(root)); const analysis = await analyzeRequirement(root, requirement);
-    // Temporary project must satisfy the same fixture contract as a real initialized project.
-    await ensureProjectFixture(root, 'demo');
-
     const first = await generateFrameworkProposal(root, analysis); expect(first.manifest.reviewRequired).toBe(true);
     const second = await generateFrameworkProposal(root, analysis); expect(second.manifest.warnings.some(message => message.includes('Existing generated proposal kept unchanged'))).toBe(true);
     const pagePath = join(root, 'projects', 'demo', 'src', 'pages', 'payment.page.ts');
@@ -210,60 +209,11 @@ test('generated proposal follows enterprise architecture, target-app tags and st
   const restore = saveEnv(['APP', 'ENV']); process.env.APP = 'billing'; process.env.ENV = 'qa';
   try {
     const analysis = await analyzeRequirement(root, await readMarkdownRequirement(await writePaymentRequirement(root)));
-    // Temporary project must satisfy the same fixture contract as a real initialized project.
-    await ensureProjectFixture(root, 'billing');
-
     const output = await generateFrameworkProposal(root, analysis);
     const generatedTestPath = join(root, output.manifest.created.find(item => item.kind === 'test')!.path);
     const generatedTest = await readFile(generatedTestPath, 'utf8');
     const generatedPage = await readFile(join(root, 'projects', 'billing', 'src', 'pages', 'payment.page.ts'), 'utf8');
-    expect(generatedTest).toContain("../../fixtures/test.fixture.js"); expect(generatedTest).toContain('@app:billing'); expect(generatedTest).toContain('test.fixme'); expect(generatedTest).toContain('test.step(');
+    expect(generatedTest).toContain('../../fixtures/test.fixture.js'); expect(generatedTest).toContain('@app:billing'); expect(generatedTest).toContain('test.fixme'); expect(generatedTest).toContain('test.step(');
     expect(generatedPage).toContain('extends BasePage');
   } finally { restore(); }
 });
-
-/**
- * Creates the minimal governed project fixture required by framework
- * generation tests.
- *
- * Production generation intentionally refuses to operate on projects that
- * have not been initialized with a project fixture. These tests construct
- * temporary projects directly, so they must reproduce that required project
- * contract before invoking the generator.
- */
-async function ensureProjectFixture(
-  root: string,
-  app: string,
-): Promise<void> {
-  const { mkdir, writeFile } = await import('node:fs/promises');
-  const { join } = await import('node:path');
-
-  const fixtureDirectory = join(
-    root,
-    'projects',
-    app,
-    'fixtures',
-  );
-
-  await mkdir(
-    fixtureDirectory,
-    { recursive: true },
-  );
-
-  const fixturePath = join(
-    fixtureDirectory,
-    'test.fixture.ts',
-  );
-
-  await writeFile(
-    fixturePath,
-    [
-      "import { test as base, expect } from '@playwright/test';",
-      '',
-      'export const test = base;',
-      'export { expect };',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
-}
