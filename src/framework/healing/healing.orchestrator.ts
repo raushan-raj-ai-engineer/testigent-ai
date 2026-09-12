@@ -19,6 +19,8 @@ interface ResolvedCandidate {
   decision: HealingDecision;
 }
 
+type AiGatewayFactory = () => AiGateway | undefined;
+
 /**
  * Author: Raushan Raj
  * Business Use: Guarded runtime locator recovery for UI changes while preserving functional assertions.
@@ -28,11 +30,13 @@ interface ResolvedCandidate {
 export class HealingOrchestrator {
   private readonly audit = new HealingAudit();
   private readonly cache = new HealingCache();
+  private aiResolved = false;
+  private resolvedAi?: AiGateway;
 
   constructor(
     private readonly page: Page,
     private readonly logger: EnterpriseLogger,
-    private readonly ai?: AiGateway,
+    private readonly ai?: AiGateway | AiGatewayFactory,
     private readonly testId?: string
   ) {}
 
@@ -370,12 +374,14 @@ export class HealingOrchestrator {
   }
 
   private async askAi(plan: LocatorPlan, root: LocatorRoot): Promise<HealingDecision | undefined> {
-    if (!this.ai || (process.env.HEALING_AI_ENABLED ?? 'false').toLowerCase() !== 'true') return undefined;
+    if ((process.env.HEALING_AI_ENABLED ?? 'false').toLowerCase() !== 'true') return undefined;
+    const ai = this.aiGateway();
+    if (!ai) return undefined;
 
     const snapshot = await (root === this.page ? this.page.locator('body') : root as Locator).ariaSnapshot();
     const maxSnapshotChars = this.positiveInteger(process.env.AI_HEALING_SNAPSHOT_MAX_CHARS, 6_000);
 
-    const response = await this.ai.proposeLocator({
+    const response = await ai.proposeLocator({
       planId: plan.id,
       businessName: plan.businessName,
       accessibilitySnapshot: snapshot.slice(0, maxSnapshotChars),
@@ -395,6 +401,21 @@ export class HealingOrchestrator {
     };
     this.logger.warn('SELF_HEALING_AI_PROPOSAL', { planId: plan.id, aiDecision: decision });
     return decision;
+  }
+
+  /**
+   * AI is resolved only after primary, deterministic fallbacks and validated cache have failed.
+   * This keeps ordinary UI execution independent from AI provider configuration and avoids
+   * provider/network startup cost when deterministic automation is healthy.
+   */
+  private aiGateway(): AiGateway | undefined {
+    if (!this.ai) return undefined;
+    if (typeof this.ai !== 'function') return this.ai;
+    if (!this.aiResolved) {
+      this.resolvedAi = this.ai();
+      this.aiResolved = true;
+    }
+    return this.resolvedAi;
   }
 
   private healingMode(): string {

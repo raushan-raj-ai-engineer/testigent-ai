@@ -3,7 +3,7 @@ import type { DatabaseClient } from './database.client';
 /**
  * Author: Raushan Raj
  * Business Use: MySQL adapter behind the common DB contract.
- * How to use: Set DB_TYPE=mysql; repositories use '?' placeholders.
+ * How to use: Select mysql in projects/<project>/config/<env>.json and provide DB_* secret environment values; repositories use '?' placeholders.
  * Benefit: Product repositories remain portable across supported database engines.
  */
 export class MysqlDatabaseClient implements DatabaseClient {

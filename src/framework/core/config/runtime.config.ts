@@ -89,7 +89,7 @@ export class RuntimeConfig {
       project.capabilities?.database,
       environmentLayer.capabilities?.database,
     );
-    const configuredType = (env.DB_TYPE?.trim() || database.type || 'none').toLowerCase();
+    const configuredType = (database.type || 'none').toLowerCase();
     if (!['none', 'postgres', 'mysql', 'mssql'].includes(configuredType)) {
       throw new Error(`Unsupported database capability type '${configuredType}' for ${application}/${environment}.`);
     }

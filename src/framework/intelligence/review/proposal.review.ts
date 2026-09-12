@@ -269,6 +269,15 @@ function blockingMarkers(text: string, kind?: string): string[] {
     if (unsafe.length) found.push('direct Playwright UI action bypasses the HealingOrchestrator contract');
     if (!/LocatorPlan/.test(body)) found.push('healing-aware LocatorPlan is missing from generated UI abstraction');
   }
+  if (kind === 'db-repository') {
+    const mutatingSql = /\b(?:INSERT\s+INTO|UPDATE\s+[A-Za-z0-9_."`\[\]]+\s+SET|DELETE\s+FROM|MERGE\s+INTO|DROP\s+(?:TABLE|DATABASE)|TRUNCATE\s+TABLE|ALTER\s+TABLE)\b/i;
+    if (mutatingSql.test(body)) found.push('agent-generated database validation must remain read-only; mutating/destructive SQL requires a separate human-owned data setup path');
+  }
+  if (kind === 'api-service') {
+    if (/\bAPIRequestContext\b/.test(body) || /\brequest\.(?:fetch|get|post|put|patch|delete)\s*\(/.test(body)) {
+      found.push('generated API service bypasses the project BaseApiClient/domain-service contract');
+    }
+  }
   return found;
 }
 

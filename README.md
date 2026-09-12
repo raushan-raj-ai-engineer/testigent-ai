@@ -42,8 +42,8 @@ That rule makes the framework reusable across teams without turning it into a si
 | 🗄️ **Database validation** | Capability-aware Postgres/MySQL/MSSQL support with project-owned repositories |
 | 📊 **Data-driven testing** | JSON, CSV, YAML and spreadsheet-oriented data flows with parallel-safe identities |
 | 🔐 **Authentication** | Verified storage state, project-owned auth providers, auto refresh and bounded runtime recovery |
-| 🩹 **Self-healing** | Deterministic fallback, validated cache and optional AI recovery with semantic post-conditions |
-| 🤖 **Agent-driven automation** | Planner → generator → healer authoring loop, project-seed context, CLI/MCP browser evidence and review-gated promotion |
+| 🩹 **Self-healing** | UI recovery: deterministic fallback, validated cache and lazy optional AI fallback with semantic post-conditions |
+| 🤖 **Agent-driven automation** | Layer-aware UI/API/DB/E2E proposal authoring from approved evidence with explicit human approval/promotion |
 | ✨ **AI / agent quality** | Provider-neutral, opt-in AI contracts, healing support, MCP tooling and AI-lane reporting |
 | 🧠 **Requirement intelligence** | Requirement analysis, test-plan generation, review-gated proposals and application knowledge |
 | 🧾 **Business reporting** | Executive KPIs, known-defect semantics, evidence, steps, merged shard reporting and email preview |
@@ -218,6 +218,122 @@ npm run qa:new -- checkout --mode=agents
 ```
 
 > New joiners should start with `qa:*`. Advanced scripts are available, but they are not required for normal daily execution.
+
+---
+
+## Multi-Project / Customer Portfolio Execution
+
+A single TestigentAI installation can serve **one product, a selected set of products, a named customer portfolio, or every registered project**. The runner discovers projects from `projects/<project>/config`; new projects automatically participate in `--all` without editing a hard-coded list.
+
+### Run one project
+
+```bash
+APP=portal ENV=qa npm run test:project -- --project=chromium
+```
+
+### Run selected projects
+
+```bash
+npm run test:projects -- \
+  --apps=portal,payments,claims \
+  --env=qa \
+  --profile=regression \
+  --project=chromium
+```
+
+### Use different environments per project
+
+```bash
+npm run test:projects -- \
+  --apps=portal,payments,claims \
+  --env-map=portal:qa,payments:uat,claims:qa \
+  --profile=regression \
+  --project=chromium
+```
+
+### Run every registered project
+
+```bash
+npm run test:projects -- \
+  --all \
+  --env=qa \
+  --profile=regression \
+  --project=chromium
+```
+
+`--all` is dynamic. If a team later adds `projects/customer-search/config/qa.json`, that project is automatically discovered.
+
+### Customer / portfolio groups
+
+For customers that own several products, define a reusable group in `config/project-groups.json`:
+
+```json
+{
+  "groups": {
+    "customer-a": {
+      "description": "Customer A digital estate",
+      "projects": ["portal", "payments", "claims"],
+      "environments": {
+        "portal": "qa",
+        "payments": "uat",
+        "claims": "qa"
+      }
+    }
+  }
+}
+```
+
+Then run the customer portfolio with one command:
+
+```bash
+npm run test:projects -- \
+  --group=customer-a \
+  --profile=regression \
+  --project=chromium
+```
+
+Useful portfolio options:
+
+| Option | Purpose |
+|---|---|
+| `--all` | Run every registered project |
+| `--apps=a,b,c` | Run an ad-hoc subset |
+| `--group=name` | Run a reusable customer/product group |
+| `--env=qa` | Apply one environment to every selected project |
+| `--env-map=a:qa,b:uat` | Use project-specific environments |
+| `--profile=pr|smoke|regression|nightly|release` | Apply a common execution profile |
+| `--include-ai` | Explicitly permit `@ai` tests; provider configuration is still required |
+| `--fail-fast` | Stop after the first failed project |
+| `--dry-run` | Print the resolved project/environment plan without executing |
+
+By default, TestigentAI **continues through all selected projects** even if one project fails, then exits non-zero at the end. This gives customers a complete estate-level result instead of hiding later project outcomes.
+
+Each product keeps its own auth state, test data and business report under `reports/<APP>/...`. Portfolio execution writes both a deterministic summary and a stakeholder-friendly estate view:
+
+```text
+reports/multi-project/summary.json   # CI / machine-readable source
+reports/multi-project/index.html    # business portfolio dashboard
+```
+
+The portfolio dashboard keeps business language at the top: project gate, selected/executed/not-applicable/blocked scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical evidence remains inside each product report.
+
+For all executable automated tests including AI-tagged tests, explicitly opt in and configure the AI provider:
+
+```bash
+AI_ENABLED=true \
+AI_PROVIDER_MODE=single \
+AI_PROVIDER=<approved-provider> \
+HEALING_AI_ENABLED=true \
+npm run test:projects -- \
+  --group=customer-a \
+  --profile=nightly \
+  --include-ai \
+  --project=chromium
+```
+
+Provider endpoint/model/key variables remain in local or CI secrets. Cloud providers also require the explicit cloud-egress policy switch documented in `.env.example`; never place provider secrets in source control.
+
+Manual tests and review-blocked generated proposals remain excluded by governance.
 
 ---
 
@@ -436,6 +552,8 @@ none | postgres | mysql | mssql
 
 Database behavior is capability-aware:
 
+- the selected project's `config/<env>.json` exclusively owns the database type; machine/CI `DB_TYPE` values cannot activate DB tests in another project
+- connection credentials remain secret environment variables (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and adapter-specific settings)
 - optional + unavailable → `@db` scenarios are skipped with a clear reason
 - configured + available → DB scenarios run normally
 - required + unavailable → readiness fails before execution
@@ -464,7 +582,9 @@ Primary locator
     ↓
 Reviewed deterministic fallback
     ↓
-Validated healing cache
+Semantically validated healing cache
+    ↓
+Lazy AI gateway creation (only if still unresolved)
     ↓
 Optional configured AI provider
     ↓
@@ -474,7 +594,7 @@ Perform action
     ↓
 Semantic business post-condition
     ↓
-Cache only validated recovery
+Cache only validated dynamic recovery
 ```
 
 Modes:
@@ -491,7 +611,20 @@ HEALING_MODE=runtime npm run qa:test -- --project=chromium
 npm run qa:heal
 ```
 
-A healed action is not counted as successful until its semantic business post-condition passes.
+A healed action is not counted as successful until its semantic business post-condition passes. Healthy deterministic tests do not initialize an AI provider, so optional AI configuration cannot break ordinary UI execution and no provider/network overhead is paid unless AI fallback is actually needed.
+
+### Recovery is broader than UI healing
+
+TestigentAI deliberately separates recovery by failure class:
+
+| Area | Automatic recovery boundary | AI role |
+|---|---|---|
+| **UI** | Locator/action drift through deterministic recovery, validated cache and optional lazy AI | Last-resort locator proposal only |
+| **Authentication** | Token/session freshness, verified refresh and bounded runtime recovery | None required |
+| **API** | Safe technical/transient resilience only when explicitly configured | Diagnose/propose source change; never rewrite status/business contract at runtime |
+| **Database** | Connection/transient resilience only when adapter/policy supports it | Diagnose/propose source change; never rewrite schema/business state at runtime |
+
+See [`docs/30-RECOVERY-ARCHITECTURE.md`](docs/30-RECOVERY-ARCHITECTURE.md).
 
 ---
 
@@ -507,7 +640,7 @@ flowchart LR
     R[Requirement] --> A[Requirement Analysis]
     A --> P[Reviewed Test Plan]
     P --> S[Project Agent Seed]
-    S --> E[Live Browser Evidence]
+    S --> E[Approved Layer Evidence]
     E --> M[Architecture Mapping]
     M --> G[Generated Proposal]
     G --> V[Architecture + Type + Authoring Validation]
@@ -517,14 +650,16 @@ flowchart LR
     T --> C[CI + Business Report]
 
     subgraph Evidence
-      E1[Playwright CLI]
-      E2[Playwright MCP]
-      E3[Planner / Generator / Healer]
+      E1[UI: Playwright CLI / MCP]
+      E2[API: OpenAPI / contracts]
+      E3[DB: schema / repository evidence]
+      E4[Planner / Generator / Healer]
     end
 
     E1 --> E
     E2 --> E
     E3 --> E
+    E4 --> E
 ```
 
 ### 1. Select the product and prepare agent tooling
@@ -570,7 +705,7 @@ npm run qa:new -- checkout --mode=cli
 npm run qa:new -- checkout --mode=mcp
 ```
 
-The workflow performs requirement analysis, creates a test plan, scaffolds a **review-blocked proposal**, validates generated architecture, and creates an authoring prompt under:
+The workflow performs requirement analysis, detects required automation layers, creates a test plan, scaffolds a **review-blocked proposal**, validates generated architecture, and creates a layer-aware authoring prompt under:
 
 ```text
 generated/requirements/<requirement-id>/PLAYWRIGHT_AUTHORING_PROMPT.md
@@ -583,16 +718,21 @@ The coding agent should read that prompt before changing automation code.
 | Agent role | Responsibility in TestigentAI | What it must not do |
 |---|---|---|
 | **Planner** | Convert the requirement into business scenarios using the selected project's seed/context | Invent application behavior or bypass product ownership |
-| **Generator** | Use live browser evidence to propose Page → Workflow → Facade → business-spec changes | Drop raw Playwright actions directly into normal business specs |
+| **Generator** | Use approved layer evidence to propose Page / Workflow / API Service / Repository → Facade → business-spec changes | Invent selectors, endpoints, payloads, schema identifiers or business expectations |
 | **Healer** | Diagnose locator/scoping/synchronization drift and propose source maintenance | Weaken assertions, hide defects, or change API/DB/security expectations |
 
-### 4. Live evidence: CLI first, MCP when useful
+### 4. Evidence is layer-specific
 
 TestigentAI deliberately separates **evidence collection** from **production automation design**.
 
-- **Playwright CLI** — preferred for high-throughput coding-agent work and compact browser evidence.
-- **Playwright MCP** — useful for persistent structured browser state and iterative exploration.
-- **Playwright Test Agents** — useful for a planner → generator → healer authoring loop.
+| Layer | Preferred evidence | Rule |
+|---|---|---|
+| **UI** | Playwright CLI first, MCP/Test Agents when persistent browser context helps | Selectors and actions live in Page Objects/LocatorPlans |
+| **API** | Approved OpenAPI/Swagger/Postman/contracts or observed domain-service behavior | Never invent routes, payload fields or expected statuses |
+| **Database** | Approved schema/data dictionary/migrations or existing repository patterns | Generated validation is read-only and parameterized by default |
+| **E2E** | Correlated business identity across participating layers | Business spec coordinates intent through project facades |
+
+Playwright CLI remains preferred for high-throughput UI coding-agent work; MCP is useful for persistent structured browser exploration; Test Agents support planner → generator → healer loops.
 
 Standalone MCP can be started with:
 
@@ -600,7 +740,7 @@ Standalone MCP can be started with:
 npm run mcp:start
 ```
 
-Raw generated Playwright is treated as **evidence**, not automatically as production-ready framework code. Final business tests still follow:
+Raw generated browser/API/DB code is treated as **evidence/proposal material**, not automatically as production-ready framework code. Final business tests still follow:
 
 ```text
 Business Spec
@@ -667,6 +807,8 @@ The enterprise agent overlay enforces these rules:
 
 - never change a functional assertion just to make a failing test green;
 - never heal API-status, database-state, money/quantity, authorization or security failures;
+- API generation is contract-driven; DB generation is read-only by default and mutating/destructive SQL is blocked from review-gated proposals;
+- generated UI/API/DB/E2E automation requires named human approval before promotion;
 - never send secrets or PII to cloud LLM providers;
 - prefer deterministic accessible locators and reviewed fallbacks before AI recovery;
 - runtime healing may recover locator mechanics only and must validate the business post-condition;
@@ -680,7 +822,7 @@ npm run agents:policy
 npm run agents:check
 ```
 
-Detailed guide: [`docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md`](docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md).
+Detailed guides: [`docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md`](docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md) and [`docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md`](docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md).
 
 ---
 
@@ -705,7 +847,7 @@ npm run mcp:start
 
 Supported agent bootstrap targets include VS Code, Codex, Claude and OpenCode when installed and approved by your organization.
 
-AI-specific CI execution is kept separate from core business shards. If an AI lane is planned and `@ai` tests exist, the merged report requires the AI business result. If no AI scenarios exist, the lane is treated as not applicable rather than failed.
+AI-specific CI execution is kept separate from core business shards. Dedicated AI lanes explicitly set `ALLOW_AI_TESTS=true`; ordinary runs continue to deny `@ai` by default. Portfolio `--include-ai` performs provider configuration preflight before real execution, while dry-run planning remains secret-free. If an AI lane is planned and `@ai` tests exist, the merged report requires the AI business result. If no AI scenarios exist, the lane is treated as not applicable rather than failed.
 
 ---
 
@@ -776,6 +918,8 @@ This avoids the common problem where an expected Playwright failure appears as a
 reports/<APP>/playwright-html/      technical Playwright report
 reports/<APP>/business/             product business report
 reports/<APP>/business-merged/      merged CI business report
+reports/multi-project/index.html    portfolio/customer business dashboard
+reports/multi-project/summary.json portfolio deterministic summary
 test-results/<APP>/                 screenshots / video / trace / context
 .report-history/<APP>/              trend history
 ```
@@ -795,7 +939,7 @@ npm run report:mail:preview
 npm run report:business:complete
 ```
 
-The interactive business dashboard supports KPI cards, filters, layer/status graphs, scenario drill-down, `test.step()` details and evidence links.
+The interactive product dashboard supports KPI cards, filters, layer/status graphs, scenario drill-down, `test.step()` details and evidence links. Multi-project runs additionally produce a portfolio dashboard focused on estate health, quality risk, known defects, CI blockers, execution applicability, healing and AI usage; engineering evidence stays one click deeper in each product report.
 
 ---
 
@@ -1008,6 +1152,17 @@ npm run qa:auth
 
 First verify that tests were actually selected and executed. `test:project` prints the resolved selection and final business scenario count. A successful local run with zero business scenarios is treated as an error rather than silently publishing an empty report.
 
+
+### `--include-ai` provider preflight fails
+
+A real portfolio AI run requires explicit runtime AI configuration. First validate the provider:
+
+```bash
+AI_ENABLED=true AI_PROVIDER_MODE=single AI_PROVIDER=<provider> npm run ai:check
+```
+
+Then run the portfolio with `--include-ai`. Normal/non-AI tests do not need provider initialization; UI AI fallback is lazy and is only created after deterministic healing is exhausted.
+
 ### Database scenario skipped
 
 Run:
@@ -1016,7 +1171,7 @@ Run:
 npm run qa:doctor
 ```
 
-and verify `projects/<project>/project.json`, `config/<env>.json` and required DB secret variables.
+and verify `projects/<project>/project.json`, `config/<env>.json` and required DB secret variables. Do not use a shared `DB_TYPE` override; database type is intentionally project/environment-owned so one customer's DB settings cannot leak into another project.
 
 ---
 
@@ -1031,6 +1186,8 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | Create product | `npm run project:new -- <project>` |
 | Create test/proposal input | `npm run qa:new -- <requirement>` |
 | Run selected product | `npm run qa:test -- --project=chromium` |
+| Run all registered products | `npm run test:projects -- --all --env=qa --project=chromium` |
+| Dry-run customer portfolio | `npm run test:projects -- --group=<name> --dry-run --project=chromium` |
 | Project preflight | `APP=<project> ENV=qa npm run project:check` |
 | Auth status | `npm run auth:check` |
 | Prepare/refresh auth | `npm run auth:prepare` |
@@ -1062,6 +1219,9 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | Requirement intelligence | [`docs/08-REQUIREMENT-INTELLIGENCE.md`](docs/08-REQUIREMENT-INTELLIGENCE.md) |
 | Known defects / troubleshooting | [`docs/09-KNOWN-DEFECTS-TROUBLESHOOTING.md`](docs/09-KNOWN-DEFECTS-TROUBLESHOOTING.md) |
 | New-product handoff | [`docs/15-NEW-PROJECT-HANDOFF.md`](docs/15-NEW-PROJECT-HANDOFF.md) |
+| Multi-project/customer execution | [`docs/18-MULTI-PROJECT-EXECUTION.md`](docs/18-MULTI-PROJECT-EXECUTION.md) |
+| Agent UI/API/DB/E2E authoring | [`docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md`](docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md) |
+| Recovery architecture | [`docs/30-RECOVERY-ARCHITECTURE.md`](docs/30-RECOVERY-ARCHITECTURE.md) |
 | Data and parallel execution | [`docs/20-V6-DATA-PARALLEL-EXECUTION.md`](docs/20-V6-DATA-PARALLEL-EXECUTION.md) |
 | Quality lanes / declarative authoring | [`docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md`](docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md) |
 | Declarative automation | [`docs/24-DECLARATIVE-AUTOMATION-GUIDE.md`](docs/24-DECLARATIVE-AUTOMATION-GUIDE.md) |
@@ -1081,10 +1241,12 @@ Release-specific history belongs in [`FINAL-RELEASE-NOTES.md`](FINAL-RELEASE-NOT
 4. **Business tests express intent; infrastructure stays behind typed fixtures/facades.**
 5. **Known defects remain quality failures, not fake passes.**
 6. **Healing must prove business success before it is trusted.**
-7. **AI is optional and cannot override deterministic quality facts.**
+7. **AI is optional, lazy at runtime, and cannot override deterministic quality facts.**
 8. **No silent zero-test success.**
 9. **Generated automation stays review-gated until human promotion.**
 10. **Every CI topology must produce one authoritative merged quality view.**
+11. **Agent-generated UI/API/DB/E2E automation becomes trusted only after human approval.**
+12. **Recovery may repair mechanics/transients, never silently rewrite business contracts.**
 
 ---
 

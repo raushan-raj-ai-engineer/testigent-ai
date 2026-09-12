@@ -88,12 +88,25 @@ test.describe('runtime configuration contract @framework', () => {
       const disabled = RuntimeConfig.resolve(root, { APP: 'alpha', ENV: 'qa' });
       expect(disabled.capabilities.database).toMatchObject({ type: 'none', required: false, enabled: false });
 
-      const incomplete = RuntimeConfig.resolve(root, { APP: 'alpha', ENV: 'qa', DB_TYPE: 'postgres' });
+      const leakedGlobalOverride = RuntimeConfig.resolve(root, {
+        APP: 'alpha', ENV: 'qa', DB_TYPE: 'postgres',
+        DB_HOST: 'localhost', DB_NAME: 'test', DB_USER: 'user', DB_PASSWORD: 'secret',
+      });
+      expect(leakedGlobalOverride.capabilities.database).toMatchObject({
+        type: 'none', required: false, enabled: false, missingConfiguration: [],
+      });
+
+      const alphaQa = path.join(root, 'projects', 'alpha', 'config', 'qa.json');
+      const alphaConfig = JSON.parse(fs.readFileSync(alphaQa, 'utf8')) as { capabilities: { database: { type: string } } };
+      alphaConfig.capabilities.database.type = 'postgres';
+      fs.writeFileSync(alphaQa, JSON.stringify(alphaConfig));
+
+      const incomplete = RuntimeConfig.resolve(root, { APP: 'alpha', ENV: 'qa' });
       expect(incomplete.capabilities.database.enabled).toBe(false);
       expect(incomplete.capabilities.database.missingConfiguration).toEqual(['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']);
 
       const ready = RuntimeConfig.resolve(root, {
-        APP: 'alpha', ENV: 'qa', DB_TYPE: 'postgres',
+        APP: 'alpha', ENV: 'qa',
         DB_HOST: 'localhost', DB_NAME: 'test', DB_USER: 'user', DB_PASSWORD: 'secret',
       });
       expect(ready.capabilities.database).toMatchObject({ type: 'postgres', required: false, enabled: true, missingConfiguration: [] });

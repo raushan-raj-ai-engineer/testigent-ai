@@ -3,7 +3,7 @@ import type { DatabaseClient } from './database.client';
 /**
  * Author: Raushan Raj
  * Business Use: PostgreSQL adapter implementing the common database contract.
- * How to use: Set DB_TYPE=postgres and DB_* environment values. Repositories use '?' placeholders.
+ * How to use: Select postgres in projects/<project>/config/<env>.json and provide DB_* secret environment values. Repositories use '?' placeholders.
  * Benefit: DB technology can change without changing business tests/repositories.
  */
 export class PostgresDatabaseClient implements DatabaseClient {

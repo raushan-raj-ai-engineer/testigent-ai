@@ -17,22 +17,25 @@ For a requirement under `requirements/<feature>.md`:
 npm run qa:new -- <feature>
 ```
 
+`qa:new` uses the same governed proposal flow for UI, API, database and mixed E2E automation. Generated automation is not trusted production code until automated checks pass and a human reviewer explicitly approves and promotes the proposal.
+
 The daily authoring contract is intentionally small:
 
 - `config/` owns environment/application values.
 - `fixtures/` injects project domain facades.
 - `src/pages/` owns UI mechanics and `LocatorPlan` definitions.
 - `src/workflows/` owns business journeys.
-- `src/api/` owns domain API services.
-- `src/database/` owns domain repositories/SQL.
+- `src/api/` owns contract-driven domain API services.
+- `src/database/` owns parameterized domain repositories/SQL; agent-generated DB validation is read-only by default.
 - `data/` owns project test data.
 - `tests/` expresses business intent with project fixtures and `test.step()`.
-- `tests/_agent/seed.spec.ts` is the Playwright Planner/Generator seed example.
+- `tests/_agent/seed.spec.ts` is the project seed for Planner/Generator workflows.
 
 Normal business specs should not construct `HealingOrchestrator`, `BaseApiClient`, database clients, AI providers, or `ApplicationRegistry`, and should not contain raw `page.click/fill/locator/getByRole` actions.
 
-Before handing this project to another team, follow `docs/15-NEW-PROJECT-HANDOFF.md`.
+Runtime UI recovery is deterministic-first: primary locator -> deterministic fallback -> validated cache -> optional lazy AI fallback. API and DB contract/schema mismatches are diagnosed, not silently rewritten.
 
+Before handing this project to another team, follow `docs/15-NEW-PROJECT-HANDOFF.md` and `docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md`.
 
 ## Database capability policy
 

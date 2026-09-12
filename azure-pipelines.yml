@@ -157,7 +157,7 @@ stages:
       - bash: |
           set -euo pipefail
           APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
-            AI_ENABLED=true HEALING_AI_ENABLED=true HEALING_MODE=runtime \
+            AI_ENABLED=true ALLOW_AI_TESTS=true HEALING_AI_ENABLED=true HEALING_MODE=runtime \
             npm run test:project -- --project=chromium --grep="@ai"
         condition: eq(variables['HAS_AI_TESTS'], 'true')
         displayName: Run dedicated AI/healing tests

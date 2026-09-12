@@ -3,7 +3,7 @@ import type { DatabaseClient } from './database.client';
 /**
  * Author: Raushan Raj
  * Business Use: SQL Server adapter behind the common DB contract.
- * How to use: Set DB_TYPE=mssql; repositories use '?' placeholders which this adapter maps to named parameters.
+ * How to use: Select mssql in projects/<project>/config/<env>.json and provide DB_* secret environment values; repositories use '?' placeholders which this adapter maps to named parameters.
  * Benefit: Business repositories avoid SQL-driver-specific parameter syntax.
  */
 export class MssqlDatabaseClient implements DatabaseClient {

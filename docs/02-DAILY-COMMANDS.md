@@ -73,4 +73,38 @@ The repository still exposes specialized commands (`test:ui`, `test:api`, `test:
 
 ## Database capability policy
 
-Database use is project/environment configurable and enforced by the reusable framework. Optional unavailable DB capability skips `@db` tests with a clear reason; required unavailable DB fails readiness before execution. Business specs do not read `DB_TYPE` or own capability gating.
+Database use is project/environment configurable and enforced by the reusable framework. Optional unavailable DB capability skips `@db` tests with a clear reason; required unavailable DB fails readiness before execution. The selected project's config owns the DB type; machine-level `DB_TYPE` values cannot activate DB tests in another project.
+
+## Multi-project / customer portfolio execution
+
+Run a selected set of projects:
+
+```bash
+npm run test:projects -- --apps=portal,payments --env=qa --profile=regression --project=chromium
+```
+
+Run project-specific environments:
+
+```bash
+npm run test:projects -- --apps=portal,payments --env-map=portal:qa,payments:uat --project=chromium
+```
+
+Run a configured customer group:
+
+```bash
+npm run test:projects -- --group=customer-a --profile=regression --project=chromium
+```
+
+Run every registered project:
+
+```bash
+npm run test:projects -- --all --env=qa --profile=regression --project=chromium
+```
+
+Preview without execution:
+
+```bash
+npm run test:projects -- --all --env=qa --dry-run --project=chromium
+```
+
+The default portfolio behavior continues after a project failure and returns a non-zero final status when any project failed. Use `--fail-fast` only when early termination is required.

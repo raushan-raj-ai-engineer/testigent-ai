@@ -171,6 +171,7 @@ function printHelp(): void {
     `  npm run auth:check                           Check auth freshness without refreshing\n` +
     `  npm run qa:new -- <requirement>              Prepare agent-assisted test authoring\n` +
     `  npm run qa:test -- [Playwright args]          Run selected project\n` +
+    `  npm run test:projects -- --all ...           Run all/selected/customer project portfolios\n` +
     `  npm run qa:validate                           Run static/type/config quality gates\n` +
     `  npm run qa:validate -- --with-tests           Include Chromium project tests\n` +
     `  npm run qa:report                            Open the selected project's report\n` +

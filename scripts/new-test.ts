@@ -29,29 +29,49 @@ async function main(): Promise<void> {
   await mkdir(outDir, { recursive: true });
   const promptPath = join(outDir, 'PLAYWRIGHT_AUTHORING_PROMPT.md');
   const seed = `projects/${process.env.APP ?? '<selected-project>'}/tests/_agent/seed.spec.ts`;
-  const prompt = `# Playwright Framework Authoring Prompt
+  const planPath = join(outDir, 'test-plan.json');
+  const plan = JSON.parse(await readFile(planPath, 'utf8')) as { layers?: string[] };
+  const layers = Array.isArray(plan.layers) ? plan.layers : [];
+  const layerLabel = layers.length ? layers.join(' + ') : 'OTHER';
+  const layerGuidance = authoringGuidance(layers);
+  const prompt = `# TestigentAI Automation Authoring Prompt
 
 Author: Raushan Raj
 
-Use ${mode.toUpperCase()} to inspect the live application and implement requirement **${requirementId}**.
+Use ${mode.toUpperCase()} and approved project evidence to implement requirement **${requirementId}**.
+
+Target automation layers: **${layerLabel}**
 
 ## Non-negotiable framework rules
-1. Read generation-manifest.json, AUTOMATION_PROPOSAL.md and the generated Page/Workflow/spec first.
-2. Start browser exploration from the selected project's agent seed (${seed}) so authentication, fixtures and setup are inherited.
-3. Use Playwright CLI/MCP/Test Agent browser evidence to validate locators and flows; never invent UI details, URLs, credentials or expected results.
-4. Final business specs consume project fixtures/facades (app, api, repositories, data) and contain business intent + test.step(). Never construct framework services or use raw page.goto/locator/getByRole/click/fill in normal specs.
-5. Page Objects own UI mechanics. Every executable UI action uses LocatorPlan + HealingOrchestrator (or BasePage healing helpers). Workflows own reusable business journeys.
-6. Scope modal/component plans so healing cannot jump to a same-named control elsewhere on the page. Deterministic primary/fallback comes before AI recovery.
-7. Runtime healing may recover locators only. Source healing is review-only; do not alter business assertions, API 4xx/5xx expectations, DB/security outcomes, or add test.skip/test.fixme to hide defects.
-8. Keep GENERATED PROPOSAL ownership header until proposal promotion. Remove REVIEW_REQUIRED/test.fixme only after live validation and human review.
-9. Finish with npm run architecture:check, npm run typecheck, npm run test:authoring:contract, and npm run proposal:validate -- ${requirementId}.
+1. Read generation-manifest.json, AUTOMATION_PROPOSAL.md, test-plan.json and the generated/reused project abstractions first.
+2. Use the selected project's agent seed (${seed}) as the architectural entry point. UI exploration inherits project configuration/auth/fixtures from that seed.
+3. Collect evidence appropriate to each layer; never invent UI details, URLs, API routes, payload fields, credentials, database tables/columns, SQL semantics or expected business results.
+4. Final business specs consume project fixtures/facades (app, api, repositories, data) and contain business intent + test.step(). Never construct framework services directly.
+5. UI mechanics stay in Page Objects. Every executable UI action uses LocatorPlan + HealingOrchestrator (or BasePage healing helpers). Workflows own reusable journeys.
+6. UI recovery order is primary locator -> deterministic fallback -> semantically validated cache -> lazy AI fallback. AI is created only when deterministic recovery is exhausted.
+7. API services own routes, typed payloads and response mapping. Business specs do not use raw APIRequestContext and agents must not change expected status/business contracts to make tests green.
+8. Database repositories own parameterized SQL. Agent-authored DB validation is read-only by default; destructive DDL/DML is prohibited unless an explicit human-approved project policy says otherwise.
+9. Runtime recovery may repair infrastructure/transient conditions only when business intent can still be deterministically proven. Source healing is review-only and must never weaken assertions, authorization/security rules or data-integrity expectations.
+10. Keep GENERATED PROPOSAL ownership header until proposal promotion. Remove REVIEW_REQUIRED/test.fixme only after evidence-based implementation and human review.
+11. Finish with npm run architecture:check, npm run typecheck, npm run test:authoring:contract, and npm run proposal:validate -- ${requirementId}.
+
+## Layer-specific authoring guidance
+${layerGuidance}
+
+## Human approval gate
+Generated automation is a proposal, never trusted production automation by default:
+- npm run proposal:show -- ${requirementId}
+- npm run proposal:validate -- ${requirementId}
+- npm run proposal:approve -- ${requirementId} --reviewer="<name>"
+- npm run proposal:promote -- ${requirementId}
 
 ## Tool policy
-- Planner: create/review the business test plan using the project seed.
-- CLI: preferred for token-efficient coding-agent snapshots and locator evidence.
-- MCP: use when persistent structured browser state/exploration is valuable.
-- Generator: treat raw Playwright output as evidence; map it into Page -> Workflow -> Facade -> business spec before promotion.
-- Healer: use for diagnosis/source-maintenance proposals; runtime healing remains handled by TestigentAI.
+- Planner: convert requirement + approved evidence into business scenarios and layer coverage.
+- CLI/MCP: preferred for UI/browser evidence; use the project seed and never bypass application auth policy.
+- API evidence: prefer approved OpenAPI/Swagger/Postman/contracts or observed project service behavior. Do not guess undocumented endpoints.
+- Database evidence: prefer approved schema/data dictionary/migrations or project repository patterns. Do not guess identifiers.
+- Generator: map evidence into Page / Workflow / API Service / Repository -> project Facade -> business spec.
+- Healer: diagnose locator/scoping/synchronization drift and propose source maintenance; runtime UI healing remains governed by TestigentAI.
 `;
   await writeFile(promptPath, prompt, 'utf8');
 
@@ -64,6 +84,25 @@ Use ${mode.toUpperCase()} to inspect the live application and implement requirem
   console.log(`  npm run proposal:show -- ${requirementId}`);
   console.log('  npm run test:authoring:contract');
   console.log(`  npm run authoring:complete -- ${requirementId}   # after implementation/validation`);
+}
+
+
+function authoringGuidance(layers: string[]): string {
+  const output: string[] = [];
+  if (layers.includes('UI')) {
+    output.push('- **UI:** inspect the live application with Playwright CLI/MCP/Test Agents; place selectors and LocatorPlan metadata in Page Objects; validate every healed action with a semantic post-condition.');
+  }
+  if (layers.includes('API')) {
+    output.push('- **API:** derive routes, methods, auth, payloads, schemas and expected statuses from approved API evidence; generate positive/negative/boundary/contract coverage only when supported by the requirement or contract.');
+  }
+  if (layers.includes('DATABASE')) {
+    output.push('- **DATABASE:** derive tables/columns/relationships from approved schema evidence; keep SQL parameterized in repositories; use SELECT/read-only validation by default and never auto-correct schema drift.');
+  }
+  if (layers.length > 1) {
+    output.push('- **Cross-layer E2E:** correlate one business identity across layers (for example transaction/customer/reference id) and prove the same business outcome through API/UI/DB without duplicating framework infrastructure.');
+  }
+  if (!output.length) output.push('- **Other:** keep the proposal review-gated and collect deterministic evidence before implementation.');
+  return output.join('\n');
 }
 
 main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exit(1); });
