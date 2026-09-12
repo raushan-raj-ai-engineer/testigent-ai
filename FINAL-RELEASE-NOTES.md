@@ -1,3 +1,13 @@
+## v1.3.9 - Zero-selection and empty-shard reporting hardening
+
+- Fixed the SDET Practice PR-profile selection gap by tagging the critical CRUD business scenario with `@smoke`; `TEST_PROFILE=pr` now selects a real business test instead of producing an empty run.
+- Added scale-audit `PROFILE_EMPTY` governance so any configured include-tag profile that has no matching project test is release-blocking before CI.
+- Core CI workers now use Playwright `--pass-with-no-tests` so over-sharding does not fail a worker merely because that shard receives no tests.
+- Core bundle markers auto-detect whether a worker actually produced business scenarios; empty workers are recorded explicitly instead of being misclassified as missing artifacts.
+- Merge validation now checks expected core worker topology separately from produced business reports. Empty over-sharded workers are valid, missing workers remain invalid, and an entire profile selecting zero business scenarios fails with an actionable profile/grep/tagging diagnostic.
+- `test:project` clears stale business output before execution, prints the resolved selection policy, and rejects successful local runs that produce no business scenarios unless `--pass-with-no-tests` was explicitly requested for CI shard handling.
+- Retains v1.3.8 sequential/sharded + AI-aware merge semantics and v1.3.7 authentication hardening.
+
 ## v1.3.8 - Dynamic core/AI merge topology
 
 - Replaced the hard-coded two-report merge assumption with configurable core worker planning: `1` runs sequentially without Playwright `--shard`; values greater than `1` generate the corresponding shard matrix.

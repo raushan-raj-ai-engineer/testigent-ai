@@ -76,7 +76,7 @@ stages:
         set -euo pipefail
         SHARD_INDEX="$(System.JobPositionInPhase)"
         SHARD_TOTAL="$(System.TotalJobsInPhase)"
-        ARGS=(--project=chromium --grep-invert="@ai")
+        ARGS=(--project=chromium --grep-invert="@ai" --pass-with-no-tests)
         if (( SHARD_TOTAL > 1 )); then
           ARGS+=(--shard="${SHARD_INDEX}/${SHARD_TOTAL}")
         fi
@@ -117,7 +117,7 @@ stages:
         AI_API_KEY: $(AI_API_KEY)
     - bash: |
         APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" \
-          npm run ci:report:bundle -- core "$(System.JobPositionInPhase)" "$(System.TotalJobsInPhase)" true
+          npm run ci:report:bundle -- core "$(System.JobPositionInPhase)" "$(System.TotalJobsInPhase)" auto
       condition: always()
       displayName: Record core business bundle topology
     - task: PublishPipelineArtifact@1
@@ -247,7 +247,7 @@ stages:
         find "$(Pipeline.Workspace)/all-blob-reports" -type f -name '*.zip' -exec cp {} all-blob-reports/ \;
         find "$(Pipeline.Workspace)/all-business-reports" -type f -exec cp --parents {} all-business-reports/ \; || true
         APP="$(APP)" npm run report:merge:technical
-        APP="$(APP)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_REPORTS="${{ parameters.shards }}" EXPECT_AI_LANE="${{ parameters.runAi }}" npm run report:merge:business -- all-business-reports
+        APP="$(APP)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_WORKERS="${{ parameters.shards }}" EXPECT_AI_LANE="${{ parameters.runAi }}" npm run report:merge:business -- all-business-reports
         APP="$(APP)" npm run ci:business:finalize
         APP="$(APP)" AI_ENABLED=false npm run report:business
         APP="$(APP)" npm run ci:business:validate

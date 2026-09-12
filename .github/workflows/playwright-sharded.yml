@@ -138,7 +138,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ARGS=(--project=chromium --grep-invert="@ai")
+          ARGS=(--project=chromium --grep-invert="@ai" --pass-with-no-tests)
           if (( ${{ matrix.total }} > 1 )); then
             ARGS+=(--shard=${{ matrix.index }}/${{ matrix.total }})
           fi
@@ -146,7 +146,7 @@ jobs:
 
       - name: Record core business bundle topology
         if: ${{ always() && !cancelled() }}
-        run: npm run ci:report:bundle -- core ${{ matrix.index }} ${{ matrix.total }} true
+        run: npm run ci:report:bundle -- core ${{ matrix.index }} ${{ matrix.total }} auto
 
       - name: Upload technical blob
         if: ${{ always() && !cancelled() }}
@@ -486,7 +486,7 @@ jobs:
         run: npm run report:merge:business -- all-business-reports
         env:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
-          EXPECTED_CORE_REPORTS: ${{ needs.plan.outputs.expected_core_reports }}
+          EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
           EXPECT_AI_LANE: ${{ needs.ai-smoke.result != 'skipped' && 'true' || 'false' }}
 
       - name: Finalize business execution facts

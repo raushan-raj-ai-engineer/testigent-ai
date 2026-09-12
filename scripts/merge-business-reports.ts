@@ -43,7 +43,6 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
   const root = path.resolve(rootInput);
   const markers = locateBundleMarkers(root);
   const files = walk(root).filter(file => path.basename(file) === 'business-report.json');
-  if (!files.length) throw new Error(`No business-report.json files found under ${root}`);
 
   const reports: LocatedReport[] = files.map(file => {
     const directory = path.dirname(file);
@@ -53,6 +52,7 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
   });
 
   enforceBundleTopology(reports, markers);
+  if (!reports.length) throw new Error(`No business-report.json files found under ${root}`);
 
   const uniqueResults = new Map<string, BusinessTestResult>();
   const healingByKey = new Map<string, HealingAuditRecord>();
@@ -135,26 +135,43 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
 function enforceBundleTopology(reports: LocatedReport[], markers: LocatedMarker[]): void {
   const coreReports = reports.filter(report => report.lane === 'core');
   const aiReports = reports.filter(report => report.lane === 'ai');
-  const expectedCore = positiveIntegerEnv('EXPECTED_CORE_REPORTS') ?? positiveIntegerEnv('EXPECTED_BUSINESS_REPORTS');
+  const expectedCoreWorkers = positiveIntegerEnv('EXPECTED_CORE_WORKERS')
+    ?? positiveIntegerEnv('EXPECTED_CORE_REPORTS')
+    ?? positiveIntegerEnv('EXPECTED_BUSINESS_REPORTS');
   const expectedAi = nonNegativeIntegerEnv('EXPECTED_AI_REPORTS');
   const expectAiLane = booleanEnv('EXPECT_AI_LANE');
 
-  if (expectedCore !== undefined && coreReports.length < expectedCore) {
-    throw new Error(`Incomplete CI core business merge: expected at least ${expectedCore} core report bundle(s), found ${coreReports.length}. A sequential/shard artifact may be missing.`);
-  }
   if (expectedAi !== undefined && aiReports.length < expectedAi) {
     throw new Error(`Incomplete CI AI business merge: expected at least ${expectedAi} AI report bundle(s), found ${aiReports.length}. The dedicated AI artifact may be missing.`);
   }
 
   const coreMarkers = markers.filter(item => item.marker.lane === 'core');
-  if (expectedCore !== undefined && coreMarkers.length > 0) {
-    const identities = new Set(coreMarkers.map(item => `${item.marker.shardIndex}/${item.marker.shardTotal}`));
-    if (identities.size < expectedCore) {
-      throw new Error(`Incomplete CI core marker topology: expected ${expectedCore} unique core lane marker(s), found ${identities.size}.`);
-    }
-    for (const marker of coreMarkers) {
-      if (!hasReportInDirectory(marker.directory)) {
-        throw new Error(`Core CI bundle ${marker.marker.shardIndex}/${marker.marker.shardTotal} was uploaded without business-report.json.`);
+  if (expectedCoreWorkers !== undefined) {
+    if (!coreMarkers.length) {
+      // Backward-compatible fallback for older artifacts that predate topology markers.
+      if (coreReports.length < expectedCoreWorkers) {
+        throw new Error(`Incomplete CI core business merge: expected ${expectedCoreWorkers} core worker/report bundle(s), found ${coreReports.length}. Core topology markers were not available.`);
+      }
+    } else {
+      const identities = new Set(coreMarkers.map(item => `${item.marker.shardIndex}/${item.marker.shardTotal}`));
+      if (identities.size < expectedCoreWorkers) {
+        throw new Error(`Incomplete CI core marker topology: expected ${expectedCoreWorkers} unique core worker marker(s), found ${identities.size}.`);
+      }
+      const selectedMarkers = coreMarkers.filter(item => item.marker.hasTests === true);
+      const unknownMarkers = coreMarkers.filter(item => item.marker.hasTests === null || item.marker.hasTests === undefined);
+      if (unknownMarkers.length) {
+        throw new Error(`Core CI bundle marker(s) do not declare whether business tests were selected: ${unknownMarkers.map(item => `${item.marker.shardIndex}/${item.marker.shardTotal}`).join(', ')}.`);
+      }
+      if (!selectedMarkers.length) {
+        throw new Error(`No core business scenarios were selected across ${expectedCoreWorkers} worker(s). Check TEST_PROFILE, grep filters and project tags before publishing an empty report.`);
+      }
+      for (const marker of selectedMarkers) {
+        if (!hasReportInDirectory(marker.directory)) {
+          throw new Error(`Core CI bundle ${marker.marker.shardIndex}/${marker.marker.shardTotal} selected tests but was uploaded without business-report.json.`);
+        }
+      }
+      if (coreReports.length < selectedMarkers.length) {
+        throw new Error(`Incomplete CI core business merge: ${selectedMarkers.length} worker(s) selected tests but only ${coreReports.length} core business report bundle(s) were found.`);
       }
     }
   }

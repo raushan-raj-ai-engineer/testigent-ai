@@ -119,8 +119,20 @@ Examples:
 npm run report:merge:business -- all-business-reports
 
 # CI sequential contract.
-EXPECTED_CORE_REPORTS=1 npm run report:merge:business -- all-business-reports
+EXPECTED_CORE_WORKERS=1 npm run report:merge:business -- all-business-reports
 
 # CI 4-shard contract + planned AI lane.
-EXPECTED_CORE_REPORTS=4 EXPECT_AI_LANE=true npm run report:merge:business -- all-business-reports
+EXPECTED_CORE_WORKERS=4 EXPECT_AI_LANE=true npm run report:merge:business -- all-business-reports
 ```
+
+
+## Zero-selection vs empty-shard behavior (v1.3.9)
+
+Core worker topology and business report count are intentionally different concepts. A run may request more shards than selected tests. CI therefore records one `ci-bundle.json` marker per planned core worker and lets each marker declare whether that worker actually executed business scenarios.
+
+- Empty shard because of over-sharding: valid; no fake business report is required.
+- Missing worker marker: invalid; the CI topology is incomplete.
+- Worker says it selected tests but its business report is missing: invalid.
+- Every core worker reports `hasTests=false`: invalid; the selected profile/grep combination matched zero business scenarios.
+
+Core CI workers use Playwright `--pass-with-no-tests` only so an intentionally empty shard can reach the merge/topology gate. The final merge still fails closed when the whole execution selected zero business scenarios. Local `test:project` runs do not opt into that behavior by default and fail with `NO_BUSINESS_TESTS_SELECTED` if a successful Playwright command produces no business report rows.

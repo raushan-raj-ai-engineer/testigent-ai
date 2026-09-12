@@ -208,13 +208,13 @@ try {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   if (!pkg.scripts?.['ci:report:bundle']?.includes('ci-report-bundle.ts')) issues.push('missing ci:report:bundle topology marker script');
   const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
-  if (!githubWorkflow.includes('EXPECTED_CORE_REPORTS')) issues.push('GitHub merge must enforce core report count independently');
+  if (!githubWorkflow.includes('EXPECTED_CORE_WORKERS')) issues.push('GitHub merge must enforce core worker topology independently');
   if (!githubWorkflow.includes('EXPECT_AI_LANE')) issues.push('GitHub merge must validate the optional AI lane independently');
   if (!githubWorkflow.includes('ci:report:bundle -- core') || !githubWorkflow.includes('ci:report:bundle -- ai')) issues.push('GitHub CI must publish core/AI bundle topology markers');
   if (!githubWorkflow.includes('CI_SHARDS') || !githubWorkflow.includes('inputs.shards')) issues.push('GitHub CI must support configurable sequential/sharded execution');
   if (githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'")) issues.push('GitHub merge must not hardcode two business reports');
   const azureWorkflow = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
-  if (!azureWorkflow.includes('EXPECTED_CORE_REPORTS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core and AI lanes');
+  if (!azureWorkflow.includes('EXPECTED_CORE_WORKERS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core workers and AI lane');
   if (!azureWorkflow.includes('SHARD_TOTAL > 1')) issues.push('Azure CI must omit Playwright --shard for sequential single-worker execution');
 } catch (error) {
   issues.push(`unable to validate CI report topology contracts: ${error.message}`);
@@ -300,7 +300,9 @@ try {
   if (!githubWorkflow.includes('npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"')) issues.push('GitHub merged-report summary must use the dedicated summary script');
   if (!githubWorkflow.includes('continue-on-error: true\n        shell: bash\n        run: npm run --silent ci:business:summary')) issues.push('GitHub merged-report summary must remain informational/non-blocking');
   if (githubWorkflow.includes("<<'NODE'") || githubWorkflow.includes('GITHUB\\_STEP\\_SUMMARY')) issues.push('GitHub merged-report summary must not use fragile heredoc/escaped step-summary syntax');
-  if (!merge.includes('EXPECTED_CORE_REPORTS') || !merge.includes('EXPECT_AI_LANE') || !githubWorkflow.includes('EXPECTED_CORE_REPORTS:') || !githubWorkflow.includes('EXPECT_AI_LANE:') || !azurePipeline.includes('EXPECTED_CORE_REPORTS="${{ parameters.shards }}"') || !azurePipeline.includes('EXPECT_AI_LANE="${{ parameters.runAi }}"')) issues.push('CI merged-report core/AI topology guard missing');
+  if (!merge.includes('EXPECTED_CORE_WORKERS') || !merge.includes('EXPECT_AI_LANE') || !githubWorkflow.includes('EXPECTED_CORE_WORKERS:') || !githubWorkflow.includes('EXPECT_AI_LANE:') || !azurePipeline.includes('EXPECTED_CORE_WORKERS="${{ parameters.shards }}"') || !azurePipeline.includes('EXPECT_AI_LANE="${{ parameters.runAi }}"')) issues.push('CI merged-report core-worker/AI topology guard missing');
+  if (!githubWorkflow.includes('--pass-with-no-tests') || !azurePipeline.includes('--pass-with-no-tests') || !githubWorkflow.includes('ci:report:bundle -- core ${{ matrix.index }} ${{ matrix.total }} auto') || !azurePipeline.includes('ci:report:bundle -- core "$(System.JobPositionInPhase)" "$(System.TotalJobsInPhase)" auto')) issues.push('CI empty-shard topology contract missing');
+  if (!merge.includes('No core business scenarios were selected') || !mergeContract.includes('intentionally empty over-sharded worker') || !mergeContract.includes('all core workers selecting zero business tests')) issues.push('zero-selection vs over-sharding merge contract missing');
 } catch (error) {
   issues.push(`unable to validate reporting merge/evidence contracts: ${error.message}`);
 }
