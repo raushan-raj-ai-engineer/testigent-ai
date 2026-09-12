@@ -129,6 +129,7 @@ for (const required of [
   'src/framework/core/auth.provider.ts',
   'src/framework/core/auth.lock.ts',
   'scripts/auth-prepare.ts',
+  'scripts/ci-report-bundle.ts',
   'tests/framework/auth-lifecycle.spec.ts',
   'tests/framework/sdet-auth-provider.contract.spec.ts',
   'docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md',
@@ -200,6 +201,24 @@ if (fs.existsSync(envExamplePath)) {
   if (!/^DB_TYPE=\s*$/m.test(envExample)) issues.push('.env.example must not impose a default database type; project/environment config owns it');
 }
 
+
+
+// CI merge topology contracts: core shard completeness and AI lane completeness are independent.
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  if (!pkg.scripts?.['ci:report:bundle']?.includes('ci-report-bundle.ts')) issues.push('missing ci:report:bundle topology marker script');
+  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
+  if (!githubWorkflow.includes('EXPECTED_CORE_REPORTS')) issues.push('GitHub merge must enforce core report count independently');
+  if (!githubWorkflow.includes('EXPECT_AI_LANE')) issues.push('GitHub merge must validate the optional AI lane independently');
+  if (!githubWorkflow.includes('ci:report:bundle -- core') || !githubWorkflow.includes('ci:report:bundle -- ai')) issues.push('GitHub CI must publish core/AI bundle topology markers');
+  if (!githubWorkflow.includes('CI_SHARDS') || !githubWorkflow.includes('inputs.shards')) issues.push('GitHub CI must support configurable sequential/sharded execution');
+  if (githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'")) issues.push('GitHub merge must not hardcode two business reports');
+  const azureWorkflow = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  if (!azureWorkflow.includes('EXPECTED_CORE_REPORTS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core and AI lanes');
+  if (!azureWorkflow.includes('SHARD_TOTAL > 1')) issues.push('Azure CI must omit Playwright --shard for sequential single-worker execution');
+} catch (error) {
+  issues.push(`unable to validate CI report topology contracts: ${error.message}`);
+}
 
 // Semantic-healing release contracts (v1.2.2+).
 try {
@@ -281,7 +300,7 @@ try {
   if (!githubWorkflow.includes('npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"')) issues.push('GitHub merged-report summary must use the dedicated summary script');
   if (!githubWorkflow.includes('continue-on-error: true\n        shell: bash\n        run: npm run --silent ci:business:summary')) issues.push('GitHub merged-report summary must remain informational/non-blocking');
   if (githubWorkflow.includes("<<'NODE'") || githubWorkflow.includes('GITHUB\\_STEP\\_SUMMARY')) issues.push('GitHub merged-report summary must not use fragile heredoc/escaped step-summary syntax');
-  if (!merge.includes('EXPECTED_BUSINESS_REPORTS') || !githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'") || !azurePipeline.includes('EXPECTED_BUSINESS_REPORTS="${{ parameters.shards }}"')) issues.push('CI merged-report source-count guard missing');
+  if (!merge.includes('EXPECTED_CORE_REPORTS') || !merge.includes('EXPECT_AI_LANE') || !githubWorkflow.includes('EXPECTED_CORE_REPORTS:') || !githubWorkflow.includes('EXPECT_AI_LANE:') || !azurePipeline.includes('EXPECTED_CORE_REPORTS="${{ parameters.shards }}"') || !azurePipeline.includes('EXPECT_AI_LANE="${{ parameters.runAi }}"')) issues.push('CI merged-report core/AI topology guard missing');
 } catch (error) {
   issues.push(`unable to validate reporting merge/evidence contracts: ${error.message}`);
 }

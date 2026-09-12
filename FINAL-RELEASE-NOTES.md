@@ -1,3 +1,21 @@
+## v1.3.8 - Dynamic core/AI merge topology
+
+- Replaced the hard-coded two-report merge assumption with configurable core worker planning: `1` runs sequentially without Playwright `--shard`; values greater than `1` generate the corresponding shard matrix.
+- Added CI business-bundle topology markers so merge validation distinguishes required core shard reports from the optional dedicated AI lane.
+- Core completeness and AI completeness are now validated independently; an AI report can never satisfy a missing core shard.
+- When the AI lane is requested, CI records whether `@ai` tests exist. No-AI projects are treated as not applicable, while detected AI tests require a dedicated AI business report containing at least one `@ai` result.
+- Merged execution facts and GitHub step summaries now expose core report count, AI report count, AI-specific result count, and aggregated AI runtime calls.
+- GitHub Actions supports `workflow_dispatch.shards` and repository variable `CI_SHARDS`; Azure `shards: 1` now runs true sequential execution and larger values run sharded execution.
+- Retains v1.3.7 automatic-auth verification hardening and all v1.3.6 merged-report safety behavior.
+
+
+## v1.3.7 - CI auth verification hardening
+
+- Removed the ambiguous SDET Practice `Login` button as an unauthenticated proof. The live UI can expose that control even when a freshly issued JWT is already present in browser storage, which caused CI to reject valid provider output.
+- Kept `sdet_access_token` as the deterministic browser-state proof used by the generic auth lifecycle.
+- Added a regression contract so the project cannot silently reintroduce the ambiguous control check.
+- No generic auth-core safety rules were weakened.
+
 ## v1.3.6 - CI merged-report hardening
 
 - Replaced the GitHub merged-quality summary Bash/Node heredoc with the dedicated `ci:business:summary` script, eliminating indentation-sensitive `NODE` terminator failures.

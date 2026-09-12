@@ -76,9 +76,13 @@ stages:
         set -euo pipefail
         SHARD_INDEX="$(System.JobPositionInPhase)"
         SHARD_TOTAL="$(System.TotalJobsInPhase)"
+        ARGS=(--project=chromium --grep-invert="@ai")
+        if (( SHARD_TOTAL > 1 )); then
+          ARGS+=(--shard="${SHARD_INDEX}/${SHARD_TOTAL}")
+        fi
         APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
-          npm run test:project -- --project=chromium --shard="${SHARD_INDEX}/${SHARD_TOTAL}" --grep-invert="@ai"
-      displayName: Run project shard
+          npm run test:project -- "${ARGS[@]}"
+      displayName: Run project sequential/sharded worker
       env:
         # Auth-required projects may refresh automatically through their project-owned provider.
         # Map private provider inputs from protected variables / Key Vault; never commit auth state.
@@ -111,6 +115,11 @@ stages:
         AI_ENDPOINT: $(AI_ENDPOINT)
         AI_MODEL: $(AI_MODEL)
         AI_API_KEY: $(AI_API_KEY)
+    - bash: |
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" \
+          npm run ci:report:bundle -- core "$(System.JobPositionInPhase)" "$(System.TotalJobsInPhase)" true
+      condition: always()
+      displayName: Record core business bundle topology
     - task: PublishPipelineArtifact@1
       condition: always()
       inputs:
@@ -137,9 +146,20 @@ stages:
         displayName: Install Chromium
       - bash: |
           set -euo pipefail
+          if grep -RIl --include='*.spec.ts' --include='*.test.ts' '@ai' "projects/$(APP)/tests" 2>/dev/null | grep -q .; then
+            echo "##vso[task.setvariable variable=HAS_AI_TESTS]true"
+            echo "[ai] @ai tests found for project '$(APP)'."
+          else
+            echo "##vso[task.setvariable variable=HAS_AI_TESTS]false"
+            echo "[ai] No @ai tests found for project '$(APP)'."
+          fi
+        displayName: Detect AI tests
+      - bash: |
+          set -euo pipefail
           APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
             AI_ENABLED=true HEALING_AI_ENABLED=true HEALING_MODE=runtime \
             npm run test:project -- --project=chromium --grep="@ai"
+        condition: eq(variables['HAS_AI_TESTS'], 'true')
         displayName: Run dedicated AI/healing tests
         env:
           AUTH_USERNAME: $(AUTH_USERNAME)
@@ -166,8 +186,13 @@ stages:
           AI_ENDPOINT: $(AI_ENDPOINT)
           AI_MODEL: $(AI_MODEL)
           AI_API_KEY: $(AI_API_KEY)
-      - task: PublishPipelineArtifact@1
+      - bash: |
+          APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" \
+            npm run ci:report:bundle -- ai 1 1 "$(HAS_AI_TESTS)"
         condition: always()
+        displayName: Record AI business bundle topology
+      - task: PublishPipelineArtifact@1
+        condition: and(always(), eq(variables['HAS_AI_TESTS'], 'true'))
         inputs:
           targetPath: 'reports/$(APP)/blob-report'
           artifact: 'blob-$(APP)-ai-$(Build.BuildId)'
@@ -179,7 +204,7 @@ stages:
           artifact: 'business-$(APP)-ai-$(Build.BuildId)'
         displayName: Publish AI business bundle
       - task: PublishPipelineArtifact@1
-        condition: always()
+        condition: and(always(), eq(variables['HAS_AI_TESTS'], 'true'))
         inputs:
           targetPath: 'reports/$(APP)/ai'
           artifact: 'ai-audit-$(APP)-$(Build.BuildId)'
@@ -222,7 +247,7 @@ stages:
         find "$(Pipeline.Workspace)/all-blob-reports" -type f -name '*.zip' -exec cp {} all-blob-reports/ \;
         find "$(Pipeline.Workspace)/all-business-reports" -type f -exec cp --parents {} all-business-reports/ \; || true
         APP="$(APP)" npm run report:merge:technical
-        APP="$(APP)" RUN_ID="$(Build.BuildId)" EXPECTED_BUSINESS_REPORTS="${{ parameters.shards }}" npm run report:merge:business -- all-business-reports
+        APP="$(APP)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_REPORTS="${{ parameters.shards }}" EXPECT_AI_LANE="${{ parameters.runAi }}" npm run report:merge:business -- all-business-reports
         APP="$(APP)" npm run ci:business:finalize
         APP="$(APP)" AI_ENABLED=false npm run report:business
         APP="$(APP)" npm run ci:business:validate

@@ -10,6 +10,9 @@ import type { ExecutionFacts } from '../src/framework/analytics/report.types';
  */
 export function formatBusinessStepSummary(facts: ExecutionFacts): string {
   const sourceReports = facts.aggregation?.sourceReports ?? 1;
+  const coreReports = facts.aggregation?.coreReports ?? sourceReports;
+  const aiReports = facts.aggregation?.aiReports ?? 0;
+  const aiResults = facts.aggregation?.aiResults ?? facts.results.filter(result => result.tags.includes('@ai')).length;
   return [
     '## TestigentAI merged quality report',
     `- Selected: **${facts.total}**`,
@@ -18,7 +21,8 @@ export function formatBusinessStepSummary(facts: ExecutionFacts): string {
     `- Quality failed: **${facts.qualityFailed}** (known ${facts.knownDefects}, unexpected ${facts.unexpectedFailed})`,
     `- CI-blocking issues: **${facts.ciBlockingIssues}**`,
     `- Self-healed: **${facts.healing?.count ?? 0}** · AI calls: **${facts.aiUsage?.calls ?? 0}**`,
-    `- Aggregated bundles: **${sourceReports}**`
+    `- AI-specific results: **${aiResults}**`,
+    `- Aggregated bundles: **${sourceReports}** (core ${coreReports}, AI ${aiReports})`
   ].join('\n');
 }
 

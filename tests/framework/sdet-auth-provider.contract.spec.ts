@@ -7,6 +7,16 @@ import { authProvider } from '../../projects/sdet-practice/auth/auth.provider';
 import type { AuthProviderContext } from '../../src/framework/core/auth.provider';
 
 test.describe('sdet-practice auth provider contract', () => {
+
+  test('uses an unambiguous browser auth proof for the live project', async () => {
+    const config = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), 'projects', 'sdet-practice', 'config', 'qa.json'), 'utf8'),
+    ) as { auth?: { verification?: { stateKey?: { name?: string; storage?: string }; unauthenticatedControl?: unknown } } };
+
+    expect(config.auth?.verification?.stateKey).toEqual({ name: 'sdet_access_token', storage: 'either' });
+    expect(config.auth?.verification?.unauthenticatedControl).toBeUndefined();
+  });
+
   test('uses the live demo username casing and produces browser storage state', async () => {
     const previousUsername = process.env.AUTH_USERNAME;
     const previousPassword = process.env.AUTH_PASSWORD;

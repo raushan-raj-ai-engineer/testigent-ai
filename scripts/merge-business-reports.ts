@@ -6,25 +6,53 @@ import type { AiRuntimeAuditRecord, AiRuntimeUsageSummary, BusinessAttachment, B
 import { writeBusinessDashboard } from '../src/framework/reporting/business-dashboard.writer';
 import { ReportHistoryStore } from '../src/framework/reporting/report-history.store';
 
-interface LocatedReport { file: string; directory: string; facts: ExecutionFacts }
+type ReportLane = 'core' | 'ai';
+
+interface CiBundleMarker {
+  schemaVersion: 1;
+  lane: ReportLane;
+  shardIndex: number;
+  shardTotal: number;
+  hasTests?: boolean | null;
+  application?: string;
+  environment?: string;
+  runId?: string;
+}
+
+interface LocatedReport {
+  file: string;
+  directory: string;
+  facts: ExecutionFacts;
+  lane: ReportLane;
+  marker?: CiBundleMarker;
+}
+
+interface LocatedMarker {
+  file: string;
+  directory: string;
+  marker: CiBundleMarker;
+}
 
 /**
  * Author: Raushan Raj
- * Business Use: Merges parallel CI shard facts and evidence into one complete stakeholder dashboard.
- * How to use: Download each shard's reports/<APP>/business directory beneath all-business-reports and run report:merge:business.
- * Benefit: Screenshots/traces/text evidence survive worker boundaries instead of becoming broken links after report merge.
+ * Business Use: Merges sequential, sharded and optional AI CI business facts into one complete stakeholder dashboard.
+ * How to use: Download every core/AI business artifact beneath all-business-reports and run report:merge:business.
+ * Benefit: Validates core-shard completeness independently from the AI lane, prevents AI bundles from masking a missing shard, and preserves evidence across workers.
  */
 export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-business-reports'): ExecutionFacts {
   const root = path.resolve(rootInput);
+  const markers = locateBundleMarkers(root);
   const files = walk(root).filter(file => path.basename(file) === 'business-report.json');
   if (!files.length) throw new Error(`No business-report.json files found under ${root}`);
-  enforceExpectedReportCount(files.length);
 
-  const reports: LocatedReport[] = files.map(file => ({
-    file,
-    directory: path.dirname(file),
-    facts: JSON.parse(fs.readFileSync(file, 'utf8')) as ExecutionFacts
-  }));
+  const reports: LocatedReport[] = files.map(file => {
+    const directory = path.dirname(file);
+    const facts = JSON.parse(fs.readFileSync(file, 'utf8')) as ExecutionFacts;
+    const marker = findMarkerForDirectory(directory, markers)?.marker;
+    return { file, directory, facts, marker, lane: marker?.lane ?? inferLaneFromFacts(facts) };
+  });
+
+  enforceBundleTopology(reports, markers);
 
   const uniqueResults = new Map<string, BusinessTestResult>();
   const healingByKey = new Map<string, HealingAuditRecord>();
@@ -68,11 +96,12 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
   const aiUsage = buildAiUsageSummary([...aiByKey.values()]);
 
   const first = reports[0].facts;
+  const mergedResults = [...uniqueResults.values()];
   const merged = buildExecutionFacts({
     runId: process.env.RUN_ID ?? first.runId,
     environment: first.environment,
     application: first.application,
-    results: [...uniqueResults.values()],
+    results: mergedResults,
     healing,
     aiUsage,
     scope: {
@@ -81,35 +110,130 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
     }
   });
 
+  const coreReports = reports.filter(report => report.lane === 'core').length;
+  const aiReports = reports.filter(report => report.lane === 'ai').length;
+  const aiResults = mergedResults.filter(result => result.tags.some(tag => tag.toLowerCase() === '@ai')).length;
   merged.aggregation = {
     mode: 'merged',
     sourceReports: reports.length,
+    coreReports,
+    aiReports,
+    aiResults,
     sourceRunIds: [...new Set(reports.map(report => report.facts.runId))].sort(),
     sourceDirectories: reports.map(report => path.relative(root, report.directory) || '.').sort()
   };
 
-  // CI restores .report-history before this command and this is the only place that appends the final merged release point.
   const history = new ReportHistoryStore().append(merged);
   const outputDir = path.resolve(process.env.MERGED_BUSINESS_REPORT_DIR ?? path.join(ProjectPaths.reports(), 'business-merged'));
   fs.rmSync(outputDir, { recursive: true, force: true });
   const written = writeBusinessDashboard(outputDir, merged, { history, reportUrl: cleanEnv('REPORT_PUBLIC_URL') });
-  console.log(`Merged ${files.length} shard business report(s) into ${path.join(outputDir, 'index.html')}`);
-  console.log(`Merged business scenarios: ${written.total} selected; ${written.executed}/${written.executionEligible} applicable scenarios executed; ${written.healing.count} validated healing event(s); ${written.aiUsage?.calls ?? 0} AI runtime call(s).`);
+  console.log(`Merged ${files.length} business report bundle(s) (${coreReports} core, ${aiReports} AI) into ${path.join(outputDir, 'index.html')}`);
+  console.log(`Merged business scenarios: ${written.total} selected; ${written.executed}/${written.executionEligible} applicable scenarios executed; ${aiResults} AI-specific result(s); ${written.healing.count} validated healing event(s); ${written.aiUsage?.calls ?? 0} AI runtime call(s).`);
   return written;
 }
 
+function enforceBundleTopology(reports: LocatedReport[], markers: LocatedMarker[]): void {
+  const coreReports = reports.filter(report => report.lane === 'core');
+  const aiReports = reports.filter(report => report.lane === 'ai');
+  const expectedCore = positiveIntegerEnv('EXPECTED_CORE_REPORTS') ?? positiveIntegerEnv('EXPECTED_BUSINESS_REPORTS');
+  const expectedAi = nonNegativeIntegerEnv('EXPECTED_AI_REPORTS');
+  const expectAiLane = booleanEnv('EXPECT_AI_LANE');
 
+  if (expectedCore !== undefined && coreReports.length < expectedCore) {
+    throw new Error(`Incomplete CI core business merge: expected at least ${expectedCore} core report bundle(s), found ${coreReports.length}. A sequential/shard artifact may be missing.`);
+  }
+  if (expectedAi !== undefined && aiReports.length < expectedAi) {
+    throw new Error(`Incomplete CI AI business merge: expected at least ${expectedAi} AI report bundle(s), found ${aiReports.length}. The dedicated AI artifact may be missing.`);
+  }
 
-function enforceExpectedReportCount(actual: number): void {
-  const raw = process.env.EXPECTED_BUSINESS_REPORTS?.trim();
-  if (!raw) return;
-  const expected = Number(raw);
-  if (!Number.isInteger(expected) || expected < 1) {
-    throw new Error(`EXPECTED_BUSINESS_REPORTS must be a positive integer, received '${raw}'.`);
+  const coreMarkers = markers.filter(item => item.marker.lane === 'core');
+  if (expectedCore !== undefined && coreMarkers.length > 0) {
+    const identities = new Set(coreMarkers.map(item => `${item.marker.shardIndex}/${item.marker.shardTotal}`));
+    if (identities.size < expectedCore) {
+      throw new Error(`Incomplete CI core marker topology: expected ${expectedCore} unique core lane marker(s), found ${identities.size}.`);
+    }
+    for (const marker of coreMarkers) {
+      if (!hasReportInDirectory(marker.directory)) {
+        throw new Error(`Core CI bundle ${marker.marker.shardIndex}/${marker.marker.shardTotal} was uploaded without business-report.json.`);
+      }
+    }
   }
-  if (actual < expected) {
-    throw new Error(`Incomplete CI business merge: expected at least ${expected} report bundle(s), found ${actual}. A shard artifact may be missing.`);
+
+  if (expectAiLane) {
+    const aiMarkers = markers.filter(item => item.marker.lane === 'ai');
+    if (!aiMarkers.length) {
+      throw new Error('AI lane was planned but no AI CI bundle marker was downloaded.');
+    }
+    const aiMarker = aiMarkers[0];
+    if (aiMarker.marker.hasTests === null || aiMarker.marker.hasTests === undefined) {
+      throw new Error('AI lane marker does not declare whether @ai tests were detected.');
+    }
+    if (aiMarker.marker.hasTests) {
+      if (!hasReportInDirectory(aiMarker.directory)) {
+        throw new Error('AI tests were detected but the AI lane artifact does not contain business-report.json.');
+      }
+      const aiSpecificResults = aiReports.flatMap(report => report.facts.results).filter(result => result.tags.some(tag => tag.toLowerCase() === '@ai'));
+      if (!aiSpecificResults.length) {
+        throw new Error('AI tests were detected but the merged AI business bundle contains no @ai-specific result.');
+      }
+    }
   }
+}
+
+function locateBundleMarkers(root: string): LocatedMarker[] {
+  return walk(root)
+    .filter(file => path.basename(file) === 'ci-bundle.json')
+    .map(file => ({ file, directory: path.dirname(file), marker: parseMarker(file) }));
+}
+
+function parseMarker(file: string): CiBundleMarker {
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<CiBundleMarker>;
+  if (raw.schemaVersion !== 1 || (raw.lane !== 'core' && raw.lane !== 'ai')) {
+    throw new Error(`Invalid CI bundle marker: ${file}`);
+  }
+  const shardIndex = Number(raw.shardIndex);
+  const shardTotal = Number(raw.shardTotal);
+  if (!Number.isInteger(shardIndex) || !Number.isInteger(shardTotal) || shardIndex < 1 || shardTotal < 1 || shardIndex > shardTotal) {
+    throw new Error(`Invalid CI bundle shard identity in ${file}`);
+  }
+  return { ...raw, schemaVersion: 1, lane: raw.lane, shardIndex, shardTotal, hasTests: raw.hasTests ?? null };
+}
+
+function findMarkerForDirectory(directory: string, markers: LocatedMarker[]): LocatedMarker | undefined {
+  return markers.find(marker => marker.directory === directory);
+}
+
+function inferLaneFromFacts(facts: ExecutionFacts): ReportLane {
+  const results = facts.results ?? [];
+  return results.length > 0 && results.every(result => result.tags.some(tag => tag.toLowerCase() === '@ai')) ? 'ai' : 'core';
+}
+
+function hasReportInDirectory(directory: string): boolean {
+  return fs.existsSync(path.join(directory, 'business-report.json'));
+}
+
+function positiveIntegerEnv(name: string): number | undefined {
+  const raw = process.env[name]?.trim();
+  if (!raw) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer, received '${raw}'.`);
+  return value;
+}
+
+function nonNegativeIntegerEnv(name: string): number | undefined {
+  const raw = process.env[name]?.trim();
+  if (!raw) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) throw new Error(`${name} must be a non-negative integer, received '${raw}'.`);
+  return value;
+}
+
+function booleanEnv(name: string): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (!raw) return false;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  throw new Error(`${name} must be true or false, received '${process.env[name]}'.`);
 }
 
 function buildAiUsageSummary(records: AiRuntimeAuditRecord[]): AiRuntimeUsageSummary {
