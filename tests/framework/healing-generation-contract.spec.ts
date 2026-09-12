@@ -183,6 +183,67 @@ test.describe('Visibility-aware locator cardinality', () => {
   });
 });
 
+test.describe('Lazy AI healing boundary', () => {
+  test('AI provider is created only after deterministic locator recovery is exhausted', async ({ page }) => {
+    const previous = {
+      mode: process.env.HEALING_MODE,
+      enabled: process.env.HEALING_AI_ENABLED,
+    };
+    process.env.HEALING_MODE = 'runtime';
+    process.env.HEALING_AI_ENABLED = 'true';
+    let factoryCalls = 0;
+    let aiCalls = 0;
+    const fakeAi = {
+      proposeLocator: async () => {
+        aiCalls += 1;
+        return {
+          descriptor: { type: 'role', role: 'button', name: 'Recovered', exact: true },
+          confidence: 0.99,
+          reason: 'Synthetic lazy recovery',
+          provider: 'fake',
+          model: 'fake-model',
+          latencyMs: 1,
+        };
+      },
+    } as any;
+    const factory = () => {
+      factoryCalls += 1;
+      return fakeAi;
+    };
+    const healer = new HealingOrchestrator(page, { warn: () => undefined } as any, factory);
+
+    try {
+      await page.setContent('<button>Primary</button><button>Fallback</button><button>Recovered</button>');
+      await healer.resolve({
+        id: 'lazy.primary',
+        businessName: 'Healthy primary',
+        primary: { type: 'role', role: 'button', name: 'Primary', exact: true },
+      });
+      expect(factoryCalls).toBe(0);
+
+      await healer.resolve({
+        id: 'lazy.fallback',
+        businessName: 'Deterministic fallback',
+        primary: { type: 'role', role: 'button', name: 'Missing', exact: true },
+        fallbacks: [{ type: 'role', role: 'button', name: 'Fallback', exact: true }],
+      });
+      expect(factoryCalls).toBe(0);
+
+      const recovered = await healer.resolve({
+        id: 'lazy.ai',
+        businessName: 'AI fallback',
+        primary: { type: 'role', role: 'button', name: 'Missing again', exact: true },
+      });
+      await expect(recovered).toHaveText('Recovered');
+      expect(factoryCalls).toBe(1);
+      expect(aiCalls).toBe(1);
+    } finally {
+      if (previous.mode === undefined) delete process.env.HEALING_MODE; else process.env.HEALING_MODE = previous.mode;
+      if (previous.enabled === undefined) delete process.env.HEALING_AI_ENABLED; else process.env.HEALING_AI_ENABLED = previous.enabled;
+    }
+  });
+});
+
 test.describe('Semantic healing validation', () => {
   test('safe retry rejects a wrong deterministic candidate until the business post-condition passes', async ({ page }) => {
     await page.setContent(`

@@ -14,21 +14,26 @@ npm run qa:doctor
 
 `qa:use` stores the local selection in `.runtime/workspace.json` (gitignored). CI must provide `APP` and `ENV` explicitly. The framework has no silent `demo/qa` runtime fallback.
 
-## Daily flow — five commands
+## Daily flow — small command surface
 
 ```bash
 npm run qa:status
-# auth-required projects only: npm run qa:auth
-
-Auth capture is verified in a fresh browser context before it is promoted. The framework also restores a gitignored sessionStorage companion when required and raises `AUTH_SESSION_INVALID` before locator healing if the selected session is no longer authenticated.
 npm run qa:new -- <requirement-id-or-file>
 npm run qa:test -- --project=chromium
 npm run qa:validate
 npm run qa:report
-npm run qa:heal
 ```
 
-Use `qa:validate -- --with-tests` when you also want the selected project's Chromium suite.
+For auth-required products, use `npm run qa:auth` when an interactive capture/refresh is required. Auth capture is verified in a fresh browser context before promotion. The framework can also restore a gitignored sessionStorage companion when required and raises `AUTH_SESSION_INVALID` before locator healing if the selected session is no longer authenticated.
+
+Use `qa:validate -- --with-tests` when you also want the selected project's Chromium suite. Use `npm run qa:heal` for governed source-healing review when a maintained test needs a proposed code change.
+
+For customers with multiple products, use the portfolio runner rather than scripting project loops yourself:
+
+```bash
+npm run test:projects -- --all --env=qa --dry-run --project=chromium
+npm run test:projects -- --group=<customer-group> --profile=regression --project=chromium
+```
 
 ## New test rule
 
@@ -42,12 +47,12 @@ For authenticated projects, `qa:doctor` fails until the configured storage-state
 
 Never commit `.auth`, `.env`, reports, test results, healing/cache/runtime files, or captured application evidence.
 
-Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, `15-NEW-PROJECT-HANDOFF.md`, and `16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md`.
+Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, `15-NEW-PROJECT-HANDOFF.md`, `18-MULTI-PROJECT-EXECUTION.md`, `29-AGENT-AUTHORING-UI-API-DB-E2E.md`, and `30-RECOVERY-ARCHITECTURE.md`.
 
 
 ## Database capability policy
 
-Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` selects the database type (`none`, `postgres`, `mysql`, or `mssql`). `DB_TYPE` may override the configured type in CI/local runtime, while database credentials remain secret environment variables.
+Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` exclusively selects the database type (`none`, `postgres`, `mysql`, or `mssql`). Repository or machine-level `DB_TYPE` values do not override another project's capability; only DB connection secrets such as `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` come from the environment.
 
 - optional + unavailable: tests tagged `@db` are skipped automatically with a clear reason; UI/API suites continue
 - configured and ready: `@db` tests execute normally

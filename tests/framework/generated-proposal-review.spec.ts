@@ -126,6 +126,57 @@ test.describe('generated proposal human review and promotion', () => {
     expect(await readFile(join(root, page), 'utf8')).toBe(before);
   });
 
+
+  test('agent-generated database proposal blocks mutating SQL before human approval', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'proposal-db-safety-'));
+    const requirementId = 'DB-READONLY-1';
+    const repository = 'projects/billing/src/database/customer.repository.ts';
+    await mkdir(join(root, 'projects/billing/src/database'), { recursive: true });
+    await writeFile(join(root, repository), header(requirementId) + `export class CustomerRepository {\n  async unsafe(): Promise<void> {\n    const sql = 'DELETE FROM customers WHERE id = ?';\n    void sql;\n  }\n}\n`);
+    const manifest: GenerationManifest = {
+      requirementId,
+      createdAt: new Date().toISOString(),
+      reviewRequired: true,
+      targetApplication: 'billing',
+      layers: ['DATABASE'],
+      reused: [],
+      created: [{ kind: 'db-repository', path: repository, reason: 'Created missing db-repository proposal in the existing framework structure.' }],
+      warnings: [],
+    };
+    const dir = join(root, 'generated/requirements', requirementId);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'generation-manifest.json'), JSON.stringify(manifest, null, 2));
+    await initializeProposalReview(root, manifest, [repository]);
+    const inspection = await inspectProposal(root, requirementId);
+    expect(inspection.approvable).toBeFalsy();
+    expect(inspection.issues.join(' ')).toContain('database validation must remain read-only');
+  });
+
+  test('agent-generated API proposal must use the project domain client boundary', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'proposal-api-safety-'));
+    const requirementId = 'API-BOUNDARY-1';
+    const service = 'projects/billing/src/api/customer.service.ts';
+    await mkdir(join(root, 'projects/billing/src/api'), { recursive: true });
+    await writeFile(join(root, service), header(requirementId) + `import type { APIRequestContext } from '@playwright/test';\nexport class CustomerService { constructor(private readonly request: APIRequestContext) {} }\n`);
+    const manifest: GenerationManifest = {
+      requirementId,
+      createdAt: new Date().toISOString(),
+      reviewRequired: true,
+      targetApplication: 'billing',
+      layers: ['API'],
+      reused: [],
+      created: [{ kind: 'api-service', path: service, reason: 'Created missing api-service proposal in the existing framework structure.' }],
+      warnings: [],
+    };
+    const dir = join(root, 'generated/requirements', requirementId);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'generation-manifest.json'), JSON.stringify(manifest, null, 2));
+    await initializeProposalReview(root, manifest, [service]);
+    const inspection = await inspectProposal(root, requirementId);
+    expect(inspection.approvable).toBeFalsy();
+    expect(inspection.issues.join(' ')).toContain('BaseApiClient/domain-service contract');
+  });
+
   test('a regenerated proposal invalidates an earlier approval', async () => {
     const { root, manifest, page, generatedTest } = await makeProject();
     await makeReviewClean(root, page, generatedTest);

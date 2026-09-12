@@ -40,7 +40,7 @@ tests       business intent and assertions only
 
 Normal specs consume `app`, `api`, `repositories`, and reusable data fixtures. They do not instantiate framework infrastructure.
 
-## 5. Agent-assisted new test
+## 5. Agent-assisted UI / API / DB / E2E authoring
 
 Place a requirement under `projects/project2/requirements/` and run:
 
@@ -48,9 +48,26 @@ Place a requirement under `projects/project2/requirements/` and run:
 npm run qa:new -- feature
 ```
 
-Agents start from `projects/project2/tests/_agent/seed.spec.ts`. Planner/browser evidence may contain raw Playwright actions; production TestigentAI code must be mapped into Page -> Workflow/Domain Service -> Facade -> Business Spec before promotion.
+The same entry point is layer-aware:
 
-## 6. Validate before PR
+- UI proposals use project Page -> Workflow -> Facade boundaries and deterministic-first/lazy-AI healing.
+- API proposals use approved contracts/evidence and project domain services; agents must not invent endpoints, payloads or status expectations.
+- Database proposals use approved schema evidence and project repositories; generated validation is read-only by default.
+- Mixed E2E proposals correlate the same business identifiers across layers.
+
+Agents start from `projects/project2/tests/_agent/seed.spec.ts`. Discovery evidence may contain raw Playwright/tool actions, but promoted TestigentAI code must follow project architecture. Every generated proposal remains blocked until validation succeeds and a named human reviewer approves it. See `29-AGENT-AUTHORING-UI-API-DB-E2E.md`.
+
+## 6. Portfolio readiness
+
+The project is automatically discoverable by the portfolio runner once its config exists:
+
+```bash
+npm run test:projects -- --all --env=qa --dry-run --project=chromium
+```
+
+If this product belongs to a customer estate, add it to `config/project-groups.json`. No framework-core edit is required. Portfolio execution produces a machine-readable summary and a business-first dashboard under `reports/multi-project/`.
+
+## 7. Validate before PR
 
 ```bash
 npm run qa:validate
@@ -58,3 +75,6 @@ npm run qa:test -- --project=chromium --grep @smoke
 ```
 
 CI must set `APP` and `ENV` explicitly. A project is not allowed to depend on another project's code.
+
+
+Recovery boundaries are documented in `30-RECOVERY-ARCHITECTURE.md`; UI locator healing, authentication recovery, API resilience and database resilience intentionally have different safety rules.

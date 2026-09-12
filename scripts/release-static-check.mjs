@@ -133,6 +133,10 @@ for (const required of [
   'tests/framework/auth-lifecycle.spec.ts',
   'tests/framework/sdet-auth-provider.contract.spec.ts',
   'docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md',
+  'docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md',
+  'docs/30-RECOVERY-ARCHITECTURE.md',
+  'src/framework/reporting/portfolio-dashboard.writer.ts',
+  'tests/framework/portfolio-reporting.spec.ts',
   'scripts/qa.ts',
   'scripts/healing-maintenance.ts',
   'templates/project/src/app.facade.ts',
@@ -198,7 +202,7 @@ if (fs.existsSync(envExamplePath)) {
   if (/^AI_PROVIDER=(?!\s*$).+/m.test(envExample)) issues.push('.env.example must not impose a default AI provider');
   if (!/^AI_PROVIDER_MODE=single$/m.test(envExample)) issues.push('.env.example must document single as the safe provider-selection mode');
   if (!/^APP=\s*$/m.test(envExample) || !/^ENV=\s*$/m.test(envExample)) issues.push('.env.example must not impose a default project/environment');
-  if (!/^DB_TYPE=\s*$/m.test(envExample)) issues.push('.env.example must not impose a default database type; project/environment config owns it');
+  if (/^DB_TYPE=/m.test(envExample)) issues.push('.env.example must not expose DB_TYPE as a shared override; project/environment config exclusively owns database type');
 }
 
 
@@ -228,6 +232,8 @@ try {
   const businessReporter = fs.readFileSync(path.join(root, 'src/framework/reporting/business.reporter.ts'), 'utf8');
   const businessRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/business-html.renderer.ts'), 'utf8');
   if (!orchestrator.includes('SELF_HEALING_POSTCONDITION_REJECTED')) issues.push('semantic healing rejection contract missing');
+  const enterpriseFixture = fs.readFileSync(path.join(root, 'src/framework/core/fixtures/enterprise.fixture.ts'), 'utf8');
+  if (!orchestrator.includes('private aiGateway()') || !enterpriseFixture.includes('() => createAiGateway(testInfo.testId)')) issues.push('AI healing gateway must be lazy and created only after deterministic recovery is exhausted');
   if (!orchestrator.includes('.visible()')) issues.push('healing resolver must evaluate visible locator matches');
   if (!orchestrator.includes("descriptor.match === 'firstVisible'")) issues.push('explicit firstVisible locator cardinality policy missing');
   if (!orchestrator.includes("decision.source === 'fallback' || mode === 'runtime'")) issues.push('reviewed deterministic fallbacks must remain executable in suggest mode');
@@ -305,6 +311,29 @@ try {
   if (!merge.includes('No core business scenarios were selected') || !mergeContract.includes('intentionally empty over-sharded worker') || !mergeContract.includes('all core workers selecting zero business tests')) issues.push('zero-selection vs over-sharding merge contract missing');
 } catch (error) {
   issues.push(`unable to validate reporting merge/evidence contracts: ${error.message}`);
+}
+
+
+// Portfolio, AI-selection and agent-authoring contracts (v1.4.1+).
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const portfolioRunner = fs.readFileSync(path.join(root, 'scripts/test-projects.ts'), 'utf8');
+  const portfolioWriter = fs.readFileSync(path.join(root, 'src/framework/reporting/portfolio-dashboard.writer.ts'), 'utf8');
+  const proposalReview = fs.readFileSync(path.join(root, 'src/framework/intelligence/review/proposal.review.ts'), 'utf8');
+  const generator = fs.readFileSync(path.join(root, 'src/framework/intelligence/generation/framework.generator.ts'), 'utf8');
+  const newTest = fs.readFileSync(path.join(root, 'scripts/new-test.ts'), 'utf8');
+  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
+  const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  if (!portfolioRunner.includes('writePortfolioDashboard') || !portfolioRunner.includes('Known defects') && !portfolioWriter.includes('Known defects')) issues.push('business-friendly portfolio dashboard contract missing');
+  if (!portfolioRunner.includes('resolveProviderOrder') || !portfolioRunner.includes('--include-ai requires AI_ENABLED=true')) issues.push('portfolio AI provider preflight contract missing');
+  if (!githubWorkflow.includes("ALLOW_AI_TESTS: 'true'") || !azurePipeline.includes('ALLOW_AI_TESTS=true')) issues.push('dedicated CI AI lane must explicitly allow @ai tests');
+  for (const scriptName of ['test:ai-healing', 'test:ai-healing:ollama', 'test:ai-healing:gemini']) {
+    if (!String(pkg.scripts?.[scriptName] ?? '').includes('ALLOW_AI_TESTS=true')) issues.push(`${scriptName} must explicitly opt into @ai selection`);
+  }
+  if (!proposalReview.includes('agent-generated database validation must remain read-only') || !proposalReview.includes('BaseApiClient/domain-service contract')) issues.push('generated API/DB proposal safety gate missing');
+  if (!generator.includes('layers: analysis.suggestedLayers') || !newTest.includes('Target automation layers:')) issues.push('layer-aware agent authoring contract missing');
+} catch (error) {
+  issues.push(`unable to validate portfolio/agent authoring contracts: ${error.message}`);
 }
 
 // Authentication lifecycle release contracts (v1.3.0+).

@@ -63,6 +63,7 @@ export interface GenerationManifest {
   createdAt:string;
   reviewRequired:true;
   targetApplication?:string;
+  layers?:AutomationLayer[];
   reused:ReusableCandidate[];
   knowledgeEvidence?:ApplicationKnowledgeMatch[];
   created:Array<{kind:string;path:string;reason:string}>;

@@ -1,3 +1,40 @@
+# TestigentAI v1.4.2 — Multi-project capability isolation and dormant E2E sample hardening
+
+- Fixed a multi-project isolation defect where a machine/repository-level `DB_TYPE` value could override a project's configured `database.type=none` and accidentally activate `@db` scenarios in unrelated products.
+- Database type is now exclusively owned by `projects/<project>/config/<env>.json`; environment variables provide only connection secrets and adapter settings. This keeps customer/project capability boundaries deterministic.
+- Added a regression contract proving a leaked global `DB_TYPE=postgres` cannot activate DB capability for a project configured with `database.type=none`.
+- Hardened the demo UI/API/DB reference scenario to explicitly open the Todo application before interacting with the work-item input. The missing navigation had been dormant while the optional DB capability correctly skipped the scenario.
+- Preserved lazy deterministic-first healing. When the dormant cross-layer scenario ran from a blank page, AI was allowed to propose recovery but semantic safety correctly refused to hide the test-design defect.
+- Updated README, onboarding/database documentation and `.env.example` to remove the shared DB-type override pattern and clarify project-owned database selection.
+- No auth, reporting, proposal approval, portfolio selection, AI provider, CI merge, or known-defect semantics were weakened.
+
+## TestigentAI v1.4.1 — Lazy AI recovery, governed cross-layer authoring and business portfolio reporting
+
+- Preserved the v1.4.0 dynamic multi-project runner while hardening the AI boundary: normal tests no longer instantiate an AI provider merely because AI is enabled.
+- UI healing remains available across the suite with the safe order primary locator -> deterministic fallback -> validated cache -> lazy AI fallback; AI is created only when deterministic recovery is exhausted.
+- Dedicated local/GitHub/Azure AI lanes now set the same explicit `ALLOW_AI_TESTS=true` selection contract.
+- Portfolio `--include-ai` performs one provider/configuration preflight before executing projects, while dry-run remains secret-free.
+- Added a lightweight business-first portfolio dashboard at `reports/multi-project/index.html` without changing existing per-project business/engineering reports.
+- Extended portfolio facts with executed/not-applicable/blocked scenarios, quality failures, known defects, CI blockers, validated healing and AI usage.
+- Extended the existing requirement-intelligence/proposal pipeline to author UI, API, database and mixed E2E automation using one workflow; no parallel agent framework or extra onboarding command surface was introduced.
+- Human approval remains the trust boundary before generated automation is promoted into normal project tests.
+- Added generated-code safeguards: API proposals stay behind domain/BaseApiClient boundaries and may not invent contracts; database proposals are read-only by default and mutating/destructive SQL is blocked from proposal approval.
+- Added recovery-boundary documentation separating UI locator healing, authentication recovery, API resilience and database resilience so business-contract changes are never silently healed.
+- Simplified new-project onboarding documentation and clarified automatic portfolio discovery/customer grouping.
+- Kept local portfolio execution intentionally sequential across products while Playwright parallelizes within each product; CI sharding remains the scale-out mechanism, avoiding nested browser/API/DB oversubscription and unnecessary framework complexity.
+
+
+## v1.4.0 — Multi-project customer portfolio execution
+
+- Added dynamic `test:projects` runner with `--all`, `--apps`, and `--group` selectors.
+- New projects are automatically included by `--all` when they provide `projects/<project>/config`.
+- Added customer/portfolio groups through `config/project-groups.json`.
+- Added common `--env` and per-project `--env-map` environment selection.
+- Portfolio execution continues through failures by default and supports optional `--fail-fast`.
+- Added `--dry-run` execution-plan preview and `--include-ai` explicit AI-tag opt-in.
+- Added cross-project machine-readable summary at `reports/multi-project/summary.json`.
+- Added framework contracts for dynamic discovery, mixed environments, group selection and fail-closed ambiguous environment handling.
+- Added dedicated multi-project documentation and product README guidance.
 ## v1.3.9 - Zero-selection and empty-shard reporting hardening
 
 - Fixed the SDET Practice PR-profile selection gap by tagging the critical CRUD business scenario with `@smoke`; `TEST_PROFILE=pr` now selects a real business test instead of producing an empty run.

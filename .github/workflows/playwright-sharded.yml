@@ -192,6 +192,7 @@ jobs:
       AUTH_REFRESH_TOKEN: ${{ secrets.AUTH_REFRESH_TOKEN }}
 
       AI_ENABLED: 'true'
+      ALLOW_AI_TESTS: 'true'
       AI_PROVIDER_MODE: ${{ vars.AI_PROVIDER_MODE || 'single' }}
       AI_PROVIDER: ${{ vars.AI_PROVIDER || '' }}
       AI_PROVIDER_ORDER: ${{ vars.AI_PROVIDER_ORDER || '' }}
@@ -312,6 +313,7 @@ jobs:
           }
 
           [[ "${AI_ENABLED}" == "true" ]] || fail "AI_ENABLED must be true in the AI job."
+          [[ "${ALLOW_AI_TESTS}" == "true" ]] || fail "ALLOW_AI_TESTS must be true in the dedicated AI job."
           [[ "${HEALING_AI_ENABLED}" == "true" ]] || fail "HEALING_AI_ENABLED must be true in the AI job."
 
           [[ "${AI_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TIMEOUT_MS must be numeric."

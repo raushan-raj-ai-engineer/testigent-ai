@@ -1,4 +1,4 @@
-# Business Reporting Standard — v1.2.6
+# Business Reporting Standard
 
 ## Purpose
 
@@ -160,3 +160,8 @@ CI shard reports are intermediate transport artifacts. Normal shards exclude `@a
 
 For a failed business step, the business dashboard presents one primary screenshot inline at the failure point. The scenario-level **Additional attachments** area excludes image evidence already represented inline and retains video, trace, logs, error context, and other unique artifacts. This prevents duplicate screenshots without reducing evidence availability.
 
+
+
+## Portfolio reporting
+
+Multi-project/customer execution adds an estate-level business view under `reports/multi-project/index.html` while preserving each project dashboard as the detailed source. The portfolio page uses the same deterministic project reports and does not recalculate alternative pass/fail semantics. It highlights project gate, selected/executed scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical traces remain in project-level drill-down reports.

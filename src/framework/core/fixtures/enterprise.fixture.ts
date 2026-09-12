@@ -118,7 +118,7 @@ export const test = base.extend<EnterpriseFixtures>({
     const healer = new HealingOrchestrator(
       page,
       logger.child({ layer: 'UI_HEALING' }),
-      createAiGateway(testInfo.testId),
+      () => createAiGateway(testInfo.testId),
       testInfo.testId,
     );
     try { await use(healer); } finally { await browserLogs.attachIfUseful(); }
