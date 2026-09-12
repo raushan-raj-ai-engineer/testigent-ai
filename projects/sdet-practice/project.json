@@ -7,6 +7,12 @@
       "allowAi": false,
       "allowGenerated": false,
       "allowManual": false
+    },
+    "pr": {
+      "includeTags": [
+        "@smoke",
+        "@critical"
+      ]
     }
   },
   "capabilities": {

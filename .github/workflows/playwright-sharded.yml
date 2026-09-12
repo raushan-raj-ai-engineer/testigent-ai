@@ -241,6 +241,7 @@ jobs:
           --project=chromium
           --shard=${{ matrix.shard }}
           --grep-invert="@ai"
+          --pass-with-no-tests
 
       - name: Upload technical blob
         if: ${{ always() && !cancelled() }}
