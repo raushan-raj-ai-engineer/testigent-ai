@@ -39,13 +39,29 @@ APP=demo ENV=qa npm run scale:audit
 
 Read `docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md`, `docs/20-V6-DATA-PARALLEL-EXECUTION.md`, `docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md`, and `docs/22-COMPETITIVE-BENCHMARK-PLAN.md`.
 
+## v1.3.x generic authentication lifecycle
+
+Authenticated projects can opt into a reusable auth lifecycle without putting project login logic in framework core. `src/framework` owns freshness checks, single-flight locking, fresh-context verification, atomic state promotion and safe navigation-boundary recovery; `projects/<project>/auth/` owns only the application-specific login/refresh implementation.
+
+```bash
+APP=<project> ENV=qa npm run auth:check
+APP=<project> ENV=qa npm run auth:prepare
+APP=<project> ENV=qa npm run test:project -- --project=chromium
+```
+
+`test:project` automatically prepares required browser auth before Playwright workers start. If a known token expiry approaches during a run, the framework may refresh before the next framework-owned action or at a navigation boundary. It never blindly replays mutating clicks/submits. See `docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md`.
+
+`v1.3.1` fixes the bundled SDET Practice demo-provider username casing and adds a deterministic provider request contract test. `v1.3.2` hardens release validation: all reusable exports again satisfy the JSDoc contract and `npm run validate:final` works on a clean checkout without requiring a saved APP/ENV selection. Runtime project selection remains explicit. `v1.3.3` fixes the release-gate environment scope so the entire validation chain—including scenario doctor—runs in the deterministic bundled `demo/qa` release context, while normal runtime commands still require explicit project selection. `v1.3.4` closes the remaining framework regressions exposed by the clean release run: the dashboard Reset Filters control is restored, MIME preview assertions tolerate standards-compliant quoted-printable folding, and requirement-intelligence fixtures now model initialized project fixtures required by the generator safety guard. `v1.3.5` aligns the last three stale framework assertions with current contracts: business skipped scenarios render as Blocked, explicit-new-app resolution is asserted before project bootstrap, and generated tests are expected to import the project-owned fixture rather than the legacy enterprise fixture.
+
 ## Daily use
 
 New joiners use the thin `qa:*` surface:
 
 ```bash
 npm run qa:status
-# auth-required projects only:
+# auth-required projects only; normally non-interactive when lifecycle autoRefresh is configured:
+npm run auth:prepare
+# manual fallback / MFA-assisted local capture:
 npm run qa:auth
 npm run qa:new -- <requirement-id-or-file>
 npm run qa:test -- --project=chromium
@@ -54,7 +70,7 @@ npm run qa:report
 npm run qa:heal
 ```
 
-Auth capture is verified in a fresh browser context before it is promoted. The framework also restores a gitignored sessionStorage companion when required and raises `AUTH_SESSION_INVALID` before locator healing if the selected session is no longer authenticated.
+Auth state is verified in a fresh browser context before promotion. Auto-refresh providers are project-owned, auth files stay gitignored, and sessionStorage is restored through a companion state file when needed. Expired auth is recovered at safe navigation boundaries only; locator healing never treats a login page as selector drift.
 
 Normal business specs consume project `app`, `api`, `repositories` and data fixtures. Page mechanics stay in Page Objects/LocatorPlans, business journeys stay in workflows, and reusable engines stay under `src/framework`. `npm run architecture:check` prevents ordinary specs from bypassing these boundaries.
 

@@ -1,3 +1,51 @@
+## v1.3.5 - Final stale-contract regression closure
+
+- Updated dashboard interactive regression to assert the current business-status label `Blocked` instead of legacy `Skipped`.
+- Preserved the explicit-new-app resolver contract by asserting resolution before bootstrapping the new project fixture, then generating only after the fixture exists.
+- Updated generated-test architecture assertion from the legacy global `enterprise.fixture.js` import to the current project-owned `../../fixtures/test.fixture.js` import.
+- No production auth, generator safety, reporting semantics, or runtime project-selection behavior was weakened.
+
+## v1.3.4 - Final framework regression closure
+
+- Restored the `Reset filters` dashboard control expected by the interactive dashboard runtime and its existing JavaScript reset handler.
+- Hardened the mail preview contract against quoted-printable soft line folding without weakening the requirement that the public dashboard URL is present in the generated EML.
+- Updated requirement-intelligence test fixtures to create the same per-project `fixtures/test.fixture.ts` contract required by production generation safety checks.
+- Preserved the v1.3.x automatic-auth lifecycle, single-flight refresh, atomic verified state promotion, lowercase SDET Practice provider fallback, and deterministic clean-checkout release context.
+- No dependency version changes.
+
+
+## v1.3.3 - Clean-checkout release context propagation
+
+- Fixed `validate:final` so `APP=demo` and `ENV=qa` wrap the complete release-validation chain, not only framework health.
+- `scenario:doctor` and any later workspace-aware release gate now inherit the same deterministic context.
+- Runtime/project commands remain strict and do not silently default to the demo project.
+- Updated the static release contract to validate the delegated final-validation step chain.
+## v1.3.2 - Release-gate hardening
+
+- Restored reusable JSDoc coverage for all 183 exported framework declarations after the auth lifecycle refactor.
+- Made `npm run validate:final` deterministic on a clean checkout by using `framework:health:release` against the bundled `demo/qa` reference project.
+- Kept `framework:health` project-aware for normal developer/CI validation; no silent project default was added to runtime configuration.
+- Retains the v1.3.1 lowercase `admin@test.com` SDET Practice provider correction and auth-provider regression contract.
+
+# TestigentAI v1.3.1
+
+- Fixed the SDET Practice automatic-auth provider default username casing from `Admin@test.com` to the live application's accepted `admin@test.com`, resolving `AUTH_REFRESH_FAILED: HTTP 401` on clean v1.3.0 installs.
+- Added a deterministic project-provider contract test that validates the exact form login request and resulting `sdet_access_token` storage state without depending on the live SUT.
+- Preserved `AUTH_USERNAME` / `AUTH_PASSWORD` secret overrides, so private or environment-specific credentials remain external to the framework.
+
+# TestigentAI v1.3.0
+## Generic auth lifecycle and pipeline-safe refresh
+
+- Added a project-neutral `AuthManager` and pluggable project auth provider contract.
+- Required UI/E2E auth is prepared before Playwright worker fan-out, reducing duplicate logins on one runner.
+- Added proactive refresh using known token expiry plus a configurable safety skew.
+- Added cross-process single-flight locking so parallel workers/processes do not refresh the same local state simultaneously.
+- Refresh candidates are verified in a fresh browser context before atomic promotion; the previous known-good state is preserved on failure.
+- Added live `BrowserContext.setStorageState()` application plus explicit localStorage/sessionStorage restore for safe pre-action refresh and mid-run navigation recovery.
+- Runtime recovery is intentionally bounded and never blindly retries mutating clicks/submits.
+- Added `auth:check` and `auth:prepare`, lifecycle visibility in `qa:doctor`, reusable provider template, SDET Practice API-login example, CI secret mappings and release contracts.
+- Removed scale-audit noise for `_agent/seed.spec.ts`, which is authoring/bootstrap infrastructure rather than a business execution lane.
+
 # TestigentAI v1.2.9
 ## v1.2.9 evidence de-duplication
 

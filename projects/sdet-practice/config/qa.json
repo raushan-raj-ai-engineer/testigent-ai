@@ -21,6 +21,17 @@
       },
       "settleMs": 400,
       "timeoutMs": 2500
+    },
+    "lifecycle": {
+      "autoRefresh": true,
+      "providerModule": "auth/auth.provider.ts",
+      "verifyBeforeRun": true,
+      "refreshSkewMs": 120000,
+      "maxRefreshAttempts": 2,
+      "runtimeRecovery": "navigation",
+      "maxRuntimeRefreshes": 1,
+      "lockTimeoutMs": 30000,
+      "lockStaleMs": 120000
     }
   },
   "capabilities": {

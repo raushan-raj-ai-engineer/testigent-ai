@@ -1,6 +1,10 @@
 # Authentication, Secrets and Environments
 
-Project authentication is configured in `projects/<project>/config/<env>.json`; reusable framework code never owns project credentials or login selectors.
+Project authentication is configured in `projects/<project>/config/<env>.json`; reusable framework code never owns project credentials, login selectors, endpoints or token keys.
+
+## Recommended v1.3 lifecycle
+
+For a project that supports non-interactive refresh, configure required storage state plus a project-owned provider:
 
 ```json
 {
@@ -9,41 +13,70 @@ Project authentication is configured in `projects/<project>/config/<env>.json`; 
     "storageStatePath": ".auth/project2.qa.json",
     "required": true,
     "verification": {
-      "unauthenticatedControl": {
-        "role": "button",
-        "name": "Login",
-        "exact": true
-      },
-      "timeoutMs": 2500
+      "stateKey": { "name": "access_token", "storage": "either" },
+      "unauthenticatedControl": { "role": "button", "name": "Login", "exact": true }
+    },
+    "lifecycle": {
+      "autoRefresh": true,
+      "providerModule": "auth/auth.provider.ts",
+      "verifyBeforeRun": true,
+      "refreshSkewMs": 120000,
+      "maxRefreshAttempts": 2,
+      "runtimeRecovery": "navigation",
+      "maxRuntimeRefreshes": 1
     }
   }
 }
 ```
 
-`verification` is required for projects whose storage state is required. A project may configure an authenticated or unauthenticated URL pattern/control. This keeps application-specific login knowledge in project configuration instead of reusable framework code.
+`src/framework/core/auth.manager.ts` owns lifecycle policy: freshness, locking, candidate verification, persistence and safe recovery. `projects/<project>/auth/auth.provider.ts` owns how that application logs in or refreshes a token.
 
-Create/refresh state through the thin developer command:
+## Normal commands
+
+```bash
+APP=<project> ENV=qa npm run auth:check
+APP=<project> ENV=qa npm run auth:prepare
+APP=<project> ENV=qa npm run test:project -- --project=chromium
+```
+
+`test:project` automatically prepares required UI/E2E auth before workers are spawned. API/DB-only lanes remain capability-aware and are not forced to create browser auth state.
+
+When the configured state has a known expiry, TestigentAI refreshes before the expiry safety window. During execution, a known-expiry guard may refresh immediately before framework-owned click/fill actions, while invalid-session recovery is limited to navigation boundaries. Verified refreshed state is hot-applied to the current browser context; mutating actions are never blindly repeated.
+
+## Manual/MFA fallback
+
+For projects that cannot non-interactively refresh, keep lifecycle `autoRefresh` disabled and run:
 
 ```bash
 npm run qa:auth
 ```
 
-`qa:auth` is deliberately stricter than a normal storage-state capture:
+The interactive capture flow verifies the current session, captures Playwright browser state plus a gitignored sessionStorage companion, proves the capture in a second fresh browser context, and only then promotes it as known-good state.
 
-1. open a clean interactive browser context;
-2. let the engineer complete login;
-3. verify the current page against the project auth contract;
-4. capture Playwright cookies/localStorage plus a gitignored sessionStorage companion;
-5. restore both into a second fresh browser context;
-6. revisit the application and verify authentication again;
-7. only then promote the new auth files as the local known-good state.
+## Verification is mandatory for required browser auth
 
-If a fresh context still shows the configured unauthenticated marker, auth capture fails and the previous known-good auth state is not replaced. This prevents an empty/invalid `.auth` file from making `qa:doctor` look healthy.
+A required storage-state project should configure a meaningful verification contract using a state key, authenticated/unauthenticated URL pattern, or authenticated/unauthenticated visible control. File existence alone is not considered proof of authentication.
 
-Normal UI execution restores the Playwright storage state through `playwright.config.ts` and restores the optional sessionStorage companion through the reusable enterprise fixture. Authenticated `BasePage.navigate()` calls verify the configured auth contract immediately after navigation. An expired/missing session therefore fails as `AUTH_SESSION_INVALID` before locator healing starts; login-page controls are never treated as locator drift.
+If authentication cannot be recovered, execution fails as an authentication problem before locator healing. A login-page button must never be interpreted as selector drift.
 
-The generated auth files may contain cookies/tokens and are ignored by Git. For mutating parallel suites, prefer separate test accounts or per-worker authentication rather than sharing one mutable account.
+## Secrets
 
-Never place passwords, SMTP credentials, API tokens, database passwords, or connector tokens in committed YAML or JSON. Local secrets belong in `.env`; CI secrets belong in the CI provider’s secret store and should be mapped to environment variables.
+Never place passwords, refresh tokens, client secrets, API keys, SMTP credentials, database passwords or private session files in committed YAML/JSON. Local secrets belong in `.env`; CI secrets belong in the provider's secret store and are mapped to environment variables only for the jobs that need them.
 
-Environment files are project-owned. Add `uat.json`, `stage.json`, etc. under the project rather than creating global application maps.
+Common optional provider inputs are:
+
+```text
+AUTH_USERNAME
+AUTH_PASSWORD
+AUTH_CLIENT_ID
+AUTH_CLIENT_SECRET
+AUTH_REFRESH_TOKEN
+```
+
+Projects may use different names when required by their identity platform. The reusable framework does not require a particular authentication vendor.
+
+Generated `.auth/` state and lifecycle metadata are gitignored because they may contain impersonation-capable browser state. Do not publish them as ordinary CI artifacts.
+
+Environment files remain project-owned. Add `uat.json`, `stage.json`, etc. under the project rather than creating global application maps.
+
+For the architecture, concurrency model, CI guidance and provider template, read `docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md`.

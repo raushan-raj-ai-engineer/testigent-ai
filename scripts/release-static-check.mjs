@@ -63,6 +63,23 @@ for (const project of fs.readdirSync(path.join(root, 'projects'), { withFileType
         if (!verification || (!verification.stateKey && !verification.unauthenticatedControl && !verification.authenticatedControl && !verification.unauthenticatedUrlPattern && !verification.authenticatedUrlPattern)) {
           issues.push(`required storageState auth verification missing: projects/${project}/config/${environmentFile}`);
         }
+        const lifecycle = environmentJson.auth?.lifecycle;
+        if (lifecycle?.autoRefresh === true) {
+          const providerModule = String(lifecycle.providerModule ?? '').trim();
+          if (!providerModule) {
+            issues.push(`auto-refresh auth provider missing: projects/${project}/config/${environmentFile}`);
+          } else {
+            const providerPath = providerModule.startsWith('projects/')
+              ? path.join(root, providerModule)
+              : path.join(root, 'projects', project, providerModule);
+            if (!fs.existsSync(providerPath)) issues.push(`auto-refresh auth provider file missing: ${path.relative(root, providerPath)}`);
+          }
+          for (const key of ['refreshSkewMs', 'maxRefreshAttempts', 'maxRuntimeRefreshes', 'lockTimeoutMs', 'lockStaleMs']) {
+            if (lifecycle[key] !== undefined && (!Number.isInteger(lifecycle[key]) || lifecycle[key] <= 0)) {
+              issues.push(`invalid auth.lifecycle.${key}: projects/${project}/config/${environmentFile}`);
+            }
+          }
+        }
       }
     } catch (error) {
       issues.push(`unable to validate project environment capability for ${project}/${environmentFile}: ${error.message}`);
@@ -108,6 +125,13 @@ for (const required of [
   'src/framework/core/config/capability.policy.ts',
   'src/framework/core/auth.state.ts',
   'src/framework/core/auth.verifier.ts',
+  'src/framework/core/auth.manager.ts',
+  'src/framework/core/auth.provider.ts',
+  'src/framework/core/auth.lock.ts',
+  'scripts/auth-prepare.ts',
+  'tests/framework/auth-lifecycle.spec.ts',
+  'tests/framework/sdet-auth-provider.contract.spec.ts',
+  'docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md',
   'scripts/qa.ts',
   'scripts/healing-maintenance.ts',
   'templates/project/src/app.facade.ts',
@@ -151,7 +175,8 @@ try {
   for (const scenarioScript of ['scenario:help', 'scenario:list', 'scenario:validate', 'scenario:new', 'scenario:run', 'scenario:doctor', 'scenario:schema', 'scenario:schema:check']) {
     if (!pkg.scripts?.[scenarioScript]) issues.push(`missing declarative authoring script: ${scenarioScript}`);
   }
-  if (!pkg.scripts?.['validate:final']?.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
+  const finalValidationContract = `${pkg.scripts?.['validate:final'] ?? ''} ${pkg.scripts?.['validate:final:steps'] ?? ''}`;
+  if (!finalValidationContract.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
@@ -257,20 +282,32 @@ try {
   issues.push(`unable to validate reporting merge/evidence contracts: ${error.message}`);
 }
 
-// Authentication-state release contracts (v1.2.5+).
+// Authentication lifecycle release contracts (v1.3.0+).
 try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const appAuth = fs.readFileSync(path.join(root, 'scripts/app-auth.ts'), 'utf8');
   const authState = fs.readFileSync(path.join(root, 'src/framework/core/auth.state.ts'), 'utf8');
   const authVerifier = fs.readFileSync(path.join(root, 'src/framework/core/auth.verifier.ts'), 'utf8');
+  const authManager = fs.readFileSync(path.join(root, 'src/framework/core/auth.manager.ts'), 'utf8');
+  const authProvider = fs.readFileSync(path.join(root, 'src/framework/core/auth.provider.ts'), 'utf8');
+  const authLock = fs.readFileSync(path.join(root, 'src/framework/core/auth.lock.ts'), 'utf8');
+  const testProject = fs.readFileSync(path.join(root, 'scripts/test-project.ts'), 'utf8');
   const basePage = fs.readFileSync(path.join(root, 'src/framework/core/ui/base.page.ts'), 'utf8');
   const fixture = fs.readFileSync(path.join(root, 'src/framework/core/fixtures/enterprise.fixture.ts'), 'utf8');
   if (!appAuth.includes('fresh browser context') && !appAuth.includes('verifyContext')) issues.push('qa:auth must verify captured state in a fresh browser context');
-  if (!authState.includes('SessionStorageSnapshot')) issues.push('sessionStorage auth companion support missing');
+  if (!appAuth.includes('promoteVerifiedFile')) issues.push('qa:auth must promote verified state with cross-platform replacement fallback');
+  if (!authState.includes('SessionStorageSnapshot') || !authState.includes('atomicWriteJson') || !authState.includes('applyLocalStorageStateToPage')) issues.push('atomic/live browser storage auth persistence contract missing');
   if (!fixture.includes('installSessionStorageSnapshot')) issues.push('enterprise fixture must restore sessionStorage auth state before test navigation');
   if (!authVerifier.includes('AUTH_SESSION_INVALID')) issues.push('explicit invalid-auth runtime diagnostic missing');
-  if (!basePage.includes('assertAuthenticatedPage')) issues.push('authenticated navigation must fail before locator healing when auth is invalid');
+  if (!basePage.includes('AuthManager') || !basePage.includes('ensureAuthenticatedNavigation') || !basePage.includes('ensureFreshBeforeAction')) issues.push('authenticated navigation/actions must use lifecycle recovery before locator healing');
+  if (!authManager.includes('acquireFileLock') || !authManager.includes('setStorageState') || !authManager.includes('validateAndPromote')) issues.push('single-flight verified hot auth refresh contract missing');
+  if (!authManager.includes('shouldRefreshProactively') || !authManager.includes('refreshAndReplayNavigation') || !authManager.includes('ensureFreshBeforeAction')) issues.push('safe-boundary proactive auth refresh contract missing');
+  if (!authProvider.includes('loadProjectAuthProvider')) issues.push('project-owned pluggable auth provider contract missing');
+  if (!authLock.includes("openSync(file, 'wx'")) issues.push('cross-process auth refresh lock contract missing');
+  if (!testProject.includes('prepareForRun')) issues.push('test:project must prepare auth before Playwright worker fan-out');
+  if (!pkg.scripts?.['auth:prepare'] || !pkg.scripts?.['auth:check']) issues.push('auth lifecycle CLI scripts missing');
 } catch (error) {
-  issues.push(`unable to validate auth-state contracts: ${error.message}`);
+  issues.push(`unable to validate auth lifecycle contracts: ${error.message}`);
 }
 
 for (const file of walk(root).filter(f => f.endsWith('.json'))) {

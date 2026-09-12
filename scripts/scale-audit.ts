@@ -77,6 +77,9 @@ function auditTests(project: string, findings: AuditFinding[]): void {
   const root = path.resolve('projects', project, 'tests');
   if (!fs.existsSync(root)) return;
   for (const file of walk(root).filter(file => /\.spec\.[cm]?[jt]s$/i.test(file))) {
+    const normalized = file.replace(/\\/g, '/');
+    // _agent/seed.spec.ts is authoring/bootstrap infrastructure, not a runnable business lane.
+    if (normalized.includes('/tests/_agent/seed.spec.')) continue;
     const text = fs.readFileSync(file, 'utf8');
     const hasExecutionLane = /@lane:(ui|api|db|e2e|ai|visual|accessibility|performance)|@(ui|api|db|e2e|ai|visual|accessibility|performance)\b/.test(text);
     const isPureDataContract = /@data\b/.test(text);

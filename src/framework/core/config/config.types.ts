@@ -66,11 +66,35 @@ export interface ProjectAuthVerificationConfig {
   timeoutMs?: number;
 }
 
+export type AuthRuntimeRecoveryMode = 'off' | 'navigation';
+
+export interface ProjectAuthLifecycleConfig {
+  /** Enables project-owned non-interactive refresh through providerModule. */
+  autoRefresh?: boolean;
+  /** Project-relative (preferred) or repository-relative module exporting an auth provider. */
+  providerModule?: string;
+  /** Verify persisted auth in a fresh browser before UI/E2E execution. */
+  verifyBeforeRun?: boolean;
+  /** Refresh this far ahead of a known token expiry to avoid mid-action expiry. */
+  refreshSkewMs?: number;
+  /** Number of provider attempts for one refresh operation. */
+  maxRefreshAttempts?: number;
+  /** Safe in-test recovery boundary. Navigation can be replayed; mutating actions are never blindly replayed. */
+  runtimeRecovery?: AuthRuntimeRecoveryMode;
+  /** Maximum auth refreshes initiated by one browser context after execution has started. */
+  maxRuntimeRefreshes?: number;
+  /** Cross-worker/process lock wait budget. */
+  lockTimeoutMs?: number;
+  /** Lock age after which a crashed refresh owner may be reclaimed. */
+  lockStaleMs?: number;
+}
+
 export interface ProjectAuthConfig {
   strategy: 'none' | 'storageState';
   storageStatePath?: string;
   required?: boolean;
   verification?: ProjectAuthVerificationConfig;
+  lifecycle?: ProjectAuthLifecycleConfig;
 }
 
 export interface ProjectEnvironmentConfig {
