@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildExecutionFacts } from '../src/framework/analytics/execution-facts';
 import type { AiRuntimeAuditRecord, BusinessTestResult, HealingAuditRecord, HealingSummary } from '../src/framework/analytics/report.types';
 import { mergeBusinessReports } from './merge-business-reports';
+import { formatBusinessStepSummary } from './ci-business-step-summary';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`REPORTING_MERGE_CONTRACT_FAILED: ${message}`);
@@ -71,6 +72,12 @@ function writeReport(root: string, name: string, results: BusinessTestResult[], 
     }
   });
   fs.writeFileSync(path.join(dir, 'business-report.json'), JSON.stringify(facts, null, 2));
+}
+
+function writeMarker(root: string, name: string, lane: 'core' | 'ai', shardIndex: number, shardTotal: number, hasTests: boolean | null = true): void {
+  const dir = path.join(root, name);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'ci-bundle.json'), JSON.stringify({ schemaVersion: 1, lane, shardIndex, shardTotal, hasTests }, null, 2));
 }
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-contract-'));
@@ -146,12 +153,19 @@ const aiRecord: AiRuntimeAuditRecord = {
 const healing: HealingSummary = { count: 1, fallback: 0, cache: 0, ai: 1, affectedTests: 1, records: [healingRecord], attempts: [healingRecord], attemptCount: 1, rejected: 0, suggested: 0, unverified: 0 };
 
 writeReport(root, 'shard-1', [pass, knownDefect]);
+writeMarker(root, 'shard-1', 'core', 1, 2);
 const shardEvidence = path.join(root, 'shard-1', 'evidence', 'failure.png');
 fs.mkdirSync(path.dirname(shardEvidence), { recursive: true });
 fs.writeFileSync(shardEvidence, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlY4QAAAABJRU5ErkJggg==', 'base64'));
 writeReport(root, 'shard-2', [dbNa]);
+writeMarker(root, 'shard-2', 'core', 2, 2);
 writeReport(root, 'ai', [aiPass], healing, [aiRecord]);
+writeMarker(root, 'ai', 'ai', 1, 1, true);
+process.env.EXPECTED_CORE_WORKERS = '2';
+process.env.EXPECT_AI_LANE = 'true';
 const merged = mergeBusinessReports(root);
+delete process.env.EXPECTED_CORE_WORKERS;
+delete process.env.EXPECT_AI_LANE;
 assert(merged.total === 4, `expected 4 selected, got ${merged.total}`);
 assert(merged.notApplicable === 1, `expected 1 not applicable, got ${merged.notApplicable}`);
 assert(merged.executionEligible === 3, `expected 3 applicable, got ${merged.executionEligible}`);
@@ -162,6 +176,9 @@ assert(merged.knownDefects === 1 && merged.qualityFailed === 1 && merged.ciBlock
 assert(merged.healing.count === 1 && merged.healing.ai === 1, 'validated AI healing must merge exactly once');
 assert(merged.aiUsage?.calls === 1 && merged.aiUsage.healingCalls === 1, 'AI usage must merge exactly once');
 assert(merged.aggregation?.mode === 'merged' && merged.aggregation.sourceReports === 3, 'aggregation metadata must identify three sources');
+assert(merged.aggregation?.coreReports === 2 && merged.aggregation.aiReports === 1 && merged.aggregation.aiResults === 1, 'aggregation metadata must distinguish core and AI bundles/results');
+const stepSummary = formatBusinessStepSummary(merged);
+assert(stepSummary.includes('Aggregated bundles: **3** (core 2, AI 1)') && stepSummary.includes('AI-specific results: **1**') && stepSummary.includes('CI-blocking issues: **0**'), 'GitHub step summary must render deterministic core/AI merged facts');
 assert(fs.existsSync(path.join(out, 'index.html')), 'merged dashboard must be generated');
 const mergedKnown = merged.results.find(result => result.testId === 'known-delete');
 const mergedScreenshot = mergedKnown?.attachments?.find(item => item.contentType.startsWith('image/'));
@@ -177,4 +194,78 @@ let duplicateRejected = false;
 try { mergeBusinessReports(dupRoot); } catch (error) { duplicateRejected = String(error).includes('Duplicate business scenario'); }
 assert(duplicateRejected, 'duplicate test IDs across shard/AI bundles must fail merge');
 
-console.log(JSON.stringify({ ok: true, selected: merged.total, applicable: merged.executionEligible, executed: merged.executed, notApplicable: merged.notApplicable, healing: merged.healing.count, aiCalls: merged.aiUsage?.calls ?? 0, sourceReports: merged.aggregation?.sourceReports }, null, 2));
+const sequentialRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-sequential-'));
+writeReport(sequentialRoot, 'sequential', [pass]);
+writeMarker(sequentialRoot, 'sequential', 'core', 1, 1);
+const sequential = mergeBusinessReports(sequentialRoot);
+assert(sequential.aggregation?.coreReports === 1 && sequential.aggregation.aiReports === 0, 'single sequential report must merge without requiring shard-specific configuration');
+
+
+const overshardRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-overshard-'));
+writeReport(overshardRoot, 'core-1', [pass]);
+writeMarker(overshardRoot, 'core-1', 'core', 1, 2, true);
+writeMarker(overshardRoot, 'core-2', 'core', 2, 2, false);
+process.env.EXPECTED_CORE_WORKERS = '2';
+const overshardMerged = mergeBusinessReports(overshardRoot);
+delete process.env.EXPECTED_CORE_WORKERS;
+assert(overshardMerged.aggregation?.coreReports === 1 && overshardMerged.total === 1, 'an intentionally empty over-sharded worker must not require a fake business report');
+
+const zeroSelectionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-zero-selection-'));
+writeMarker(zeroSelectionRoot, 'core-1', 'core', 1, 2, false);
+writeMarker(zeroSelectionRoot, 'core-2', 'core', 2, 2, false);
+process.env.EXPECTED_CORE_WORKERS = '2';
+let zeroSelectionRejected = false;
+try { mergeBusinessReports(zeroSelectionRoot); } catch (error) { zeroSelectionRejected = String(error).includes('No core business scenarios were selected'); }
+delete process.env.EXPECTED_CORE_WORKERS;
+assert(zeroSelectionRejected, 'all core workers selecting zero business tests must fail with an actionable profile/tagging error');
+
+const missingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-missing-'));
+writeReport(missingRoot, 'core-1', [pass]);
+writeMarker(missingRoot, 'core-1', 'core', 1, 2);
+writeReport(missingRoot, 'ai', [aiPass], healing, [aiRecord]);
+writeMarker(missingRoot, 'ai', 'ai', 1, 1, true);
+process.env.EXPECTED_CORE_WORKERS = '2';
+process.env.EXPECT_AI_LANE = 'true';
+let missingShardRejected = false;
+try { mergeBusinessReports(missingRoot); } catch (error) { missingShardRejected = String(error).includes('Incomplete CI core marker topology'); }
+delete process.env.EXPECTED_CORE_WORKERS;
+delete process.env.EXPECT_AI_LANE;
+assert(missingShardRejected, 'AI report must never satisfy a missing core shard count');
+
+const aiMissingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-ai-missing-'));
+writeReport(aiMissingRoot, 'core', [pass]);
+writeMarker(aiMissingRoot, 'core', 'core', 1, 1);
+writeMarker(aiMissingRoot, 'ai', 'ai', 1, 1, true);
+process.env.EXPECTED_CORE_WORKERS = '1';
+process.env.EXPECT_AI_LANE = 'true';
+let missingAiRejected = false;
+try { mergeBusinessReports(aiMissingRoot); } catch (error) { missingAiRejected = String(error).includes('AI tests were detected but the AI lane artifact does not contain business-report.json'); }
+delete process.env.EXPECTED_CORE_WORKERS;
+delete process.env.EXPECT_AI_LANE;
+assert(missingAiRejected, 'planned AI lane with detected tests must fail when its business report is missing');
+
+const aiEmptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-ai-empty-'));
+writeReport(aiEmptyRoot, 'core', [pass]);
+writeMarker(aiEmptyRoot, 'core', 'core', 1, 1);
+writeReport(aiEmptyRoot, 'ai', [contractResult({ testId: 'not-ai', title: 'Non AI result', status: 'passed', sourceFile: 'projects/demo/tests/ui/plain.spec.ts', tags: ['@ui'], layers: ['UI'], testType: 'UI_ONLY', durationMs: 10 })]);
+writeMarker(aiEmptyRoot, 'ai', 'ai', 1, 1, true);
+process.env.EXPECTED_CORE_WORKERS = '1';
+process.env.EXPECT_AI_LANE = 'true';
+let emptyAiRejected = false;
+try { mergeBusinessReports(aiEmptyRoot); } catch (error) { emptyAiRejected = String(error).includes('contains no @ai-specific result'); }
+delete process.env.EXPECTED_CORE_WORKERS;
+delete process.env.EXPECT_AI_LANE;
+assert(emptyAiRejected, 'AI lane with detected tests must contain at least one @ai business result');
+
+const aiNotApplicableRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-ai-na-'));
+writeReport(aiNotApplicableRoot, 'core', [pass]);
+writeMarker(aiNotApplicableRoot, 'core', 'core', 1, 1);
+writeMarker(aiNotApplicableRoot, 'ai', 'ai', 1, 1, false);
+process.env.EXPECTED_CORE_WORKERS = '1';
+process.env.EXPECT_AI_LANE = 'true';
+const aiNotApplicable = mergeBusinessReports(aiNotApplicableRoot);
+delete process.env.EXPECTED_CORE_WORKERS;
+delete process.env.EXPECT_AI_LANE;
+assert(aiNotApplicable.aggregation?.aiReports === 0 && aiNotApplicable.aggregation.aiResults === 0, 'AI lane with no @ai tests must be recorded as not applicable rather than treated as missing');
+
+console.log(JSON.stringify({ ok: true, selected: merged.total, applicable: merged.executionEligible, executed: merged.executed, notApplicable: merged.notApplicable, healing: merged.healing.count, aiCalls: merged.aiUsage?.calls ?? 0, aiResults: merged.aggregation?.aiResults ?? 0, coreReports: merged.aggregation?.coreReports ?? 0, aiReports: merged.aggregation?.aiReports ?? 0, sourceReports: merged.aggregation?.sourceReports }, null, 2));

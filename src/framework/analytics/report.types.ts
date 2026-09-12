@@ -266,6 +266,12 @@ export interface ReportHistoryPoint {
 export interface ReportAggregation {
   mode: 'single' | 'merged';
   sourceReports: number;
+  /** Non-AI sequential/shard report bundles included in the merge. */
+  coreReports?: number;
+  /** Dedicated AI-lane report bundles included in the merge. */
+  aiReports?: number;
+  /** Merged business results explicitly tagged @ai. */
+  aiResults?: number;
   sourceRunIds: string[];
   sourceDirectories?: string[];
 }

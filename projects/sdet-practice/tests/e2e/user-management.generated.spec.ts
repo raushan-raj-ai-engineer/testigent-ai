@@ -11,7 +11,7 @@ import type { CreateUserData } from '../../src/pages/user-management.page.js';
 const deleteDefect = KnownDefectRegistry.get('sdet-practice', 'SDET-DEL-001');
 
 test(
-  'Admin can create, update and delete a user @requirement:sdet-user-crud @app:sdet-practice @critical @user-management @crud @ui',
+  'Admin can create, update and delete a user @requirement:sdet-user-crud @app:sdet-practice @critical @smoke @user-management @crud @ui',
   async ({ app, data }, testInfo) => {
     const defaults = await data.load<{ namePrefix: string; emailPrefix: string; emailDomain: string; password: string }>(
       'projects/sdet-practice/data/users/create-user.json',

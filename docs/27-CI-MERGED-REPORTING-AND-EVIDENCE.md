@@ -91,3 +91,48 @@ Both run through `npm run reporting:contract`, which is part of `qa:validate` / 
 4. Reliability signals (retry, healing, AI).
 5. Business scenarios and failed-step evidence.
 6. Playwright HTML/trace for engineering-level debugging.
+
+## Merge-job hardening (v1.3.6)
+
+The GitHub merge job publishes its step summary through `npm run ci:business:summary`; it does not embed Node.js in a Bash heredoc. This avoids whitespace/terminator failures in generated runner scripts and keeps summary rendering non-blocking when an earlier merge gate already failed.
+
+Both GitHub Actions and Azure Pipelines now pass `EXPECTED_BUSINESS_REPORTS` to the business merge. The merge fails closed when fewer required non-AI shard bundles are present, preventing a partial shard download from being published as a complete quality report. The final artifact upload uses `if-no-files-found: warn` so it does not replace the real merge error with a secondary missing-artifact error.
+
+
+## Dynamic sequential/sharded + AI merge topology (v1.3.8)
+
+The merged business report treats **core execution** and the optional **AI lane** as separate completeness contracts. This prevents an AI artifact from accidentally satisfying a missing Playwright shard.
+
+- Core workers are configurable. `1` means a true sequential run with no `--shard` argument; `N > 1` means `N` Playwright shards.
+- GitHub Actions: use workflow-dispatch input `shards`, or repository variable `CI_SHARDS` for push/PR defaults.
+- Azure Pipelines: use the existing `shards` parameter; `shards: 1` is sequential.
+- Each core worker writes `ci-bundle.json` with its shard identity before artifact upload.
+- The optional AI job writes an AI-lane marker even when the project has no `@ai` tests.
+- If AI tests are detected, merge requires the AI business report and at least one business result tagged `@ai`.
+- If no AI tests exist, the AI lane is **not applicable**, not failed.
+- Merged facts expose `aggregation.coreReports`, `aggregation.aiReports`, and `aggregation.aiResults`; `aiUsage` continues to aggregate provider/runtime calls independently.
+
+Examples:
+
+```bash
+# Local/sequential merge: one core report is valid when no strict count is supplied.
+npm run report:merge:business -- all-business-reports
+
+# CI sequential contract.
+EXPECTED_CORE_WORKERS=1 npm run report:merge:business -- all-business-reports
+
+# CI 4-shard contract + planned AI lane.
+EXPECTED_CORE_WORKERS=4 EXPECT_AI_LANE=true npm run report:merge:business -- all-business-reports
+```
+
+
+## Zero-selection vs empty-shard behavior (v1.3.9)
+
+Core worker topology and business report count are intentionally different concepts. A run may request more shards than selected tests. CI therefore records one `ci-bundle.json` marker per planned core worker and lets each marker declare whether that worker actually executed business scenarios.
+
+- Empty shard because of over-sharding: valid; no fake business report is required.
+- Missing worker marker: invalid; the CI topology is incomplete.
+- Worker says it selected tests but its business report is missing: invalid.
+- Every core worker reports `hasTests=false`: invalid; the selected profile/grep combination matched zero business scenarios.
+
+Core CI workers use Playwright `--pass-with-no-tests` only so an intentionally empty shard can reach the merge/topology gate. The final merge still fails closed when the whole execution selected zero business scenarios. Local `test:project` runs do not opt into that behavior by default and fail with `NO_BUSINESS_TESTS_SELECTED` if a successful Playwright command produces no business report rows.

@@ -54,11 +54,28 @@ function auditExecutionMatrix(project: string, findings: AuditFinding[]): void {
         if (profile === 'custom' && (policy.allowAi || policy.allowGenerated || policy.allowManual)) {
           findings.push({ level: 'ERROR', code: 'CUSTOM_GOVERNANCE', message: `${project}/${environment}/custom must default-deny AI, generated and manual execution.` });
         }
+        if (policy.includeTags.length && !projectHasAnyTag(project, policy.includeTags)) {
+          findings.push({
+            level: 'ERROR',
+            code: 'PROFILE_EMPTY',
+            message: `${project}/${environment}/${profile} requires one of [${policy.includeTags.join(', ')}] but no project test declares any of those tags. The profile would select zero tests.`,
+          });
+        }
       } catch (error) {
         findings.push({ level: 'ERROR', code: 'EXECUTION_POLICY', message: `${project}/${environment}/${profile}: ${error instanceof Error ? error.message : String(error)}` });
       }
     }
   }
+}
+
+function projectHasAnyTag(project: string, tags: string[]): boolean {
+  const root = path.resolve('projects', project, 'tests');
+  if (!fs.existsSync(root)) return false;
+  const sources = walk(root)
+    .filter(file => /\.spec\.[cm]?[jt]s$/i.test(file))
+    .filter(file => !file.replace(/\\/g, '/').includes('/tests/_agent/'))
+    .map(file => fs.readFileSync(file, 'utf8'));
+  return tags.some(tag => sources.some(source => source.includes(tag)));
 }
 
 function auditCaseDatasets(project: string, findings: AuditFinding[]): void {

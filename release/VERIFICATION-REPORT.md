@@ -1,25 +1,21 @@
-# TestigentAI v1.3.5 Verification Report
+# TestigentAI v1.3.9 Verification Report
 
 ## Scope
 
-This patch closes the final three stale framework assertions reported by the clean v1.3.4 validation run. Production runtime behavior is unchanged.
+v1.3.9 closes the empty-report / zero-test-selection gap discovered after v1.3.8 sequential and shard validation.
 
-## v1.3.5 corrections
+## Corrections
 
-1. Dashboard interactive test now expects the current business legend label `Blocked` rather than legacy `Skipped`.
-2. Explicit-new-app test resolves `claims` before project bootstrap so the resolver source remains `explicit-new-app`, then creates the required project fixture before generation.
-3. Generated-proposal architecture test now expects the project-owned `../../fixtures/test.fixture.js` import used by the generator safety contract.
+- SDET Practice critical CRUD scenario is part of the governed `@smoke` PR profile.
+- Scale audit blocks include-tag profiles that map to zero project tests (`PROFILE_EMPTY`).
+- CI core workers use Playwright `--pass-with-no-tests` so an over-sharded empty worker can still publish its topology marker.
+- Core bundle markers auto-detect whether a business report contains selected scenarios.
+- Merge validation uses `EXPECTED_CORE_WORKERS` and validates worker topology independently from actual report-bearing workers.
+- Missing workers remain release-blocking; intentionally empty workers do not require fake reports.
+- All workers selecting zero business scenarios is release-blocking with an actionable profile/grep/tagging error.
+- Local `test:project` clears stale business output and rejects successful zero-business runs unless empty selection was explicitly allowed.
+- Core and AI lane validation remain independent.
 
-## Verification performed in release build environment
+## Static/offline release evidence
 
-- `npm run release:static`
-- `node scripts/offline-release-check.mjs`
-- package/package-lock version synchronization: `1.3.5`
-- release SBOM regeneration
-- release SHA-256 manifest regeneration
-- targeted source contract checks for all three corrected assertions
-- clean ZIP extraction and independent release-manifest verification
-
-## Dependency-backed Playwright validation
-
-The final authoritative certification remains `npm ci && npx playwright install chromium && npm run validate:final` on a network-enabled developer/CI runner. The supplied user run of v1.3.4 had 88/91 framework tests passing; the remaining three failures map exactly to the three stale assertions corrected above.
+The release package must pass `release:static`, JSON/YAML parsing, TypeScript syntax transpilation, manifest verification, and package hygiene checks. Full dependency-backed Playwright execution remains the consumer Mac/CI certification gate.

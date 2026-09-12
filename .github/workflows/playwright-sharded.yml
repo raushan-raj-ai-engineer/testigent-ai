@@ -9,6 +9,11 @@ on:
       environment:
         description: Project environment config
         required: true
+      shards:
+        description: Core test workers (1 = sequential; >1 = Playwright shards)
+        required: false
+        type: number
+        default: 2
       run_ai:
         description: Run configured AI provider validation
         required: false
@@ -33,6 +38,35 @@ env:
   ENV: ${{ inputs.environment || vars.ENV }}
 
 jobs:
+  plan:
+    name: Execution Plan
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      expected_core_reports: ${{ steps.plan.outputs.expected_core_reports }}
+    steps:
+      - name: Build sequential/sharded execution plan
+        id: plan
+        shell: bash
+        env:
+          REQUESTED_SHARDS: ${{ github.event_name == 'workflow_dispatch' && inputs.shards || vars.CI_SHARDS || '2' }}
+        run: |
+          set -euo pipefail
+          SHARDS="${REQUESTED_SHARDS}"
+          if ! [[ "${SHARDS}" =~ ^[0-9]+$ ]] || (( SHARDS < 1 || SHARDS > 20 )); then
+            echo "::error::CI shard count must be an integer between 1 and 20; received '${SHARDS}'."
+            exit 1
+          fi
+          MATRIX='{"include":['
+          for ((i=1; i<=SHARDS; i++)); do
+            [[ $i -gt 1 ]] && MATRIX+=','
+            MATRIX+="{\"index\":${i},\"total\":${SHARDS}}"
+          done
+          MATRIX+=']}'
+          echo "matrix=${MATRIX}" >> "${GITHUB_OUTPUT}"
+          echo "expected_core_reports=${SHARDS}" >> "${GITHUB_OUTPUT}"
+          echo "[plan] core workers=${SHARDS}; mode=$([[ ${SHARDS} -eq 1 ]] && echo sequential || echo sharded)"
+
   validate:
     name: Framework Validation
     runs-on: ubuntu-latest
@@ -62,7 +96,7 @@ jobs:
 
   test:
     name: Project Tests - Shard ${{ matrix.index }}
-    needs: [validate]
+    needs: [validate, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -82,12 +116,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - shard: '1/2'
-            index: 1
-          - shard: '2/2'
-            index: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     steps:
       - name: Checkout TestigentAI
@@ -105,18 +134,25 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run non-AI project tests - shard ${{ matrix.index }}
-        run: >
-          npm run test:project --
-          --project=chromium
-          --shard=${{ matrix.shard }}
-          --grep-invert="@ai"
+      - name: Run non-AI project tests - worker ${{ matrix.index }}/${{ matrix.total }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARGS=(--project=chromium --grep-invert="@ai" --pass-with-no-tests)
+          if (( ${{ matrix.total }} > 1 )); then
+            ARGS+=(--shard=${{ matrix.index }}/${{ matrix.total }})
+          fi
+          npm run test:project -- "${ARGS[@]}"
+
+      - name: Record core business bundle topology
+        if: ${{ always() && !cancelled() }}
+        run: npm run ci:report:bundle -- core ${{ matrix.index }} ${{ matrix.total }} auto
 
       - name: Upload technical blob
         if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: blob-${{ env.APP }}-${{ matrix.index }}
+          name: blob-${{ env.APP }}-core-${{ matrix.index }}
           path: reports/${{ env.APP }}/blob-report
           if-no-files-found: warn
           retention-days: 7
@@ -125,7 +161,7 @@ jobs:
         if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: business-${{ env.APP }}-${{ matrix.index }}
+          name: business-${{ env.APP }}-core-${{ matrix.index }}
           path: reports/${{ env.APP }}/business
           if-no-files-found: warn
           retention-days: 7
@@ -347,6 +383,10 @@ jobs:
           AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
 
+      - name: Record AI business bundle topology
+        if: ${{ always() && !cancelled() }}
+        run: npm run ci:report:bundle -- ai 1 1 "${{ steps.detect-ai.outputs.has_ai_tests || 'unknown' }}"
+
       - name: Upload AI technical blob
         if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
         uses: actions/upload-artifact@v7
@@ -357,7 +397,7 @@ jobs:
           retention-days: 7
 
       - name: Upload AI business report
-        if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: business-${{ env.APP }}-ai
@@ -376,7 +416,7 @@ jobs:
 
   merge:
     name: Merge TestigentAI Reports
-    needs: [test, ai-smoke]
+    needs: [plan, test, ai-smoke]
     if: >-
       ${{
         always() &&
@@ -446,6 +486,8 @@ jobs:
         run: npm run report:merge:business -- all-business-reports
         env:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
+          EXPECT_AI_LANE: ${{ needs.ai-smoke.result != 'skipped' && 'true' || 'false' }}
 
       - name: Finalize business execution facts
         run: npm run ci:business:finalize
@@ -460,23 +502,9 @@ jobs:
 
       - name: Publish merged report summary
         if: ${{ always() }}
+        continue-on-error: true
         shell: bash
-        run: |
-          if [[ -f "reports/${APP}/business/business-report.json" ]]; then
-            node - <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-            const fs = require('fs');
-            const app = process.env.APP;
-            const f = JSON.parse(fs.readFileSync(`reports/${app}/business/business-report.json`, 'utf8'));
-            console.log(`## TestigentAI merged quality report`);
-            console.log(`- Selected: **${f.total}**`);
-            console.log(`- Applicable: **${f.executionEligible}**`);
-            console.log(`- Executed: **${f.executed}/${f.executionEligible} (${f.executionRate}%)**`);
-            console.log(`- Quality failed: **${f.qualityFailed}** (known ${f.knownDefects}, unexpected ${f.unexpectedFailed})`);
-            console.log(`- CI-blocking issues: **${f.ciBlockingIssues}**`);
-            console.log(`- Self-healed: **${f.healing?.count ?? 0}** · AI calls: **${f.aiUsage?.calls ?? 0}**`);
-            console.log(`- Aggregated bundles: **${f.aggregation?.sourceReports ?? 1}**`);
-            NODE
-          fi
+        run: npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload final TestigentAI report
         id: final-upload
@@ -485,7 +513,7 @@ jobs:
         with:
           name: testigent-ai-report-${{ env.APP }}-${{ github.run_id }}
           path: reports/${{ env.APP }}
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Optional stakeholder email

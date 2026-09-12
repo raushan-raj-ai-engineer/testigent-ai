@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { projectPreflight } from './project-check';
 import { RuntimeConfig } from '../src/framework/core/config/runtime.config';
 import { AuthManager } from '../src/framework/core/auth.manager';
@@ -36,6 +38,10 @@ async function main(): Promise<void> {
   ]);
   const enforcedGrepInvert = tagsToRegExp(policy.excludeTags);
   const args = ['playwright', 'test', info.testDir, ...mergeGovernedFilters(custom.passthrough, enforcedGrep, enforcedGrepInvert)];
+  const allowEmptySelection = custom.passthrough.includes('--pass-with-no-tests');
+  const businessReportDir = path.join(runtime.reportRoot, 'business');
+  fs.rmSync(businessReportDir, { recursive: true, force: true });
+  console.log(`[selection] ${info.application}/${info.environment} profile=${info.profile} include=${policy.includeTags.join(',') || '(all)'} exclude=${policy.excludeTags.join(',') || '(none)'}${allowEmptySelection ? ' empty-shard=allowed' : ''}`);
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -48,7 +54,27 @@ async function main(): Promise<void> {
   else delete env.PW_STORAGE_STATE;
 
   const result = spawnSync('npx', args, { stdio: 'inherit', env, shell: process.platform === 'win32' });
-  process.exitCode = result.status ?? 1;
+  const status = result.status ?? 1;
+  if (status === 0 && !allowEmptySelection) assertBusinessReportHasSelection(businessReportDir, info.application, info.profile);
+  process.exitCode = status;
+}
+
+function assertBusinessReportHasSelection(reportDir: string, application: string, profile: string): void {
+  const file = path.join(reportDir, 'business-report.json');
+  if (!fs.existsSync(file)) {
+    throw new Error(`NO_BUSINESS_TESTS_SELECTED: ${application}/${profile} completed without a business report. Check TEST_PROFILE, --grep filters and project tags.`);
+  }
+  try {
+    const report = JSON.parse(fs.readFileSync(file, 'utf8')) as { total?: unknown; results?: unknown[] };
+    const total = Array.isArray(report.results) ? report.results.length : Number(report.total ?? 0);
+    if (!Number.isFinite(total) || total < 1) {
+      throw new Error(`NO_BUSINESS_TESTS_SELECTED: ${application}/${profile} produced an empty business report. Check TEST_PROFILE, --grep filters and project tags.`);
+    }
+    console.log(`[report] business scenarios=${total}; ${file}`);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('NO_BUSINESS_TESTS_SELECTED:')) throw error;
+    throw new Error(`BUSINESS_REPORT_INVALID: Could not validate ${file}: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function parseCustomArgs(argv: string[]): CustomArgs {

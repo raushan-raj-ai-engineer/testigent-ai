@@ -1,3 +1,41 @@
+## v1.3.9 - Zero-selection and empty-shard reporting hardening
+
+- Fixed the SDET Practice PR-profile selection gap by tagging the critical CRUD business scenario with `@smoke`; `TEST_PROFILE=pr` now selects a real business test instead of producing an empty run.
+- Added scale-audit `PROFILE_EMPTY` governance so any configured include-tag profile that has no matching project test is release-blocking before CI.
+- Core CI workers now use Playwright `--pass-with-no-tests` so over-sharding does not fail a worker merely because that shard receives no tests.
+- Core bundle markers auto-detect whether a worker actually produced business scenarios; empty workers are recorded explicitly instead of being misclassified as missing artifacts.
+- Merge validation now checks expected core worker topology separately from produced business reports. Empty over-sharded workers are valid, missing workers remain invalid, and an entire profile selecting zero business scenarios fails with an actionable profile/grep/tagging diagnostic.
+- `test:project` clears stale business output before execution, prints the resolved selection policy, and rejects successful local runs that produce no business scenarios unless `--pass-with-no-tests` was explicitly requested for CI shard handling.
+- Retains v1.3.8 sequential/sharded + AI-aware merge semantics and v1.3.7 authentication hardening.
+
+## v1.3.8 - Dynamic core/AI merge topology
+
+- Replaced the hard-coded two-report merge assumption with configurable core worker planning: `1` runs sequentially without Playwright `--shard`; values greater than `1` generate the corresponding shard matrix.
+- Added CI business-bundle topology markers so merge validation distinguishes required core shard reports from the optional dedicated AI lane.
+- Core completeness and AI completeness are now validated independently; an AI report can never satisfy a missing core shard.
+- When the AI lane is requested, CI records whether `@ai` tests exist. No-AI projects are treated as not applicable, while detected AI tests require a dedicated AI business report containing at least one `@ai` result.
+- Merged execution facts and GitHub step summaries now expose core report count, AI report count, AI-specific result count, and aggregated AI runtime calls.
+- GitHub Actions supports `workflow_dispatch.shards` and repository variable `CI_SHARDS`; Azure `shards: 1` now runs true sequential execution and larger values run sharded execution.
+- Retains v1.3.7 automatic-auth verification hardening and all v1.3.6 merged-report safety behavior.
+
+
+## v1.3.7 - CI auth verification hardening
+
+- Removed the ambiguous SDET Practice `Login` button as an unauthenticated proof. The live UI can expose that control even when a freshly issued JWT is already present in browser storage, which caused CI to reject valid provider output.
+- Kept `sdet_access_token` as the deterministic browser-state proof used by the generic auth lifecycle.
+- Added a regression contract so the project cannot silently reintroduce the ambiguous control check.
+- No generic auth-core safety rules were weakened.
+
+## v1.3.6 - CI merged-report hardening
+
+- Replaced the GitHub merged-quality summary Bash/Node heredoc with the dedicated `ci:business:summary` script, eliminating indentation-sensitive `NODE` terminator failures.
+- Marked the GitHub step-summary publication as informational (`continue-on-error`) so a summary-rendering problem cannot falsely fail an otherwise valid merged report.
+- Added a deterministic missing/corrupt-report fallback summary that preserves the earlier merge/validation step as the root failure.
+- Added `EXPECTED_BUSINESS_REPORTS` enforcement to fail closed when a required shard business bundle is missing instead of publishing partial quality coverage as complete.
+- Wired the source-count guard into GitHub Actions and Azure Pipelines; optional AI reports remain additive.
+- Changed final GitHub artifact publication to warn on missing files so it cannot obscure the actual merge failure with a secondary upload error.
+- Extended executable reporting contracts and static release checks for summary rendering, missing-shard rejection, and no-heredoc workflow governance.
+
 ## v1.3.5 - Final stale-contract regression closure
 
 - Updated dashboard interactive regression to assert the current business-status label `Blocked` instead of legacy `Skipped`.
