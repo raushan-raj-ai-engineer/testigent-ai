@@ -181,3 +181,8 @@ See `docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md`.
 
 v1.5.1 adds browser-backed regressions proving locator-readiness diagnostics remain non-blocking when an injected logger omits `debug()` or when the debug sink throws. It also verifies that `.runtime/latest-run` is not an implicit generic write identity and that a current `RUN_ID` wins over the convenience pointer. See `docs/36-v1.5.1-RUNTIME-CONTRACT-CLOSURE.md` and `docs/37-v1.5.1-DEEP-REVIEW-VALIDATION.md`.
 
+
+
+## v1.5.2 GitHub rerun artifact-provenance gate
+
+GitHub intermediate artifact names and merge download patterns include the full `RUN_ID` (`github.run_id-github.run_attempt`). This prevents reruns from mixing or ambiguously resolving artifacts created by another attempt of the same workflow run. The merge stage also validates downloaded topology markers before aggregation and only expects the optional AI lane when the AI job succeeded. See `docs/38-v1.5.2-CI-RERUN-ARTIFACT-PROVENANCE.md`.

@@ -155,7 +155,7 @@ jobs:
         if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: blob-${{ env.APP }}-core-${{ matrix.index }}
+          name: blob-${{ env.APP }}-${{ env.RUN_ID }}-core-${{ matrix.index }}
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/blob-report
           if-no-files-found: warn
           retention-days: 7
@@ -164,9 +164,9 @@ jobs:
         if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: business-${{ env.APP }}-core-${{ matrix.index }}
+          name: business-${{ env.APP }}-${{ env.RUN_ID }}-core-${{ matrix.index }}
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/business
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
 
   ai-smoke:
@@ -399,7 +399,7 @@ jobs:
         if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: blob-${{ env.APP }}-ai
+          name: blob-${{ env.APP }}-${{ env.RUN_ID }}-ai
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/blob-report
           if-no-files-found: warn
           retention-days: 7
@@ -408,16 +408,16 @@ jobs:
         if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: business-${{ env.APP }}-ai
+          name: business-${{ env.APP }}-${{ env.RUN_ID }}-ai
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/business
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
 
       - name: Upload AI audit
         if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: ai-audit-${{ env.APP }}
+          name: ai-audit-${{ env.APP }}-${{ env.RUN_ID }}
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/ai
           if-no-files-found: warn
           retention-days: 7
@@ -458,7 +458,7 @@ jobs:
         run: npm ci
 
       - name: Restore business report history
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .report-history/${{ env.APP }}
           key: testigent-report-history-${{ env.APP }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -468,34 +468,40 @@ jobs:
       - name: Download all technical blobs
         uses: actions/download-artifact@v8
         with:
-          pattern: blob-${{ env.APP }}-*
+          pattern: blob-${{ env.APP }}-${{ env.RUN_ID }}-*
           path: all-blob-reports
           merge-multiple: true
 
       - name: Download all business reports
         uses: actions/download-artifact@v8
         with:
-          pattern: business-${{ env.APP }}-*
+          pattern: business-${{ env.APP }}-${{ env.RUN_ID }}-*
           path: all-business-reports
 
       - name: Download AI audit
-        if: ${{ needs.ai-smoke.result != 'skipped' }}
+        if: ${{ needs.ai-smoke.result == 'success' }}
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          pattern: ai-audit-${{ env.APP }}
+          pattern: ai-audit-${{ env.APP }}-${{ env.RUN_ID }}
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/ai
           merge-multiple: true
+
+      - name: Validate downloaded report bundles
+        run: npm run ci:report:download:validate -- all-business-reports
+        env:
+          EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
 
       - name: Merge Playwright technical report
         run: npm run report:merge:technical
 
       - name: Merge business reports
+        id: merge-business
         run: npm run report:merge:business -- all-business-reports
         env:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
-          EXPECT_AI_LANE: ${{ needs.ai-smoke.result != 'skipped' && 'true' || 'false' }}
+          EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
 
       - name: Finalize business execution facts
         run: npm run ci:business:finalize
@@ -506,6 +512,7 @@ jobs:
           AI_ENABLED: 'false'
 
       - name: Validate final business bundle
+        id: validate-final-business
         run: npm run ci:business:validate
 
       - name: Publish merged report summary
@@ -519,7 +526,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: testigent-ai-report-${{ env.APP }}-${{ github.run_id }}
+          name: testigent-ai-report-${{ env.APP }}-${{ env.RUN_ID }}
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}
           if-no-files-found: warn
           retention-days: 14
@@ -546,6 +553,8 @@ jobs:
           ${{
             always() &&
             !cancelled() &&
+            steps.merge-business.outcome == 'success' &&
+            steps.validate-final-business.outcome == 'success' &&
             steps.final-upload.outcome == 'success' &&
             github.event_name != 'pull_request'
           }}
@@ -559,11 +568,11 @@ jobs:
           artifact_ids="$({
             gh api \
               "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
-              --jq '.artifacts[] | select(
-                (.name | startswith("blob-")) or
-                (.name | startswith("business-")) or
-                (.name | startswith("ai-audit-"))
-              ) | .id'
+              --jq ".artifacts[] | select(
+                (.name | startswith(\"blob-${APP}-${RUN_ID}-\")) or
+                (.name | startswith(\"business-${APP}-${RUN_ID}-\")) or
+                (.name == \"ai-audit-${APP}-${RUN_ID}\")
+              ) | .id"
           } || true)"
 
           if [[ -z "${artifact_ids}" ]]; then

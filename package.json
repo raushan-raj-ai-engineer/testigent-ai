@@ -1,6 +1,6 @@
 {
   "name": "testigent-ai",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "private": true,
   "description": "TestigentAI - Intelligent Quality Engineering Platform",
   "author": "Raushan Raj",
@@ -157,7 +157,8 @@
     "qa:migrate": "tsx scripts/qa.ts migrate",
     "test:review:browser-free": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa PLAYWRIGHT_BROWSERS_PATH=.runtime/browser-free-proof playwright test tests/framework/browser-free-fixtures.spec.ts --project=chromium --workers=1",
     "test:review:hardening": "cross-env APP=demo ENV=qa playwright test tests/framework/review-hardening-contract.spec.ts tests/framework/browser-free-fixtures.spec.ts tests/framework/healing-generation-contract.spec.ts --project=chromium",
-    "release:compat:probe": "node scripts/release-compatibility-probe.mjs"
+    "release:compat:probe": "node scripts/release-compatibility-probe.mjs",
+    "ci:report:download:validate": "tsx scripts/ci-validate-downloaded-bundles.ts"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

@@ -139,6 +139,7 @@ for (const required of [
   'docs/32-PILOT-ADOPTION-AND-METRICS.md',
   'docs/33-RELEASE-COMPATIBILITY-MATRIX.md',
   'docs/34-v1.5.0-VALIDATION-EVIDENCE.md',
+  'docs/38-v1.5.2-CI-RERUN-ARTIFACT-PROVENANCE.md',
   '.github/workflows/release-compatibility.yml',
   'scripts/release-compatibility-probe.mjs',
   'config/security-exceptions.json',
@@ -200,6 +201,8 @@ try {
   if (pkg.engines?.node !== '>=22 <23' || fs.readFileSync(path.join(root, '.nvmrc'), 'utf8').trim() !== '22') issues.push('release runtime must be consistently pinned to Node 22 in package engines and .nvmrc');
   const copilotSetup = fs.readFileSync(path.join(root, '.github/workflows/copilot-setup-steps.yml'), 'utf8');
   if (!copilotSetup.includes("node-version-file: '.nvmrc'")) issues.push('Copilot setup workflow must use the same .nvmrc release runtime');
+  const compatibilityWorkflow = fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8');
+  if (!compatibilityWorkflow.includes("- 'v*'")) issues.push('release compatibility workflow must run automatically for version tags as well as manual dispatch');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
 }
@@ -233,6 +236,24 @@ try {
   if (!githubWorkflow.includes('EXPECT_AI_LANE')) issues.push('GitHub merge must validate the optional AI lane independently');
   if (!githubWorkflow.includes('ci:report:bundle -- core') || !githubWorkflow.includes('ci:report:bundle -- ai')) issues.push('GitHub CI must publish core/AI bundle topology markers');
   if (!githubWorkflow.includes('CI_SHARDS') || !githubWorkflow.includes('inputs.shards')) issues.push('GitHub CI must support configurable sequential/sharded execution');
+  if (!githubWorkflow.includes('business-${{ env.APP }}-${{ env.RUN_ID }}-core-${{ matrix.index }}') ||
+      !githubWorkflow.includes('business-${{ env.APP }}-${{ env.RUN_ID }}-ai') ||
+      !githubWorkflow.includes('pattern: business-${{ env.APP }}-${{ env.RUN_ID }}-*')) {
+    issues.push('GitHub business artifacts must be scoped by immutable RUN_ID/run attempt so reruns cannot mix artifact generations');
+  }
+  if (!githubWorkflow.includes('blob-${{ env.APP }}-${{ env.RUN_ID }}-core-${{ matrix.index }}') ||
+      !githubWorkflow.includes('pattern: blob-${{ env.APP }}-${{ env.RUN_ID }}-*')) {
+    issues.push('GitHub technical artifacts must be scoped by immutable RUN_ID/run attempt');
+  }
+  if (!githubWorkflow.includes("EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}")) {
+    issues.push('GitHub merge must expect the AI lane only when the AI job succeeded');
+  }
+  if (!githubWorkflow.includes('Validate downloaded report bundles')) issues.push('GitHub merge must validate downloaded current-attempt bundle markers before report merge');
+  if (!githubWorkflow.includes("steps.merge-business.outcome == 'success'") || !githubWorkflow.includes("steps.validate-final-business.outcome == 'success'")) {
+    issues.push('GitHub CI must preserve intermediate artifacts when report merge/final validation fails');
+  }
+  if (githubWorkflow.includes('actions/cache@v4')) issues.push('GitHub CI must not use the deprecated Node 20 actions/cache@v4 runtime');
+  if (!githubWorkflow.includes('actions/cache@v6')) issues.push('GitHub report-history cache must use the supported Node 24 actions/cache@v6 runtime');
   if (githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'")) issues.push('GitHub merge must not hardcode two business reports');
   const azureWorkflow = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
   if (!azureWorkflow.includes('EXPECTED_CORE_WORKERS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core workers and AI lane');

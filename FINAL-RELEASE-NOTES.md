@@ -1,3 +1,17 @@
+# TestigentAI v1.5.2 — CI rerun artifact provenance hardening
+
+- Fixed GitHub Actions rerun provenance so every technical, business and AI artifact name includes the immutable `RUN_ID` (`github.run_id-github.run_attempt`). A rerun can no longer ambiguously download artifacts created by another attempt of the same workflow run.
+- Scoped merge download patterns to the current `RUN_ID`, keeping attempt 1 and attempt 2 artifacts logically separate even though GitHub associates them with the same workflow run.
+- Business artifact uploads now fail when the marker/report directory is unexpectedly absent instead of allowing a later merge stage to discover an empty bundle.
+- Added a pre-merge downloaded-bundle diagnostic that lists files and counts `ci-bundle.json` markers before technical/business aggregation.
+- The merge stage now expects an AI business lane only when the AI job actually succeeded; an AI configuration/provider failure remains the primary CI failure instead of causing a misleading secondary missing-AI-report error.
+- Intermediate-artifact cleanup is restricted to the current attempt's artifact names so cleanup from one attempt cannot delete another attempt's evidence.
+- Final report artifact names include `RUN_ID`, making rerun outputs independently identifiable.
+- Added a static release contract that blocks future removal of attempt-scoped artifact names/download patterns and the AI-success merge condition.
+- Upgraded report-history caching from `actions/cache@v4` to `actions/cache@v6`, removing the Node 20 action-runtime deprecation warning on current GitHub-hosted runners.
+- Release Compatibility remains manually dispatchable and now also runs automatically on `v*` release tags.
+- Retains all v1.5.1 runtime-collaborator fixes and v1.5.0 A1–A8 architect-review hardening.
+
 # TestigentAI v1.5.1 — Runtime contract closure after architect hardening
 
 - Fixed a runtime contract regression in `HealingOrchestrator.usableLocator()` where best-effort readiness diagnostics assumed every injected logger implemented `debug()`. Lightweight test/consumer loggers with only `warn()` could throw `TypeError: this.logger.debug is not a function` and stop deterministic healing.

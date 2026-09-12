@@ -2,6 +2,9 @@ name: TestigentAI Release Compatibility
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
