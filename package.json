@@ -173,7 +173,7 @@
     "agentic:impact": "tsx scripts/agentic-impact.ts",
     "agentic:review": "tsx scripts/agentic-review.ts",
     "agentic:evidence": "tsx scripts/agentic-evidence.ts",
-    "test:agentic:deterministic": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa AI_ENABLED=false HEALING_AI_ENABLED=false playwright test tests/framework/agentic-policy-contract.spec.ts tests/framework/agentic-planner-contract.spec.ts tests/framework/agentic-reviewer-contract.spec.ts tests/framework/agentic-ledger-contract.spec.ts tests/framework/agentic-mcp-contract.spec.ts tests/framework/agentic-reporting-contract.spec.ts --project=chromium"
+    "test:agentic:deterministic": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa AI_ENABLED=false HEALING_AI_ENABLED=false playwright test tests/framework/agentic-policy-contract.spec.ts tests/framework/agentic-planner-contract.spec.ts tests/framework/agentic-reviewer-contract.spec.ts tests/framework/agentic-ledger-contract.spec.ts tests/framework/agentic-mcp-contract.spec.ts tests/framework/agentic-reporting-contract.spec.ts"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

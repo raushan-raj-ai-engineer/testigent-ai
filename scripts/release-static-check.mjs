@@ -227,7 +227,15 @@ try {
   if (!finalValidationContract.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
   if (!pkg.scripts?.['mcp:agentic']?.includes('start-agentic-mcp.ts')) issues.push('missing controlled TestigentAI agentic MCP server script');
-  if (!pkg.scripts?.['test:agentic:deterministic']?.includes('agentic-policy-contract.spec.ts')) issues.push('missing deterministic agentic safety contract suite');
+
+  const agenticDeterministicScript = pkg.scripts?.['test:agentic:deterministic'] ?? '';
+  if (!agenticDeterministicScript.includes('agentic-policy-contract.spec.ts')) {
+    issues.push('missing deterministic agentic safety contract suite');
+  }
+  if (/--project(?:=|\s+)\S+/.test(agenticDeterministicScript)) {
+    issues.push('test:agentic:deterministic must remain browser-neutral; release compatibility selects the Playwright project through PW_BROWSERS');
+  }
+
   if (!finalValidationContract.includes('test:agentic:deterministic')) issues.push('validate:final must enforce deterministic agentic safety');
   if (pkg.engines?.node !== '>=22 <23' || fs.readFileSync(path.join(root, '.nvmrc'), 'utf8').trim() !== '22') issues.push('release runtime must be consistently pinned to Node 22 in package engines and .nvmrc');
   const copilotSetup = fs.readFileSync(path.join(root, '.github/workflows/copilot-setup-steps.yml'), 'utf8');
@@ -235,6 +243,9 @@ try {
   const compatibilityWorkflow = fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8');
   if (!compatibilityWorkflow.includes("- 'v*'")) issues.push('release compatibility workflow must run automatically for version tags as well as manual dispatch');
   if (!compatibilityWorkflow.includes('npm run test:agentic:deterministic')) issues.push('release compatibility matrix must exercise deterministic agentic safety on every supported OS/browser lane');
+  if (!compatibilityWorkflow.includes('PW_BROWSERS: ${{ matrix.browser }}')) {
+    issues.push('release compatibility matrix must select each Playwright project through PW_BROWSERS');
+  }
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
 }
