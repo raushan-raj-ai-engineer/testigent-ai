@@ -16,7 +16,7 @@
 - blocking Agentic Deterministic Safety jobs in GitHub Actions and Azure Pipelines;
 - certified v1.6.1 canary fixes carried forward: GitHub outcome normalization plus runtime canary paths.
 
-This package is a **development candidate**, not a certified release. Connected Node 22 validation, PR/main/rerun CI and the full 5/5 Release Compatibility matrix remain mandatory before tagging `v1.7.0`.
+TestigentAI **v1.7.0 is certified and released** at immutable tagged commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Connected Node 22 validation, PR/main/rerun CI, main Release Compatibility 5/5 and tag-triggered Release Compatibility 5/5 all passed.
 
 See `docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md` through `docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md`.
 
@@ -501,4 +501,4 @@ Connected Node 22 `npm run validate:final` has passed for v1.6.1. It remains a *
 - Final connected framework validation passed with 154 tests.
 - Security policy passed with zero high/critical advisories.
 - Release SBOM, manifest and offline verification were regenerated after hardening.
-- v1.7.0 remains a development candidate until PR/main reruns and the complete 5/5 Release Compatibility matrix pass.
+- v1.7.0 subsequently completed PR/main reruns plus both main and tag-triggered 5/5 Release Compatibility validation and is now the immutable certified release.

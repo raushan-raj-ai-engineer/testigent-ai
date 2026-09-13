@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Certified baseline: `v1.6.1`** — immutable tag `v1.6.1` points to certified commit `5c2c785`; main CI and its full rerun proved AI operational degradation does not corrupt deterministic release truth, and the 5/5 Release Compatibility matrix passed. **Development candidate: `v1.7.0`** — adds governed Agentic Test Intelligence: deterministic planning, proposal-only generation, generated-source review, immutable decision provenance, MCP tools and one-click agentic reporting.
+**Current certified release: `v1.7.0` — Agentic Test Intelligence.** Immutable tag `v1.7.0` points to certified commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Main CI and rerun passed, the main Release Compatibility matrix passed 5/5, and the tag-triggered Release Compatibility matrix also passed 5/5. `v1.6.1` remains preserved as the previous certified baseline.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
