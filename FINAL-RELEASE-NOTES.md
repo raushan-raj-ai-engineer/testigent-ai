@@ -1,5 +1,7 @@
 # TestigentAI v1.5.3 — Windows static-gate portability hardening
 
+**Certified release status:** main CI run `34744306756` passed all core, AI and merged-report jobs; tag-triggered Release Compatibility run `34744507321` passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Current operational summary: `docs/41-CURRENT-RELEASE-STATUS.md`. Git/GitHub CLI operations: `docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+
 - Fixed a Windows-only false failure in `release:static` caused by LF-only multi-line workflow matching against CRLF checkout content.
 - Structural workflow/pipeline checks now normalize line endings before applying release policy.
 - The merged-report summary policy remains unchanged: dedicated summary script, `shell: bash`, and `continue-on-error: true`.

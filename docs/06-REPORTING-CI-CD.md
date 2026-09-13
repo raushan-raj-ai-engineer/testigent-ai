@@ -1,5 +1,7 @@
 # Reporting and CI/CD
 
+Current certified baseline: **v1.5.3**. See `41-CURRENT-RELEASE-STATUS.md` for the green main CI and 5/5 compatibility evidence.
+
 Every project writes isolated output:
 
 ```text
@@ -16,6 +18,18 @@ The business dashboard contains execution KPIs, status/layer graphs, searchable/
 Every live execution is scoped by application, environment and immutable `RUN_ID`. Workers inherit the run ID established before Playwright configuration, so two QA/UAT or same-application executions can share a checkout without overwriting report/result/log/audit roots. `.runtime/latest-run/<APP>/<ENV>.json` is only a convenience pointer for user-facing report commands; running processes never derive identity from it. Cleanup removes only the current run directory.
 
 AI/healing audit records and framework logs live under the same run root. CI artifact upload/download paths must therefore preserve `<APP>/<ENV>/<RUN_ID>`.
+
+### GitHub rerun artifact provenance (v1.5.2+)
+
+GitHub Actions derives the immutable execution-attempt identity as:
+
+```text
+RUN_ID = github.run_id-github.run_attempt
+```
+
+Core business bundles, AI bundles, technical blobs, AI audit and the final report artifact include that full identity. Merge download patterns select only the current attempt, then `ci:report:download:validate` verifies application/environment/run identity and expected core shard markers before aggregation. A rerun therefore cannot silently merge attempt-1 and attempt-2 evidence.
+
+`EXPECT_AI_LANE` is true only when the AI lane actually succeeds; an AI configuration failure remains visible as the root failure and does not create a misleading missing-AI-report merge failure.
 
 
 ## Business-standard status model (v1.2.6)

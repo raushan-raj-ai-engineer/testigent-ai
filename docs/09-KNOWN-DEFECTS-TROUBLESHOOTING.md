@@ -32,3 +32,8 @@ Run headed/safe exploration, inspect evidence, update the project page object af
 ### Framework test fails but real dashboard works
 
 Distinguish test harness limitations from production behavior. The framework dashboard regression uses explicit asset injection when HTML is loaded with `page.setContent`, while the HTTP dashboard test validates the real bundle.
+
+
+## GitHub Actions / Git CLI troubleshooting
+
+For workflow listing, failed-job logs, reruns, repository variables/secrets, branch tracking, tags and merged-branch cleanup, use `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`. For the current certified workflow/run state, use `41-CURRENT-RELEASE-STATUS.md`.

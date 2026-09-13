@@ -1,17 +1,62 @@
 # Release Compatibility Matrix
 
-TestigentAI v1.5.0 treats **Node 22 (the version pinned by `.nvmrc`)** as the supported release runtime. Do not infer support for a Node version merely because a source-only check happens to run on it.
+TestigentAI **v1.5.3** treats **Node.js 22.x** (pinned by `.nvmrc`) as the supported release runtime. Do not infer support for a Node version merely because a source-only check happens to run on it.
 
-Before a release candidate is promoted, run the manual GitHub workflow **TestigentAI Release Compatibility**. It executes the security/recovery regression slice across:
+## Trigger policy
 
-| OS | Browser |
-| --- | --- |
-| Ubuntu hosted runner | Chromium |
-| Ubuntu hosted runner | Firefox |
-| Ubuntu hosted runner | WebKit |
-| macOS hosted runner | WebKit |
-| Windows hosted runner | Chromium |
+`TestigentAI Release Compatibility` supports both:
 
-Every matrix job uses `npm ci`, the locked Playwright version, the browser installed by that Playwright release, `release:static`, `typecheck`, the architect-review hardening suite, the browser-free fixture contract and the delayed-primary recovery contract. It then writes a machine-readable compatibility record containing the exact Node, Playwright, OS and browser versions and uploads the report/test artifacts.
+- automatic execution on pushed `v*` release tags; and
+- manual `workflow_dispatch` for pre-release/diagnostic evidence.
 
-This workflow is evidence generation, not a claim that every combination has passed until a real workflow run is attached to the release. Azure Pipelines remains the second real CI implementation for the supported Linux/Node 22 path.
+Normal `main` pushes use `TestigentAI Multi-Project CI`; the broader OS/browser compatibility matrix is intentionally release-oriented rather than running on every commit.
+
+## Certified v1.5.3 matrix
+
+The tag-triggered v1.5.3 run `34744507321` completed successfully across all supported matrix entries:
+
+| OS / hosted runner | Browser | v1.5.3 result |
+| --- | --- | --- |
+| Ubuntu | Chromium | PASS |
+| Ubuntu | Firefox | PASS |
+| Ubuntu | WebKit | PASS |
+| macOS | WebKit | PASS |
+| Windows | Chromium | PASS |
+
+The Windows/Chromium entry is an important v1.5.3 acceptance point: it proves `release:static` is line-ending portable under Windows CRLF checkout behavior before the browser-backed recovery regression executes.
+
+## What every matrix job proves
+
+Every matrix job uses:
+
+1. locked dependency installation with `npm ci`;
+2. Node.js 22.x from `.nvmrc`;
+3. the browser version installed by the locked Playwright package;
+4. `release:static` and `typecheck`;
+5. the architect-review/recovery regression slice, including browser-free fixture and delayed-primary recovery coverage;
+6. exact Node/Playwright/OS/browser evidence capture; and
+7. compatibility evidence upload.
+
+This is release evidence, not a claim about untested OS/browser combinations. Azure Pipelines remains the second real CI implementation for the supported Linux/Node 22 path.
+
+## Terminal operations
+
+List compatibility runs:
+
+```bash
+gh run list --workflow release-compatibility.yml --limit 5
+```
+
+Watch a run:
+
+```bash
+gh run watch <RUN_ID>
+```
+
+Inspect failures:
+
+```bash
+gh run view <RUN_ID> --log-failed
+```
+
+See `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md` for GitHub CLI installation/authentication and the complete release workflow.

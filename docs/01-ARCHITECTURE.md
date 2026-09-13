@@ -1,5 +1,7 @@
 # Architecture
 
+Current certified baseline: **v1.5.3**. The architecture below is the active mainline structure; release-specific historical corrections are documented separately.
+
 ## Ownership model
 
 ```text

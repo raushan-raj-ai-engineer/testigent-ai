@@ -1,5 +1,7 @@
 # Daily Commands
 
+Current certified baseline: **v1.5.3**. For Git/GitHub CLI branch, PR, CI, rerun, tag and cleanup commands, use `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+
 ## Recommended new-joiner surface
 
 ```bash
@@ -108,3 +110,24 @@ npm run test:projects -- --all --env=qa --dry-run --project=chromium
 ```
 
 The default portfolio behavior continues after a project failure and returns a non-zero final status when any project failed. Use `--fail-fast` only when early termination is required.
+
+
+## Frequent Git / GitHub CLI flow
+
+For normal contribution work, the shortest safe sequence is:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/<work>
+# make changes
+npm run validate:final
+git diff --check
+git add .
+git commit -m "<type>: <message>"
+git push -u origin feature/<work>
+gh pr create --base main --head feature/<work> --title "<title>"
+gh pr checks --watch
+```
+
+After merge, synchronize `main`, watch the main CI, and only then create a release tag when the change is a release. The full install/login/PR/CI/rerun/tag/cleanup/troubleshooting command reference is `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
