@@ -24,11 +24,19 @@
 
 ---
 
+## Current Certified Release
+
+**Stable baseline: `v1.5.3`** — Node.js 22.x, main multi-project CI green, AI healing lane green on trusted `main`, rerun-safe report provenance enabled, and the tag-triggered Release Compatibility matrix certified on Ubuntu/Chromium, Ubuntu/Firefox, Ubuntu/WebKit, macOS/WebKit and Windows/Chromium.
+
+For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
+
+---
+
 ## Why TestigentAI?
 
 TestigentAI is designed for teams that want more than a collection of Playwright tests. It provides a governed quality-engineering platform where reusable technical capability stays centralized while every application keeps its own business logic, selectors, APIs, repositories, data and authentication behavior.
 
-> **Core design rule**  
+> **Core design rule**
 > Reusable capability belongs in `src/framework/`. Product/application behavior belongs in `projects/<project>/`.
 
 That rule makes the framework reusable across teams without turning it into a single-product automation repository.
@@ -134,6 +142,9 @@ TestigentAI/
 - npm
 - Git
 - Chromium for the recommended first run
+- GitHub CLI (`gh`) for PR/CI/release operations (recommended for contributors)
+
+Git/`gh` installation, authentication and daily terminal operations are documented in [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
 ### 1. Install
 
@@ -1228,6 +1239,8 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | First-time onboarding | [`docs/00-START-HERE.md`](docs/00-START-HERE.md) |
 | Architecture and dependency rules | [`docs/01-ARCHITECTURE.md`](docs/01-ARCHITECTURE.md) |
 | Daily commands | [`docs/02-DAILY-COMMANDS.md`](docs/02-DAILY-COMMANDS.md) |
+| Git + GitHub CLI terminal guide | [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md) |
+| Current certified release status | [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |

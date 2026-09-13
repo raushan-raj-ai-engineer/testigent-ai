@@ -115,3 +115,8 @@ The JSON remains the deterministic source for CI. The HTML portfolio dashboard i
 ## Concurrent shared-checkout isolation (v1.5.0)
 
 A project run owns `reports/<APP>/<ENV>/<RUN_ID>` and `test-results/<APP>/<ENV>/<RUN_ID>`. `RUN_ID` is created before Playwright config resolution and propagated to workers/child processes. Same-application QA and UAT runs therefore keep independent evidence, logs, healing/AI audits and test-data provenance. The `.runtime/latest-run` pointer is for convenience only and must never be treated as a running process identity.
+
+
+## GitHub rerun attempt isolation (v1.5.2+)
+
+GitHub CI extends the framework run identity with `github.run_attempt`, so a rerun of the same workflow run receives a distinct `RUN_ID` and distinct report/blob/business/AI artifact names. The authoritative merge downloads and validates only the current attempt. See `27-CI-MERGED-REPORTING-AND-EVIDENCE.md` and `38-v1.5.2-CI-RERUN-ARTIFACT-PROVENANCE.md`.

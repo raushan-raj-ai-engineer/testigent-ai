@@ -136,3 +136,20 @@ Core worker topology and business report count are intentionally different conce
 - Every core worker reports `hasTests=false`: invalid; the selected profile/grep combination matched zero business scenarios.
 
 Core CI workers use Playwright `--pass-with-no-tests` only so an intentionally empty shard can reach the merge/topology gate. The final merge still fails closed when the whole execution selected zero business scenarios. Local `test:project` runs do not opt into that behavior by default and fail with `NO_BUSINESS_TESTS_SELECTED` if a successful Playwright command produces no business report rows.
+
+
+## Rerun-safe artifact provenance (v1.5.2+)
+
+GitHub artifacts are attempt-scoped with the full immutable framework run ID:
+
+```text
+<github.run_id>-<github.run_attempt>
+```
+
+Core shard business bundles, technical blobs, AI business/audit bundles and the final report artifact include this identity in their artifact names. The merge job downloads only the current-attempt pattern and runs `npm run ci:report:download:validate` before Playwright/business aggregation. The validator fails closed for missing/duplicate core topology markers or application/environment/run-ID mismatches.
+
+The optional AI lane is expected only when the AI job result is `success`. This preserves the original AI failure as the primary diagnostic instead of manufacturing a second missing-report failure. Intermediate artifacts are cleaned only after successful merge/final validation and cleanup is limited to the current attempt.
+
+## Cross-platform release-policy portability (v1.5.3)
+
+Release static checks normalize CRLF/CR to LF before evaluating multi-line GitHub/Azure policy contracts. The policy itself is unchanged. `scripts/release-static-portability-contract.mjs` proves the informational/non-blocking merged-summary rule against LF and simulated Windows CRLF content, preventing a Windows checkout conversion from changing release-gate results.

@@ -2,7 +2,11 @@
 
 TestigentAI is a reusable Playwright + TypeScript quality platform. Reusable engines live in `src/framework/`; application behavior lives only in `projects/<project>/`.
 
+Current certified baseline: **v1.5.3** on Node.js 22.x. The main CI and 5/5 tag-triggered release-compatibility matrix are green; see `41-CURRENT-RELEASE-STATUS.md`.
+
 ## First-time setup
+
+Contributor prerequisite: install Git and GitHub CLI (`gh`) when you need branch/PR/Actions/release operations. See `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md` for macOS/Windows/Linux setup and `gh auth login`.
 
 ```bash
 npm ci
@@ -47,7 +51,7 @@ For authenticated projects, `qa:doctor` fails until the configured storage-state
 
 Never commit `.auth`, `.env`, reports, test results, healing/cache/runtime files, or captured application evidence.
 
-Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, `15-NEW-PROJECT-HANDOFF.md`, `18-MULTI-PROJECT-EXECUTION.md`, `29-AGENT-AUTHORING-UI-API-DB-E2E.md`, and `30-RECOVERY-ARCHITECTURE.md`.
+Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`, `41-CURRENT-RELEASE-STATUS.md`, `15-NEW-PROJECT-HANDOFF.md`, `18-MULTI-PROJECT-EXECUTION.md`, `29-AGENT-AUTHORING-UI-API-DB-E2E.md`, and `30-RECOVERY-ARCHITECTURE.md`.
 
 
 ## Database capability policy

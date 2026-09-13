@@ -1,5 +1,7 @@
 # Release Validation
 
+Current certified baseline: **v1.5.3**. Exact current evidence is recorded in `41-CURRENT-RELEASE-STATUS.md`; Git/GitHub CLI operational commands are in `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+
 ## One-command release gate
 
 Run from repository root after a clean install:
@@ -192,3 +194,27 @@ GitHub intermediate artifact names and merge download patterns include the full 
 `npm run release:static` validates structural GitHub/Azure workflow policy independently of checkout line endings. The release checker normalizes CRLF/CR to LF before multi-line policy evaluation and executes `scripts/release-static-portability-contract.mjs`, which proves the merged-report informational summary rule against both LF and simulated Windows CRLF workflow content.
 
 The Windows release-compatibility job must pass `Static and type validation` before browser recovery regressions execute. A platform-specific checkout conversion must never change release-policy results.
+
+
+## v1.5.3 certified release evidence
+
+The current release was certified after merge/tag, not only by local/static inspection:
+
+```text
+Main commit: 14f0a487d3d762fd660d3697f2ed315e709565f3
+Main CI run: 34744306756 — PASS
+Release Compatibility run: 34744507321 — PASS
+```
+
+The main run passed framework validation, execution planning, both core shards, trusted AI healing validation and the authoritative merged-report job. The tag-triggered compatibility matrix passed Ubuntu/Chromium, Ubuntu/Firefox, Ubuntu/WebKit, macOS/WebKit and Windows/Chromium.
+
+For release operations from the terminal:
+
+```bash
+gh run list --branch main --workflow playwright-sharded.yml --limit 5
+gh run list --workflow release-compatibility.yml --limit 5
+gh run watch <RUN_ID>
+gh run view <RUN_ID> --log-failed
+```
+
+A pushed `v*` tag automatically triggers `TestigentAI Release Compatibility`; `workflow_dispatch` remains available for manual/pre-release evidence generation.
