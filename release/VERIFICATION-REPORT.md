@@ -50,3 +50,63 @@ Before archive creation, the v1.6.1 candidate passed the dependency-independent 
 | Provider-health sanitization/truth-boundary probe | PASS |
 
 The final archive is additionally re-extracted into a clean directory and the release/static/offline/parser/integrity checks are repeated before handoff. Full connected `npm ci`, `npm run validate:final`, PR/main/rerun CI and the five-platform/browser compatibility matrix remain required before v1.6.1 can replace certified v1.6.0.
+
+---
+
+# TestigentAI v1.6.1 — Certified Baseline
+
+## Release Focus
+
+AI Operational Reliability
+
+## Certification Status
+
+TestigentAI v1.6.1 has completed release certification successfully.
+
+### CI Validation
+
+- Main CI: PASS
+- Main full rerun: PASS
+- Framework Validation: PASS
+- Execution Plan: PASS
+- Project Tests - Shard 1: PASS
+- Project Tests - Shard 2: PASS
+- AI Deterministic Safety: PASS
+- AI Live Provider Canary: PASS as operational/non-blocking lane
+- Provider Health History: PASS
+- Rerun-safe Report Provenance: PASS
+- Final Business Bundle Validation: PASS
+
+## AI Operational Reliability Proof
+
+The live Gemini provider experienced external availability/rate-limit conditions during certification.
+
+Observed operational conditions included:
+
+- HTTP 503 UNAVAILABLE
+- HTTP 429 RESOURCE_EXHAUSTED
+
+TestigentAI correctly classified the live provider as DEGRADED without converting external provider instability into a deterministic release failure.
+
+Deterministic AI safety remained the release correctness gate.
+
+The provider-health artifact remained valid, was persisted in provider-health history, and was consumed successfully by report merging and final business-bundle validation.
+
+## Release Compatibility Matrix
+
+- Ubuntu / Chromium: PASS
+- Ubuntu / Firefox: PASS
+- Ubuntu / WebKit: PASS
+- macOS / WebKit: PASS
+- Windows / Chromium: PASS
+
+## Final Result
+
+TestigentAI v1.6.1 is the current CERTIFIED BASELINE.
+
+The v1.6.1 Git tag is immutable and must not be moved or recreated.
+
+TestigentAI v1.6.0 remains preserved as the previous certified baseline.
+
+Future runtime development must continue on a new version or feature branch rather than modifying the certified v1.6.1 tag.
+
