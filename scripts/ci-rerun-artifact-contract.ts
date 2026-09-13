@@ -22,6 +22,34 @@ function marker(lane: 'core' | 'ai', shardIndex: number, shardTotal: number, run
   return { schemaVersion: 1, lane, shardIndex, shardTotal, hasTests: true, application: 'demo', environment: 'qa', runId };
 }
 
+function assertWorkflowArtifactAcquisitionContract(): void {
+  const workflowFile = path.join(process.cwd(), '.github', 'workflows', 'playwright-sharded.yml');
+  const workflow = fs.readFileSync(workflowFile, 'utf8').replace(/\r\n/g, '\n');
+  const requiredDownloadFragments = [
+    'name: Download workflow-run technical blobs',
+    'name: Download workflow-run business reports',
+    'name: Download AI audit',
+    'github-token: ${{ github.token }}',
+    'repository: ${{ github.repository }}',
+    'run-id: ${{ github.run_id }}'
+  ];
+  for (const fragment of requiredDownloadFragments) {
+    assert(workflow.includes(fragment), `workflow artifact acquisition must include '${fragment}'`);
+  }
+  const cleanupGuard = [
+    "needs.test.result == 'success'",
+    "needs.ai-smoke.result == 'success' || needs.ai-smoke.result == 'skipped'",
+    'blob-${APP}-${GITHUB_RUN_ID}-',
+    'business-${APP}-${GITHUB_RUN_ID}-',
+    'ai-audit-${APP}-${GITHUB_RUN_ID}-'
+  ];
+  for (const fragment of cleanupGuard) {
+    assert(workflow.includes(fragment), `intermediate artifact cleanup must retain evidence until '${fragment}' is satisfied`);
+  }
+}
+
+assertWorkflowArtifactAcquisitionContract();
+
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-rerun-artifacts-'));
 const rawBusiness = path.join(root, 'business-raw');
 const rawBlob = path.join(root, 'blob-raw');

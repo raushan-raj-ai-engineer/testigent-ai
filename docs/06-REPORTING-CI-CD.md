@@ -27,7 +27,7 @@ GitHub Actions derives the immutable execution-attempt identity as:
 RUN_ID = github.run_id-github.run_attempt
 ```
 
-Core business bundles, AI bundles, technical blobs, AI audit and the final report artifact include that full identity. GitHub failed-job reruns do not necessarily rerun successful shard jobs, so the merge stage downloads only artifacts from the same `github.run_id` family and runs `ci:report:rerun:resolve` before validation. The resolver selects the newest available source independently for each expected shard, may reuse an earlier attempt only when the application/environment/workflow-run/shard identity is exact, and writes `_rerun-resolution.json` recording every selected source attempt. `ci:report:download:validate` then verifies that manifest and the resolved topology before aggregation. Artifacts from another workflow run are never eligible, and mixed-attempt evidence is explicit rather than silent.
+Core business bundles, AI bundles, technical blobs, AI audit and the final report artifact include that full identity. GitHub failed-job reruns can expose a different attempt-scoped artifact view, so the merge stage downloads artifacts through the authenticated workflow-run API path (`github-token` + `repository` + `run-id`), restricts names to the same `github.run_id` family, and then runs `ci:report:rerun:resolve` before validation. The resolver selects the newest available source independently for each expected shard, may reuse an earlier attempt only when the application/environment/workflow-run/shard identity is exact, and writes `_rerun-resolution.json` recording every selected source attempt. `ci:report:download:validate` then verifies that manifest and the resolved topology before aggregation. Artifacts from another workflow run are never eligible, and mixed-attempt evidence is explicit rather than silent.
 
 `EXPECT_AI_LANE` is true only when the AI lane actually succeeds; an AI configuration failure remains visible as the root failure and does not create a misleading missing-AI-report merge failure.
 
@@ -122,3 +122,7 @@ The business report distinguishes locator attempts from proven recovery:
 
 Every generated business dashboard now includes `evidence-ledger.html` and `evidence-graph.json`. They are derived from the same merged/single `ExecutionFacts` object as the dashboard, so shard merging cannot create a separate truth model. The ledger is linked directly from the release dashboard and is intended for claim verification, not another stakeholder dashboard.
 
+
+### Failed-run artifact retention
+
+Intermediate core/AI report artifacts are deleted only when the core test job succeeded and the AI job either succeeded or was intentionally skipped, in addition to successful merge/final validation/upload. A required-lane failure therefore retains immutable evidence for diagnostics and a later provenance-safe partial rerun.

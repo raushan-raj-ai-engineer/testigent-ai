@@ -268,6 +268,26 @@ try {
   if (!pkg.scripts?.['reporting:contract']?.includes('ci-rerun-artifact-contract.ts')) {
     issues.push('Reporting contract must exercise failed-rerun artifact provenance resolution');
   }
+  const publicRunArtifactDownloads = [
+    'Download workflow-run technical blobs',
+    'Download workflow-run business reports',
+    'Download AI audit',
+    'github-token: ${{ github.token }}',
+    'repository: ${{ github.repository }}',
+    'run-id: ${{ github.run_id }}'
+  ];
+  if (!publicRunArtifactDownloads.every(fragment => githubWorkflow.includes(fragment))) {
+    issues.push('CI rerun reporting must acquire artifacts through the workflow-run public API path');
+  }
+  if (!githubWorkflow.includes("needs.test.result == 'success'") ||
+      !githubWorkflow.includes("needs.ai-smoke.result == 'success' || needs.ai-smoke.result == 'skipped'")) {
+    issues.push('Intermediate report artifacts must be retained whenever any required execution lane fails');
+  }
+  if (!githubWorkflow.includes('blob-${APP}-${GITHUB_RUN_ID}-') ||
+      !githubWorkflow.includes('business-${APP}-${GITHUB_RUN_ID}-') ||
+      !githubWorkflow.includes('ai-audit-${APP}-${GITHUB_RUN_ID}-')) {
+    issues.push('Successful cleanup must remove intermediate artifacts across the complete workflow-run attempt family');
+  }
   if (!pkg.scripts?.['test:review:hardening']?.includes('ai-retry-budget-contract.spec.ts')) {
     issues.push('Review hardening must exercise bounded Gemini retry-budget behavior');
   }
