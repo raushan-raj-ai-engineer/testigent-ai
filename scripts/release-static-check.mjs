@@ -154,6 +154,15 @@ for (const required of [
   'tests/framework/review-hardening-contract.spec.ts',
   'tests/framework/browser-free-fixtures.spec.ts',
   'scripts/migration-assess.ts',
+  'scripts/change-impact.ts',
+  'src/framework/intelligence/change-impact.ts',
+  'src/framework/analytics/evidence-graph.ts',
+  'tests/framework/evidence-intelligence-contract.spec.ts',
+  'tests/framework/false-heal-safety.spec.ts',
+  'docs/42-QUALITY-EVIDENCE-AND-RELEASE-INTELLIGENCE.md',
+  'docs/43-CHANGE-IMPACT-AND-MIGRATION.md',
+  'docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md',
+  'docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md',
   'src/framework/reporting/portfolio-dashboard.writer.ts',
   'tests/framework/portfolio-reporting.spec.ts',
   'scripts/qa.ts',
@@ -430,6 +439,11 @@ try {
   const reviewTests = fs.readFileSync(path.join(root, 'tests/framework/review-hardening-contract.spec.ts'), 'utf8');
   const browserFree = fs.readFileSync(path.join(root, 'tests/framework/browser-free-fixtures.spec.ts'), 'utf8');
   const migration = fs.readFileSync(path.join(root, 'scripts/migration-assess.ts'), 'utf8');
+  const changeImpact = fs.readFileSync(path.join(root, 'src/framework/intelligence/change-impact.ts'), 'utf8');
+  const evidenceGraph = fs.readFileSync(path.join(root, 'src/framework/analytics/evidence-graph.ts'), 'utf8');
+  const dashboardWriter = fs.readFileSync(path.join(root, 'src/framework/reporting/business-dashboard.writer.ts'), 'utf8');
+  const dashboardRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/business-html.renderer.ts'), 'utf8');
+  const falseHealSafety = fs.readFileSync(path.join(root, 'tests/framework/false-heal-safety.spec.ts'), 'utf8');
   const reportHistory = fs.readFileSync(path.join(root, 'src/framework/reporting/report-history.store.ts'), 'utf8');
   const durationHistory = fs.readFileSync(path.join(root, 'src/framework/execution/duration-history.store.ts'), 'utf8');
   const evidencePolicy = fs.readFileSync(path.join(root, 'src/framework/logging/evidence.policy.ts'), 'utf8');
@@ -463,7 +477,13 @@ try {
   if (!security.includes('advisoryId') || !security.includes('expiresAt') || !security.includes('unresolved:${packageName}') || securityConfig.schemaVersion !== 1 || !Array.isArray(securityConfig.exceptions)) issues.push('A8 advisory-scoped/fail-closed security exception policy missing');
   if (!pkg.scripts?.['test:review:hardening'] || !String(pkg.scripts?.['validate:final:steps'] ?? '').includes('test:review:hardening') || !String(pkg.scripts?.['test:review:hardening'] ?? '').includes('healing-generation-contract.spec.ts')) issues.push('architect-review regression suite must gate A1-A8 including delayed-primary recovery');
   if (!reviewTests.includes('A1 removes canary secrets') || !reviewTests.includes('A8 a new advisory')) issues.push('architect-review executable acceptance coverage missing');
-  if (!pkg.scripts?.['migration:assess'] || !pkg.scripts?.['qa:migrate'] || !migration.includes('adoption aid')) issues.push('existing-Playwright migration assessment path missing');
+  if (!pkg.scripts?.['migration:assess'] || !pkg.scripts?.['qa:migrate'] || !migration.includes('adoption aid') || !migration.includes('migrationSlices')) issues.push('existing-Playwright incremental migration assessment/slicing path missing');
+  if (!pkg.scripts?.['change:impact'] || !pkg.scripts?.['qa:impact']) issues.push('explainable change-impact CLI path missing');
+  if (!pkg.scripts?.['test:healing:safety'] || !String(pkg.scripts?.['test:review:hardening'] ?? '').includes('false-heal-safety.spec.ts')) issues.push('false-heal safety benchmark must remain part of architect-review hardening');
+  if (!pkg.scripts?.['test:evidence:intelligence'] || !String(pkg.scripts?.['test:review:hardening'] ?? '').includes('evidence-intelligence-contract.spec.ts')) issues.push('quality evidence/release intelligence regression gate missing');
+  if (!changeImpact.includes('Impact analysis is advisory in v1.6.0') || !changeImpact.includes('all-project-tests') || !changeImpact.includes('reasons')) issues.push('v1.6.0 change-impact must stay explainable, advisory and fail-safe on shared changes');
+  if (!evidenceGraph.includes('Truth boundary:') || !evidenceGraph.includes('deriveExplainableReleaseRisk') || !dashboardWriter.includes('evidence-ledger.html') || !dashboardWriter.includes('evidence-graph.json') || !dashboardRenderer.includes('Verify dashboard claims')) issues.push('v1.6.0 one-click deterministic evidence ledger/release-risk contract missing');
+  if (!falseHealSafety.includes('cannot override a failed business post-condition') || !falseHealSafety.includes('never promoted into reusable cache')) issues.push('v1.6.0 seeded false-heal acceptance coverage missing');
   if (!pkg.scripts?.['release:compat:probe'] || !fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8').includes('Architect-review and recovery regression')) issues.push('release compatibility evidence workflow/probe missing');
   if (!reportHistory.includes("'.report-history', application, environment") || !reportHistory.includes("openSync(lock, 'wx')") || !durationHistory.includes("'.report-history', app, env") || !durationHistory.includes("openSync(lock, 'wx')")) issues.push('shared history must be environment-scoped and lock-protected');
 } catch (error) {

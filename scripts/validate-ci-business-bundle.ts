@@ -15,7 +15,9 @@ function main(): void {
   const htmlPath = path.join(reportDir, 'index.html');
   const jsPath = path.join(reportDir, 'assets', 'dashboard.js');
   const csvPath = path.join(reportDir, 'business-tests.csv');
-  [jsonPath, htmlPath, jsPath, csvPath].forEach(requireNonEmptyFile);
+  const evidenceLedgerPath = path.join(reportDir, 'evidence-ledger.html');
+  const evidenceGraphPath = path.join(reportDir, 'evidence-graph.json');
+  [jsonPath, htmlPath, jsPath, csvPath, evidenceLedgerPath, evidenceGraphPath].forEach(requireNonEmptyFile);
 
   const facts = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as ExecutionFacts;
   if (facts.total !== facts.results.length) throw new Error(`Business total mismatch: total=${facts.total}, results=${facts.results.length}`);
@@ -30,6 +32,17 @@ function main(): void {
   if (!html.includes('assets/dashboard.js')) throw new Error('Interactive dashboard asset reference is missing from index.html');
   if (!html.includes('statusDonut')) throw new Error('Execution status graph container is missing from index.html');
   if (!html.includes('Test Explorer')) throw new Error('Test Explorer is missing from index.html');
+  if (!html.includes('evidence-ledger.html')) throw new Error('One-click Evidence Ledger link is missing from index.html');
+
+  const evidenceLedger = fs.readFileSync(evidenceLedgerPath, 'utf8');
+  if (!evidenceLedger.includes('Truth boundary:')) throw new Error('Evidence Ledger truth-boundary statement is missing');
+  const evidenceGraph = JSON.parse(fs.readFileSync(evidenceGraphPath, 'utf8')) as { schemaVersion?: number; runId?: string; claims?: Array<{ id?: string }> };
+  if (evidenceGraph.schemaVersion !== 1) throw new Error(`Unsupported evidence graph schema: ${String(evidenceGraph.schemaVersion)}`);
+  if (evidenceGraph.runId !== facts.runId) throw new Error(`Evidence graph run mismatch: graph=${String(evidenceGraph.runId)}, business=${facts.runId}`);
+  const claimIds = new Set((evidenceGraph.claims ?? []).map(claim => claim.id));
+  for (const requiredClaim of ['release-decision', 'release-risk', 'execution-coverage', 'quality-pass-rate', 'traceability']) {
+    if (!claimIds.has(requiredClaim)) throw new Error(`Evidence graph is missing required claim '${requiredClaim}'`);
+  }
 
   let evidenceChecked = 0;
   for (const result of facts.results) {

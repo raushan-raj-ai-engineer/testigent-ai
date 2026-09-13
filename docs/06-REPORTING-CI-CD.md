@@ -117,3 +117,8 @@ The business report distinguishes locator attempts from proven recovery:
 - `unverified` — runtime action completed without a semantic post-condition; retained for audit but not counted/cached
 
 `business-report.json`, the HTML dashboard, merged shard reporting and the executive summary use the same rule. Historical pre-v1.2.2 records without an outcome are treated as validated for backward-compatible report reading, but legacy cache entries are not trusted for future execution.
+
+## v1.6.0 evidence bundle
+
+Every generated business dashboard now includes `evidence-ledger.html` and `evidence-graph.json`. They are derived from the same merged/single `ExecutionFacts` object as the dashboard, so shard merging cannot create a separate truth model. The ledger is linked directly from the release dashboard and is intended for claim verification, not another stakeholder dashboard.
+

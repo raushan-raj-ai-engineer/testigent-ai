@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { BusinessAttachment, ExecutionFacts } from '../analytics/report.types';
 import { renderBusinessHtml, type BusinessDashboardOptions } from './business-html.renderer';
+import { buildEvidenceGraph, renderEvidenceLedgerHtml } from '../analytics/evidence-graph';
 
 /**
  * Author: Raushan Raj
@@ -20,6 +21,9 @@ export function writeBusinessDashboard(outputDir: string, input: ExecutionFacts,
   fs.copyFileSync(clientSource, path.join(assetsDir, 'dashboard.js'));
   fs.writeFileSync(path.join(outputDir, 'business-tests.csv'), toCsv(facts), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'business-report.json'), JSON.stringify(facts, null, 2), 'utf8');
+  const evidenceGraph = buildEvidenceGraph(facts);
+  fs.writeFileSync(path.join(outputDir, 'evidence-graph.json'), JSON.stringify(evidenceGraph, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outputDir, 'evidence-ledger.html'), renderEvidenceLedgerHtml(evidenceGraph, facts), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'index.html'), renderBusinessHtml(facts, options), 'utf8');
   return facts;
 }

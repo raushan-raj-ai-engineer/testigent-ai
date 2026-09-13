@@ -131,3 +131,28 @@ gh pr checks --watch
 ```
 
 After merge, synchronize `main`, watch the main CI, and only then create a release tag when the change is a release. The full install/login/PR/CI/rerun/tag/cleanup/troubleshooting command reference is `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+
+## v1.6.0 evidence / impact commands
+
+Explain changed-code impact without silently narrowing CI:
+
+```bash
+npm run qa:impact -- --base main --head HEAD
+# or
+npm run qa:impact -- --files projects/demo/src/pages/todo.page.ts
+```
+
+Assess an existing Playwright suite in incremental migration slices:
+
+```bash
+npm run qa:migrate -- projects/<project>/tests
+```
+
+Run the seeded false-heal safety benchmark:
+
+```bash
+npm run test:healing:safety
+```
+
+After a normal business execution, open the business report and use **Verify dashboard claims** for one-click access to the Evidence Ledger.
+
