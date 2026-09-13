@@ -1,6 +1,6 @@
 # Daily Commands
 
-Current certified baseline: **v1.5.3**. For Git/GitHub CLI branch, PR, CI, rerun, tag and cleanup commands, use `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+Current certified baseline: **v1.6.0**. For Git/GitHub CLI branch, PR, CI, rerun, tag and cleanup commands, use `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
 
 ## Recommended new-joiner surface
 

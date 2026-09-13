@@ -1,3 +1,23 @@
+# TestigentAI v1.6.1 — AI Operational Reliability Candidate
+
+## Baseline
+
+`v1.6.0` is the immutable certified baseline at commit `4225e151fadcc85fd0a9861b385bda82bd1c96c0`. Tag-triggered Release Compatibility run `34760349497` passed the full 5/5 Ubuntu/macOS/Windows browser matrix.
+
+## v1.6.1 scope
+
+- blocking `AI Deterministic Safety` job with no external provider dependency;
+- non-blocking `AI Live Provider Canary` for real provider/generation/healing availability;
+- structured `HEALTHY` / `DEGRADED` / `MISCONFIGURED` / `SKIPPED` canary evidence;
+- environment-scoped, lock-protected AI provider-health history;
+- one-click `ai-provider-health.html` drill-down from the compact business dashboard;
+- healthy live AI evidence is merged only when the canary is healthy; provider degradation never rewrites deterministic release facts.
+- merge-time AI evidence selection is artifact-driven and rerun-safe: newest same-workflow canary wins, missing expected evidence fails closed, and intentional skips record `SKIPPED`.
+
+See `docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`. v1.6.1 remains a candidate until connected validation, main/rerun CI and the compatibility matrix pass.
+
+---
+
 # TestigentAI v1.6.0 — Review Candidate
 
 ### Connected type-safety correction
@@ -13,11 +33,11 @@
 - Evidence-graph edges are referentially valid and direct attachment links reject unsafe absolute/parent-traversal paths.
 - Evidence graph and change-impact analysis were optimized to avoid avoidable quadratic/repeated-file-read behavior.
 - Change-impact ownership hints now ignore generic/short filename vocabulary so heuristic noise cannot masquerade as narrow impact evidence; unresolved project changes fail safe to the full project suite.
-- Connected Node 22 `npm ci && npm run validate:final` plus the supported OS/browser matrix remain the certification boundary; v1.5.3 stays the certified baseline until those pass.
+- Historical pre-certification note: connected Node 22 `npm ci && npm run validate:final` plus the supported OS/browser matrix were the certification boundary; those gates later passed and v1.6.0 is now the certified baseline.
 
 # TestigentAI v1.6.0 — Evidence Intelligence Review Candidate
 
-Status: **REVIEW CANDIDATE**. v1.5.3 remains the last certified tag until connected release validation completes.
+Historical status: **REVIEW CANDIDATE**. At that point v1.5.3 remained the last certified tag; v1.6.0 later completed connected certification and is now the immutable certified baseline.
 
 ## v1.6.0 product improvements
 
@@ -419,7 +439,7 @@ Connected Node 22.23.2 validation passed locally (37/37 review-hardening, 124/12
 - Gemini health/model validation succeeded, but two slow HTTP 503 responses consumed most of the old 90-second total retry budget. Gemini retry allocation now reserves future retry/backoff time, defaults the per-attempt CI timeout to 30 seconds, retries timeout by default, and retains strict failure after bounded attempts.
 - GitHub `rerun --failed` may not rerun already-successful core shard jobs. Report merge now resolves immutable same-workflow-run artifacts per shard, records `_rerun-resolution.json`, carries technical blobs from the same source attempts, rejects cross-run/future/duplicate provenance, and allows mixed attempt IDs only when explicitly verified as members of the same workflow run.
 
-No `v1.6.0` tag should be created until the replacement trusted-main run, rerun proof and release compatibility matrix are green. See `docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`.
+Historical pre-tag instruction: no `v1.6.0` tag was to be created until replacement trusted-main, rerun proof and release compatibility were green; those gates later completed successfully. See `docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`.
 
 
 ## v1.6.0 pre-tag closure — workflow-run artifact acquisition
@@ -429,51 +449,21 @@ No `v1.6.0` tag should be created until the replacement trusted-main run, rerun 
 - Merge downloads now supply `github-token`, `repository`, and `run-id` so artifact lookup uses the authenticated workflow-run API path before strict provenance resolution.
 - Intermediate core/AI artifacts are retained whenever a required execution lane fails; cleanup occurs only after required lanes plus final merge/validation/upload succeed.
 - Static and synthetic rerun contracts protect acquisition, retention, shard-attempt selection, technical/business alignment, and cross-run rejection.
-- `v1.6.0` remains untagged until replacement main CI, main rerun, and the 5/5 compatibility matrix pass.
+- Historical pre-tag state: `v1.6.0` remained untagged until replacement main CI, main rerun and the 5/5 compatibility matrix passed; those gates later completed successfully.
 
-<!-- V1.6.0-CERTIFICATION-RECORD -->
+## v1.6.0 final certification and v1.6.1 operational candidate
 
-## v1.6.0 Final Certification Record
+TestigentAI **v1.6.0 is the certified immutable baseline**. Annotated tag `v1.6.0` resolves to certified commit `4225e151fadcc85fd0a9861b385bda82bd1c96c0`. Tag-triggered Release Compatibility run `34760349497` passed Ubuntu Chromium/Firefox/WebKit, macOS WebKit and Windows Chromium.
 
-TestigentAI v1.6.0 is now the certified release baseline.
+The current development candidate is **v1.6.1 — AI Operational Reliability**. It keeps v1.6.0 deterministic release/evidence semantics unchanged and adds:
 
-- Release tag: `v1.6.0`
-- Certified commit: `4225e151fadcc85fd0a9861b385bda82bd1c96c0`
-- Tag object: `80e723eb45af82147ff1e0d4044b8b31bce8e19c`
-- Release Compatibility workflow run: `34760349497`
-- Certification status: **PASS**
+- blocking provider-neutral `AI Deterministic Safety`;
+- non-blocking `AI Live Provider Canary` with `HEALTHY`, `DEGRADED`, `MISCONFIGURED` and `SKIPPED`;
+- environment-scoped, sanitized, bounded provider-health history;
+- compact dashboard reliability signal plus one-click `ai-provider-health.html`;
+- immutable canary-artifact selection for rerun-safe AI evidence inclusion;
+- fail-closed behavior when expected canary evidence is missing;
+- explicit `SKIPPED` evidence when a canary is intentionally not run;
+- matching GitHub Actions and Azure Pipelines policy boundaries.
 
-Compatibility matrix:
-
-| Platform | Browser | Result |
-| --- | --- | --- |
-| Ubuntu | Chromium | PASS |
-| Ubuntu | Firefox | PASS |
-| Ubuntu | WebKit | PASS |
-| macOS | WebKit | PASS |
-| Windows | Chromium | PASS |
-
-The compatibility workflow validated locked dependency installation, static and TypeScript checks, architect-review/recovery regressions, runtime/browser version capture, and compatibility evidence publication.
-
-Additional v1.6.0 evidence completed before certification included:
-
-- Node 22 connected `validate:final` validation
-- 40/40 review-hardening tests
-- 127/127 framework regression tests
-- zero high/critical dependency advisories
-- governed Quality Evidence Graph and one-click Evidence Ledger validation
-- false-heal safety validation
-- explainable release-risk validation
-- change-impact fail-safe contracts
-- Gemini retry-budget contracts
-- real Gemini AI-healing execution
-- failed-job rerun recovery
-- mixed-attempt artifact provenance validation
-- business/technical report provenance alignment
-- workflow-run artifact acquisition and retention validation
-
-Live external AI-provider availability remains operationally observable and may independently experience provider-side transient failures such as HTTP 503. Such provider availability events remain visible in CI evidence and are not represented as successful AI healing.
-
-This certification record supersedes earlier pre-tag or awaiting-certification status statements for v1.6.0.
-
-The `v1.6.0` tag is an immutable release marker and must not be moved or recreated after this documentation update.
+v1.6.1 remains a **candidate**, not a certified release, until connected Node 22 `npm run validate:final`, PR/main/rerun CI and the 5/5 Release Compatibility matrix pass.

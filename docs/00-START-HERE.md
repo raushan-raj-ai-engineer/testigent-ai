@@ -2,7 +2,7 @@
 
 TestigentAI is a reusable Playwright + TypeScript quality platform. Reusable engines live in `src/framework/`; application behavior lives only in `projects/<project>/`.
 
-Current certified baseline: **v1.5.3** on Node.js 22.x. The main CI and 5/5 tag-triggered release-compatibility matrix are green; see `41-CURRENT-RELEASE-STATUS.md`.
+Current certified baseline: **v1.6.0** on Node.js 22.x. The main CI and 5/5 tag-triggered release-compatibility matrix are green; see `41-CURRENT-RELEASE-STATUS.md`.
 
 ## First-time setup
 

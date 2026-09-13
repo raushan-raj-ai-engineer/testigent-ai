@@ -28,6 +28,7 @@ function assertWorkflowArtifactAcquisitionContract(): void {
   const requiredDownloadFragments = [
     'name: Download workflow-run technical blobs',
     'name: Download workflow-run business reports',
+    'name: Download workflow-run AI provider canaries',
     'name: Download AI audit',
     'github-token: ${{ github.token }}',
     'repository: ${{ github.repository }}',
@@ -38,10 +39,11 @@ function assertWorkflowArtifactAcquisitionContract(): void {
   }
   const cleanupGuard = [
     "needs.test.result == 'success'",
-    "needs.ai-smoke.result == 'success' || needs.ai-smoke.result == 'skipped'",
+    "needs.ai-contracts.result == 'success'",
     'blob-${APP}-${GITHUB_RUN_ID}-',
     'business-${APP}-${GITHUB_RUN_ID}-',
-    'ai-audit-${APP}-${GITHUB_RUN_ID}-'
+    'ai-audit-${APP}-${GITHUB_RUN_ID}-',
+    'ai-canary-${APP}-${GITHUB_RUN_ID}-'
   ];
   for (const fragment of cleanupGuard) {
     assert(workflow.includes(fragment), `intermediate artifact cleanup must retain evidence until '${fragment}' is satisfied`);

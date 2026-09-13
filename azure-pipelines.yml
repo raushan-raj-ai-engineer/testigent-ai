@@ -32,6 +32,20 @@ variables:
   AI_ALLOWED_PRIVATE_ORIGINS: ''
   AI_ALLOWED_EXTERNAL_ORIGINS: ''
   AI_ALLOW_CROSS_ORIGIN_REDIRECTS: 'false'
+  AI_TIMEOUT_MS: '30000'
+  AI_TOTAL_TIMEOUT_MS: '90000'
+  AI_RETRY_MAX_ATTEMPTS: '3'
+  AI_RETRY_BASE_DELAY_MS: '1000'
+  AI_RETRY_MAX_DELAY_MS: '8000'
+  AI_RETRY_JITTER_MS: '250'
+  AI_RETRY_ON_TIMEOUT: 'true'
+  AI_MAX_CALLS_PER_TEST: '2'
+  AI_PROVIDER_GENERATION_CHECK: 'true'
+  AI_TEST_TIMEOUT_MS: '180000'
+  AI_NAVIGATION_TIMEOUT_MS: '60000'
+  AI_HEALING_SNAPSHOT_MAX_CHARS: '6000'
+  GEMINI_THINKING_LEVEL: 'low'
+  GEMINI_MAX_OUTPUT_TOKENS: '512'
   GEMINI_MODEL: ''
   OPENAI_MODEL: ''
   AZURE_OPENAI_ENDPOINT: ''
@@ -66,6 +80,19 @@ stages:
   displayName: Run selected project
   dependsOn: Validate
   jobs:
+  - job: AIDeterministicSafety
+    displayName: AI Deterministic Safety
+    pool: { vmImage: ubuntu-latest }
+    steps:
+    - task: NodeTool@0
+      inputs: { versionSpec: '$(NODE_VERSION)' }
+    - script: npm ci
+      displayName: Install locked dependencies
+    - script: npx playwright install --with-deps chromium
+      displayName: Install Chromium
+    - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run test:ai:deterministic
+      displayName: Run deterministic AI safety contracts
+
   - job: PlaywrightShard
     pool: { vmImage: ubuntu-latest }
     strategy:
@@ -142,8 +169,8 @@ stages:
       displayName: Publish business shard bundle
 
   - ${{ if eq(parameters.runAi, true) }}:
-    - job: AIHealing
-      displayName: AI healing validation
+    - job: AILiveCanary
+      displayName: AI Live Provider Canary (non-blocking)
       pool: { vmImage: ubuntu-latest }
       steps:
       - task: NodeTool@0
@@ -154,27 +181,68 @@ stages:
         displayName: Install Chromium
       - bash: |
           set -euo pipefail
+          HAS_AI_TESTS=false
           if grep -RIl --include='*.spec.ts' --include='*.test.ts' '@ai' "projects/$(APP)/tests" 2>/dev/null | grep -q .; then
-            echo "##vso[task.setvariable variable=HAS_AI_TESTS]true"
-            echo "[ai] @ai tests found for project '$(APP)'."
-          else
-            echo "##vso[task.setvariable variable=HAS_AI_TESTS]false"
-            echo "[ai] No @ai tests found for project '$(APP)'."
+            HAS_AI_TESTS=true
           fi
-        displayName: Detect AI tests
-      - bash: |
-          set -euo pipefail
-          APP="$(APP)" ENV="$(ENV)" CI=true RUN_ID="$(Build.BuildId)" \
-            AI_ENABLED=true ALLOW_AI_TESTS=true HEALING_AI_ENABLED=true HEALING_MODE=runtime \
-            npm run test:project -- --project=chromium --grep="@ai"
-        condition: eq(variables['HAS_AI_TESTS'], 'true')
-        displayName: Run dedicated AI/healing tests
+          echo "##vso[task.setvariable variable=HAS_AI_TESTS]${HAS_AI_TESTS}"
+
+          CONFIG_OUTCOME=skipped
+          PROVIDER_OUTCOME=skipped
+          HEALING_OUTCOME=skipped
+          AI_HEALING_DEMO_VALUE=false
+          [[ "$(APP)" == "demo" ]] && AI_HEALING_DEMO_VALUE=true
+
+          if [[ "${HAS_AI_TESTS}" == "true" ]]; then
+            set +e
+            npm run ai:canary:preflight
+            rc=$?
+            set -e
+            if [[ $rc -eq 0 ]]; then CONFIG_OUTCOME=passed; else CONFIG_OUTCOME=failed; fi
+
+            if [[ "${CONFIG_OUTCOME}" == "passed" ]]; then
+              set +e
+              npm run ai:check
+              rc=$?
+              set -e
+              if [[ $rc -eq 0 ]]; then PROVIDER_OUTCOME=passed; else PROVIDER_OUTCOME=failed; fi
+            fi
+
+            if [[ "${PROVIDER_OUTCOME}" == "passed" ]]; then
+              set +e
+              AI_HEALING_DEMO="${AI_HEALING_DEMO_VALUE}" npm run test:project -- --project=chromium --grep="@ai"
+              rc=$?
+              set -e
+              if [[ $rc -eq 0 ]]; then HEALING_OUTCOME=passed; else HEALING_OUTCOME=failed; fi
+            fi
+          fi
+
+          AI_CANARY_HAS_TESTS="${HAS_AI_TESTS}" \
+          AI_CANARY_CONFIG_OUTCOME="${CONFIG_OUTCOME}" \
+          AI_CANARY_PROVIDER_OUTCOME="${PROVIDER_OUTCOME}" \
+          AI_CANARY_HEALING_OUTCOME="${HEALING_OUTCOME}" \
+            npm run ai:canary:finalize
+
+          STATUS="$(node -e "const fs=require('fs');process.stdout.write(JSON.parse(fs.readFileSync(process.env.AI_CANARY_RECORD_FILE,'utf8')).status)")"
+          if [[ "${STATUS}" == "HEALTHY" ]]; then
+            echo "##vso[task.setvariable variable=CANARY_HEALTHY]true"
+          else
+            echo "##vso[task.setvariable variable=CANARY_HEALTHY]false"
+            echo "##vso[task.logissue type=warning]Live AI provider canary=${STATUS}; deterministic AI safety remains the blocking correctness gate."
+          fi
+          echo "Live AI provider canary: ${STATUS}"
+        displayName: Execute and classify live AI provider canary
         env:
-          AUTH_USERNAME: $(AUTH_USERNAME)
-          AUTH_PASSWORD: $(AUTH_PASSWORD)
-          AUTH_CLIENT_ID: $(AUTH_CLIENT_ID)
-          AUTH_CLIENT_SECRET: $(AUTH_CLIENT_SECRET)
-          AUTH_REFRESH_TOKEN: $(AUTH_REFRESH_TOKEN)
+          APP: $(APP)
+          ENV: $(ENV)
+          CI: 'true'
+          RUN_ID: $(Build.BuildId)
+          AI_ENABLED: 'true'
+          ALLOW_AI_TESTS: 'true'
+          HEALING_AI_ENABLED: 'true'
+          HEALING_MODE: runtime
+          AI_AUDIT_ENABLED: $(AI_AUDIT_ENABLED)
+          AI_RUNTIME_LOGGING: $(AI_RUNTIME_LOGGING)
           AI_PROVIDER_MODE: $(AI_PROVIDER_MODE)
           AI_PROVIDER: $(AI_PROVIDER)
           AI_PROVIDER_ORDER: $(AI_PROVIDER_ORDER)
@@ -182,7 +250,28 @@ stages:
           AI_ALLOWED_PRIVATE_ORIGINS: $(AI_ALLOWED_PRIVATE_ORIGINS)
           AI_ALLOWED_EXTERNAL_ORIGINS: $(AI_ALLOWED_EXTERNAL_ORIGINS)
           AI_ALLOW_CROSS_ORIGIN_REDIRECTS: $(AI_ALLOW_CROSS_ORIGIN_REDIRECTS)
+          AI_TIMEOUT_MS: $(AI_TIMEOUT_MS)
+          AI_TOTAL_TIMEOUT_MS: $(AI_TOTAL_TIMEOUT_MS)
+          AI_RETRY_MAX_ATTEMPTS: $(AI_RETRY_MAX_ATTEMPTS)
+          AI_RETRY_BASE_DELAY_MS: $(AI_RETRY_BASE_DELAY_MS)
+          AI_RETRY_MAX_DELAY_MS: $(AI_RETRY_MAX_DELAY_MS)
+          AI_RETRY_JITTER_MS: $(AI_RETRY_JITTER_MS)
+          AI_RETRY_ON_TIMEOUT: $(AI_RETRY_ON_TIMEOUT)
+          AI_MAX_CALLS_PER_TEST: $(AI_MAX_CALLS_PER_TEST)
+          AI_PROVIDER_GENERATION_CHECK: $(AI_PROVIDER_GENERATION_CHECK)
+          TEST_TIMEOUT_MS: $(AI_TEST_TIMEOUT_MS)
+          NAVIGATION_TIMEOUT_MS: $(AI_NAVIGATION_TIMEOUT_MS)
+          AI_HEALING_SNAPSHOT_MAX_CHARS: $(AI_HEALING_SNAPSHOT_MAX_CHARS)
+          AI_PROVIDER_HEALTH_FILE: reports/$(APP)/$(ENV)/$(Build.BuildId)/provider-canary/ai-provider-canary.json
+          AI_CANARY_RECORD_FILE: reports/$(APP)/$(ENV)/$(Build.BuildId)/provider-canary/ai-provider-canary.json
+          AUTH_USERNAME: $(AUTH_USERNAME)
+          AUTH_PASSWORD: $(AUTH_PASSWORD)
+          AUTH_CLIENT_ID: $(AUTH_CLIENT_ID)
+          AUTH_CLIENT_SECRET: $(AUTH_CLIENT_SECRET)
+          AUTH_REFRESH_TOKEN: $(AUTH_REFRESH_TOKEN)
           GEMINI_MODEL: $(GEMINI_MODEL)
+          GEMINI_THINKING_LEVEL: $(GEMINI_THINKING_LEVEL)
+          GEMINI_MAX_OUTPUT_TOKENS: $(GEMINI_MAX_OUTPUT_TOKENS)
           GEMINI_API_KEY: $(GEMINI_API_KEY)
           OPENAI_MODEL: $(OPENAI_MODEL)
           OPENAI_API_KEY: $(OPENAI_API_KEY)
@@ -198,28 +287,33 @@ stages:
           AI_MODEL: $(AI_MODEL)
           AI_API_KEY: $(AI_API_KEY)
       - bash: |
-          APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" \
-            npm run ci:report:bundle -- ai 1 1 "$(HAS_AI_TESTS)"
-        condition: always()
-        displayName: Record AI business bundle topology
+          APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run ci:report:bundle -- ai 1 1 true
+        condition: and(always(), eq(variables['CANARY_HEALTHY'], 'true'))
+        displayName: Record healthy AI business bundle topology
       - task: PublishPipelineArtifact@1
-        condition: and(always(), eq(variables['HAS_AI_TESTS'], 'true'))
+        condition: always()
+        inputs:
+          targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/provider-canary'
+          artifact: 'ai-canary-$(APP)-$(Build.BuildId)'
+        displayName: Publish live AI provider canary
+      - task: PublishPipelineArtifact@1
+        condition: and(always(), eq(variables['CANARY_HEALTHY'], 'true'))
         inputs:
           targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/blob-report'
           artifact: 'blob-$(APP)-ai-$(Build.BuildId)'
-        displayName: Publish AI technical blob
+        displayName: Publish healthy AI technical blob
       - task: PublishPipelineArtifact@1
-        condition: always()
+        condition: and(always(), eq(variables['CANARY_HEALTHY'], 'true'))
         inputs:
           targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/business'
           artifact: 'business-$(APP)-ai-$(Build.BuildId)'
-        displayName: Publish AI business bundle
+        displayName: Publish healthy AI business bundle
       - task: PublishPipelineArtifact@1
-        condition: and(always(), eq(variables['HAS_AI_TESTS'], 'true'))
+        condition: and(always(), eq(variables['CANARY_HEALTHY'], 'true'))
         inputs:
           targetPath: 'reports/$(APP)/$(ENV)/$(Build.BuildId)/ai'
           artifact: 'ai-audit-$(APP)-$(Build.BuildId)'
-        displayName: Publish AI audit
+        displayName: Publish healthy AI audit
 
 
 - stage: Merge
@@ -252,13 +346,24 @@ stages:
           business-$(APP)-*/**
         path: '$(Pipeline.Workspace)/all-business-reports'
       displayName: Download business shard artifacts
+    - task: DownloadPipelineArtifact@2
+      continueOnError: true
+      inputs:
+        patterns: |
+          ai-canary-$(APP)-*/**
+        path: '$(Pipeline.Workspace)/ai-canary-records'
+      displayName: Download live AI provider canary records
     - bash: |
         set -euo pipefail
         mkdir -p all-blob-reports all-business-reports
         find "$(Pipeline.Workspace)/all-blob-reports" -type f -name '*.zip' -exec cp {} all-blob-reports/ \;
         find "$(Pipeline.Workspace)/all-business-reports" -type f -exec cp --parents {} all-business-reports/ \; || true
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" AI_CANARY_EXPECTED="${{ parameters.runAi }}" CI_WORKFLOW_RUN_ID="$(Build.BuildId)" npm run ci:ai:health -- "$(Pipeline.Workspace)/ai-canary-records"
+        EXPECT_AI=false
+        if grep -RIl --include='ci-bundle.json' '"lane"[[:space:]]*:[[:space:]]*"ai"' all-business-reports 2>/dev/null | grep -q .; then EXPECT_AI=true; fi
+        echo "Resolved healthy AI execution evidence: ${EXPECT_AI}"
         APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run report:merge:technical
-        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_WORKERS="${{ parameters.shards }}" EXPECT_AI_LANE="${{ parameters.runAi }}" npm run report:merge:business -- all-business-reports
+        APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" EXPECTED_CORE_WORKERS="${{ parameters.shards }}" EXPECT_AI_LANE="${EXPECT_AI}" npm run report:merge:business -- all-business-reports
         APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run ci:business:finalize
         APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" AI_ENABLED=false npm run report:business
         APP="$(APP)" ENV="$(ENV)" RUN_ID="$(Build.BuildId)" npm run ci:business:validate

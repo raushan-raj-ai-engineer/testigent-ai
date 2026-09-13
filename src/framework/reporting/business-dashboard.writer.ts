@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { BusinessAttachment, ExecutionFacts } from '../analytics/report.types';
 import { renderBusinessHtml, type BusinessDashboardOptions } from './business-html.renderer';
 import { buildEvidenceGraph, renderEvidenceLedgerHtml } from '../analytics/evidence-graph';
+import { renderAiProviderHealthHtml } from './ai-provider-health.renderer';
 
 /**
  * Author: Raushan Raj
@@ -24,6 +25,7 @@ export function writeBusinessDashboard(outputDir: string, input: ExecutionFacts,
   const evidenceGraph = buildEvidenceGraph(facts);
   fs.writeFileSync(path.join(outputDir, 'evidence-graph.json'), JSON.stringify(evidenceGraph, null, 2), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'evidence-ledger.html'), renderEvidenceLedgerHtml(evidenceGraph, facts), 'utf8');
+  fs.writeFileSync(path.join(outputDir, 'ai-provider-health.html'), renderAiProviderHealthHtml(options.providerHealth ?? { status: 'SKIPPED', samples: 0, healthySamples: 0, degradedSamples: 0, availabilityPercent: null, averageGenerationLatencyMs: null, recent: [] }), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'index.html'), renderBusinessHtml(facts, options), 'utf8');
   return facts;
 }

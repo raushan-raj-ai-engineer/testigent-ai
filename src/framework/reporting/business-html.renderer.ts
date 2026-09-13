@@ -1,10 +1,12 @@
 import type { BusinessOutcome, BusinessStepDetail, ExecutionFacts, ReportHistoryPoint, TestType } from '../analytics/report.types';
 import { formatTestType } from '../analytics/test-layer.classifier';
 import { deriveExplainableReleaseRisk } from '../analytics/evidence-graph';
+import type { AiProviderHealthSummary } from '../ai/ai-provider-health.store';
 
 export interface BusinessDashboardOptions {
   history?: ReportHistoryPoint[];
   reportUrl?: string;
+  providerHealth?: AiProviderHealthSummary;
 }
 
 interface ChartItem { label: string; value: number }
@@ -17,6 +19,7 @@ interface ChartItem { label: string; value: number }
  */
 export function renderBusinessHtml(payload: ExecutionFacts, options: BusinessDashboardOptions = {}): string {
   const history = options.history ?? [];
+  const providerHealth = options.providerHealth ?? { status: 'SKIPPED' as const, samples: 0, healthySamples: 0, degradedSamples: 0, availabilityPercent: null, averageGenerationLatencyMs: null, recent: [] };
   const aiUsage = payload.aiUsage ?? { calls: 0, healingCalls: 0, reportingCalls: 0, successfulCalls: 0, noResultCalls: 0, errorCalls: 0, budgetBlockedCalls: 0, averageLatencyMs: 0, providers: [], records: [] };
   const healingAttempts = payload.healing.attempts ?? payload.healing.records;
   const skipBreakdown = payload.skipBreakdown ?? { count: payload.skipped, categories: [] };
@@ -83,7 +86,7 @@ export function renderBusinessHtml(payload: ExecutionFacts, options: BusinessDas
 <div class="panel span4"><div class="panel-head"><div><h2>Slowest scenarios</h2><div class="panel-sub">Top execution-cost drivers for this run.</div></div></div>${slowest.length ? `<div class="rank-list">${slowest.map((result, index) => `<div class="rank-row"><span class="rank">${index + 1}</span><span><b>${escapeHtml(shortTitle(result.title))}</b><small>${escapeHtml(formatOutcome(result.outcome ?? legacyOutcome(result.status)))}</small></span><strong>${formatDuration(result.totalDurationMs)}</strong></div>`).join('')}</div>` : emptyState('No executed scenarios', 'No duration data available.')}</div>
 <div class="panel span4"><div class="panel-head"><div><h2>Executed layer coverage</h2><div class="panel-sub">Executed business scenarios only; not-applicable and blocked skips are excluded.</div></div></div><div id="layerBars" class="bars">${renderBars(layerData)}</div></div>
 <div class="panel span4"><div class="panel-head"><div><h2>Quality failure categories</h2><div class="panel-sub">Includes known-defect debt and unexpected failures.</div></div></div><div id="failureBars" class="bars">${renderBars(failureData)}</div></div>
-<div class="panel span4"><div class="panel-head"><div><h2>Reliability signals</h2><div class="panel-sub">Signals that may not fail the release but deserve engineering attention.</div></div></div><div class="signal-list"><div><span>Passed with healing</span><b>${payload.outcomes.passedWithHealing}</b></div><div><span>Passed after retry</span><b>${payload.outcomes.passedAfterRetry}</b></div><div><span>AI runtime calls</span><b>${aiUsage.calls}</b></div><div><span>Rejected healing</span><b>${payload.healing.rejected ?? 0}</b></div></div></div>
+<div class="panel span4"><div class="panel-head"><div><h2>Reliability signals</h2><div class="panel-sub">Signals that may not fail the release but deserve engineering attention.</div></div><a class="proof-link" href="./ai-provider-health.html">AI provider health ↗</a></div><div class="signal-list"><div><span>Passed with healing</span><b>${payload.outcomes.passedWithHealing}</b></div><div><span>Passed after retry</span><b>${payload.outcomes.passedAfterRetry}</b></div><div><span>AI runtime calls</span><b>${aiUsage.calls}</b></div><div><span>Live AI provider</span><b>${escapeHtml(providerHealth.status)}</b></div></div></div>
 </section>
 <section class="panel section-space"><div class="panel-head"><div><h2>Business impact</h2><div class="panel-sub">Risk translated from quality-failed scenarios into business language.</div></div></div><div class="insight-grid">${impactCards}</div></section>
 <section class="panel section-space"><div class="panel-head"><div><h2>New failure clusters</h2><div class="panel-sub">Unexpected failures grouped for triage; accepted known defects are tracked separately.</div></div></div><div class="insight-grid">${clusterCards}</div></section>

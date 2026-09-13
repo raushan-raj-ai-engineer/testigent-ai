@@ -17,7 +17,8 @@ function main(): void {
   const csvPath = path.join(reportDir, 'business-tests.csv');
   const evidenceLedgerPath = path.join(reportDir, 'evidence-ledger.html');
   const evidenceGraphPath = path.join(reportDir, 'evidence-graph.json');
-  [jsonPath, htmlPath, jsPath, csvPath, evidenceLedgerPath, evidenceGraphPath].forEach(requireNonEmptyFile);
+  const aiProviderHealthPath = path.join(reportDir, 'ai-provider-health.html');
+  [jsonPath, htmlPath, jsPath, csvPath, evidenceLedgerPath, evidenceGraphPath, aiProviderHealthPath].forEach(requireNonEmptyFile);
 
   const facts = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as ExecutionFacts;
   if (facts.total !== facts.results.length) throw new Error(`Business total mismatch: total=${facts.total}, results=${facts.results.length}`);
@@ -33,6 +34,9 @@ function main(): void {
   if (!html.includes('statusDonut')) throw new Error('Execution status graph container is missing from index.html');
   if (!html.includes('Test Explorer')) throw new Error('Test Explorer is missing from index.html');
   if (!html.includes('evidence-ledger.html')) throw new Error('One-click Evidence Ledger link is missing from index.html');
+  if (!html.includes('ai-provider-health.html')) throw new Error('One-click AI provider health link is missing from index.html');
+  const providerHealth = fs.readFileSync(aiProviderHealthPath, 'utf8');
+  if (!providerHealth.includes('Operational canary only') || !providerHealth.includes('Truth boundary')) throw new Error('AI provider health truth-boundary content is missing');
 
   const evidenceLedger = fs.readFileSync(evidenceLedgerPath, 'utf8');
   if (!evidenceLedger.includes('Truth boundary:')) throw new Error('Evidence Ledger truth-boundary statement is missing');

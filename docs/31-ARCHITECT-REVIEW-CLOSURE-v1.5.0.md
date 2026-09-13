@@ -1,6 +1,6 @@
 # TestigentAI v1.5.0 — Architect Review Closure
 
-> **Historical release evidence.** This document records the release state at that version. The current certified baseline is **v1.5.3**; use `41-CURRENT-RELEASE-STATUS.md`, `33-RELEASE-COMPATIBILITY-MATRIX.md`, and `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md` for current operations.
+> **Historical release evidence.** This document records the release state at that version. The current certified baseline is **v1.6.0**; use `41-CURRENT-RELEASE-STATUS.md`, `33-RELEASE-COMPATIBILITY-MATRIX.md`, and `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md` for current operations.
 
 This release treats the 12 September 2026 v1.4.2 architect/product-owner review as a regression backlog, not as a checklist to silence. The goal is to remove the root causes behind A1–A8 while preserving project isolation, reporting semantics, deterministic-first recovery, auth lifecycle and multi-project execution.
 

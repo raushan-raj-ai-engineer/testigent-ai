@@ -169,8 +169,31 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  ai-smoke:
-    name: AI Healing Validation
+  ai-contracts:
+    name: AI Deterministic Safety
+    needs: [validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AI_ENABLED: 'false'
+      HEALING_AI_ENABLED: 'false'
+    steps:
+      - name: Checkout TestigentAI
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run deterministic AI safety contracts
+        run: npm run test:ai:deterministic
+
+  ai-canary:
+    name: AI Live Provider Canary (non-blocking)
     needs: [validate]
     if: >-
       ${{
@@ -238,6 +261,8 @@ jobs:
 
     outputs:
       has_ai_tests: ${{ steps.detect-ai.outputs.has_ai_tests }}
+      canary_healthy: ${{ steps.classify-canary.outputs.canary_healthy }}
+      canary_status: ${{ steps.classify-canary.outputs.canary_status }}
 
     steps:
       - name: Checkout TestigentAI
@@ -254,6 +279,14 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Initialize AI canary runtime paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          canary_path="reports/${APP}/${ENV}/${RUN_ID}/provider-canary/ai-provider-canary.json"
+          echo "AI_CANARY_RECORD_FILE=${canary_path}" >> "$GITHUB_ENV"
+          echo "AI_PROVIDER_HEALTH_FILE=${canary_path}" >> "$GITHUB_ENV"
 
       - name: Detect AI tests
         id: detect-ai
@@ -279,8 +312,10 @@ jobs:
           fi
 
       - name: Validate AI CI configuration
+        id: validate-ai-config
         if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
-        shell: bash
+        continue-on-error: true
+        run: npm run ai:canary:preflight
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -288,85 +323,11 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: |
-          set -euo pipefail
-
-          echo "APP=${APP}"
-          echo "ENV=${ENV}"
-          echo "AI_PROVIDER_MODE=${AI_PROVIDER_MODE}"
-          echo "AI_PROVIDER=${AI_PROVIDER}"
-          echo "AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}"
-          echo "AI_ALLOW_CLOUD_EGRESS=${AI_ALLOW_CLOUD_EGRESS}"
-          echo "AI_TIMEOUT_MS=${AI_TIMEOUT_MS}"
-          echo "AI_TOTAL_TIMEOUT_MS=${AI_TOTAL_TIMEOUT_MS}"
-          echo "AI_RETRY_MAX_ATTEMPTS=${AI_RETRY_MAX_ATTEMPTS}"
-          echo "AI_RETRY_BASE_DELAY_MS=${AI_RETRY_BASE_DELAY_MS}"
-          echo "AI_RETRY_MAX_DELAY_MS=${AI_RETRY_MAX_DELAY_MS}"
-          echo "AI_RETRY_JITTER_MS=${AI_RETRY_JITTER_MS}"
-          echo "AI_RETRY_ON_TIMEOUT=${AI_RETRY_ON_TIMEOUT}"
-          echo "TEST_TIMEOUT_MS=${TEST_TIMEOUT_MS}"
-          echo "NAVIGATION_TIMEOUT_MS=${NAVIGATION_TIMEOUT_MS}"
-          echo "PW_RETRIES=${PW_RETRIES}"
-          echo "AI_HEALING_SNAPSHOT_MAX_CHARS=${AI_HEALING_SNAPSHOT_MAX_CHARS}"
-          echo "AI_PROVIDER_GENERATION_CHECK=${AI_PROVIDER_GENERATION_CHECK}"
-          echo "GEMINI_MODEL=${GEMINI_MODEL}"
-          echo "GEMINI_THINKING_LEVEL=${GEMINI_THINKING_LEVEL}"
-          echo "GEMINI_MAX_OUTPUT_TOKENS=${GEMINI_MAX_OUTPUT_TOKENS}"
-
-          fail() {
-            echo "::error::$1"
-            exit 1
-          }
-
-          [[ "${AI_ENABLED}" == "true" ]] || fail "AI_ENABLED must be true in the AI job."
-          [[ "${ALLOW_AI_TESTS}" == "true" ]] || fail "ALLOW_AI_TESTS must be true in the dedicated AI job."
-          [[ "${HEALING_AI_ENABLED}" == "true" ]] || fail "HEALING_AI_ENABLED must be true in the AI job."
-
-          [[ "${AI_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TIMEOUT_MS must be numeric."
-          [[ "${AI_TOTAL_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "AI_TOTAL_TIMEOUT_MS must be numeric."
-          [[ "${AI_TOTAL_TIMEOUT_MS}" -ge "${AI_TIMEOUT_MS}" ]] || fail "AI_TOTAL_TIMEOUT_MS must be >= AI_TIMEOUT_MS."
-          [[ "${AI_RETRY_MAX_ATTEMPTS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_MAX_ATTEMPTS must be numeric."
-          [[ "${AI_RETRY_MAX_ATTEMPTS}" -ge 1 && "${AI_RETRY_MAX_ATTEMPTS}" -le 5 ]] || fail "AI_RETRY_MAX_ATTEMPTS must be between 1 and 5."
-          [[ "${AI_RETRY_BASE_DELAY_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_BASE_DELAY_MS must be numeric."
-          [[ "${AI_RETRY_MAX_DELAY_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_MAX_DELAY_MS must be numeric."
-          [[ "${AI_RETRY_MAX_DELAY_MS}" -ge "${AI_RETRY_BASE_DELAY_MS}" ]] || fail "AI_RETRY_MAX_DELAY_MS must be >= AI_RETRY_BASE_DELAY_MS."
-          [[ "${AI_RETRY_JITTER_MS}" =~ ^[0-9]+$ ]] || fail "AI_RETRY_JITTER_MS must be numeric."
-          case "${AI_RETRY_ON_TIMEOUT}" in
-            true|false) ;;
-            *) fail "AI_RETRY_ON_TIMEOUT must be true or false." ;;
-          esac
-          [[ "${TEST_TIMEOUT_MS}" =~ ^[0-9]+$ ]] || fail "TEST_TIMEOUT_MS must be numeric."
-          [[ "${TEST_TIMEOUT_MS}" -gt "${AI_TOTAL_TIMEOUT_MS}" ]] || fail "AI_TEST_TIMEOUT_MS/TEST_TIMEOUT_MS must be greater than AI_TOTAL_TIMEOUT_MS."
-
-          case "${AI_PROVIDER_MODE}" in
-            single)
-              [[ -n "${AI_PROVIDER}" ]] || fail "AI_PROVIDER is required when AI_PROVIDER_MODE=single. Create GitHub Actions Repository Variable AI_PROVIDER."
-              ;;
-            failover)
-              [[ -n "${AI_PROVIDER_ORDER}" ]] || fail "AI_PROVIDER_ORDER is required when AI_PROVIDER_MODE=failover."
-              ;;
-            *)
-              fail "AI_PROVIDER_MODE must be 'single' or 'failover'."
-              ;;
-          esac
-
-          if [[ "${AI_PROVIDER_MODE}" == "single" && "${AI_PROVIDER}" == "gemini" ]]; then
-            [[ "${AI_ALLOW_CLOUD_EGRESS}" == "true" ]] || fail "Gemini requires AI_ALLOW_CLOUD_EGRESS=true."
-            [[ -n "${GEMINI_MODEL}" ]] || fail "GEMINI_MODEL is required for Gemini."
-            [[ -n "${GEMINI_API_KEY:-}" ]] || fail "GitHub Actions Repository Secret GEMINI_API_KEY is missing."
-            case "${GEMINI_THINKING_LEVEL}" in
-              low|medium|high) ;;
-              *) fail "GEMINI_THINKING_LEVEL must be low, medium or high." ;;
-            esac
-            [[ "${GEMINI_MAX_OUTPUT_TOKENS}" =~ ^[0-9]+$ ]] || fail "GEMINI_MAX_OUTPUT_TOKENS must be numeric."
-            [[ "${GEMINI_MAX_OUTPUT_TOKENS}" -ge 64 ]] || fail "GEMINI_MAX_OUTPUT_TOKENS must be >= 64."
-            echo "Gemini API key configured: YES"
-          fi
-
-          echo "AI CI preflight validation: PASSED"
 
       - name: Check configured AI provider and generation endpoint
-        if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
+        id: provider-check
+        if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' && steps.validate-ai-config.outcome == 'success' }}
+        continue-on-error: true
         run: npm run ai:check
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -377,7 +338,9 @@ jobs:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
 
       - name: Run AI healing tests
-        if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' }}
+        id: healing-check
+        if: ${{ steps.detect-ai.outputs.has_ai_tests == 'true' && steps.validate-ai-config.outcome == 'success' && steps.provider-check.outcome == 'success' }}
+        continue-on-error: true
         run: >
           npm run test:project --
           --project=chromium
@@ -391,12 +354,48 @@ jobs:
           AI_COMPAT_API_KEY: ${{ secrets.AI_COMPAT_API_KEY }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
 
-      - name: Record AI business bundle topology
+      - name: Classify live AI provider canary
+        id: classify-canary
         if: ${{ always() && !cancelled() }}
+        shell: bash
+        env:
+          AI_CANARY_HAS_TESTS: ${{ steps.detect-ai.outputs.has_ai_tests || 'false' }}
+          AI_CANARY_CONFIG_OUTCOME: ${{ steps.validate-ai-config.outcome || 'skipped' }}
+          AI_CANARY_PROVIDER_OUTCOME: ${{ steps.provider-check.outcome || 'skipped' }}
+          AI_CANARY_HEALING_OUTCOME: ${{ steps.healing-check.outcome || 'skipped' }}
+        run: |
+          set -euo pipefail
+          npm run ai:canary:finalize
+          status="$(node -e "const fs=require('fs');const p=process.env.AI_CANARY_RECORD_FILE;process.stdout.write(JSON.parse(fs.readFileSync(p,'utf8')).status)")"
+          echo "canary_status=${status}" >> "$GITHUB_OUTPUT"
+          if [[ "${status}" == "HEALTHY" ]]; then
+            echo "canary_healthy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "canary_healthy=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Live AI provider canary=${status}. This job is operational/non-blocking; deterministic AI safety remains blocking."
+          fi
+          {
+            echo "## Live AI provider canary"
+            echo "- Status: **${status}**"
+            echo "- Blocking release correctness: **No**"
+            echo "- Blocking deterministic AI safety: **AI Deterministic Safety job**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload live AI provider canary
+        if: ${{ always() && !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-canary-${{ env.APP }}-${{ env.RUN_ID }}
+          path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/provider-canary/ai-provider-canary.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record AI business bundle topology
+        if: ${{ always() && !cancelled() && steps.classify-canary.outputs.canary_healthy == 'true' }}
         run: npm run ci:report:bundle -- ai 1 1 "${{ steps.detect-ai.outputs.has_ai_tests || 'unknown' }}"
 
       - name: Upload AI technical blob
-        if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
+        if: ${{ always() && !cancelled() && steps.classify-canary.outputs.canary_healthy == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: blob-${{ env.APP }}-${{ env.RUN_ID }}-ai
@@ -405,7 +404,7 @@ jobs:
           retention-days: 7
 
       - name: Upload AI business report
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && steps.classify-canary.outputs.canary_healthy == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: business-${{ env.APP }}-${{ env.RUN_ID }}-ai
@@ -414,7 +413,7 @@ jobs:
           retention-days: 7
 
       - name: Upload AI audit
-        if: ${{ always() && !cancelled() && steps.detect-ai.outputs.has_ai_tests == 'true' }}
+        if: ${{ always() && !cancelled() && steps.classify-canary.outputs.canary_healthy == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: ai-audit-${{ env.APP }}-${{ env.RUN_ID }}
@@ -424,7 +423,7 @@ jobs:
 
   merge:
     name: Merge TestigentAI Reports
-    needs: [plan, test, ai-smoke]
+    needs: [plan, test, ai-contracts, ai-canary]
     if: >-
       ${{
         always() &&
@@ -465,6 +464,24 @@ jobs:
           restore-keys: |
             testigent-report-history-${{ env.APP }}-
 
+      - name: Download workflow-run AI provider canaries
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ai-canary-${{ env.APP }}-${{ github.run_id }}-*
+          path: ai-canary-records
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
+
+      - name: Record AI provider health history
+        id: provider-health
+        run: npm run ci:ai:health -- ai-canary-records
+        env:
+          AI_CANARY_EXPECTED: ${{ needs.ai-canary.result != 'skipped' && 'true' || 'false' }}
+          CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+
       # Supplying github-token + run-id forces the public artifacts API path.
       # That is required for partial reruns because the default current-attempt
       # backend view does not expose sibling/prior-attempt artifacts reliably.
@@ -490,12 +507,12 @@ jobs:
         run: npm run ci:report:rerun:resolve -- all-business-reports-raw all-business-reports all-blob-reports-raw all-blob-reports
         env:
           EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
-          EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
+          EXPECT_AI_LANE: ${{ steps.provider-health.outputs.canary_healthy == 'true' && 'true' || 'false' }}
           CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
           CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
 
       - name: Download AI audit
-        if: ${{ needs.ai-smoke.result == 'success' }}
+        if: ${{ steps.provider-health.outputs.canary_healthy == 'true' }}
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
@@ -510,7 +527,7 @@ jobs:
         run: npm run ci:report:download:validate -- all-business-reports
         env:
           EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
-          EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
+          EXPECT_AI_LANE: ${{ steps.provider-health.outputs.canary_healthy == 'true' && 'true' || 'false' }}
           CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS: 'true'
           CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
           CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -524,7 +541,7 @@ jobs:
         env:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
-          EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
+          EXPECT_AI_LANE: ${{ steps.provider-health.outputs.canary_healthy == 'true' && 'true' || 'false' }}
           CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS: 'true'
           CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
           CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -583,7 +600,7 @@ jobs:
             steps.validate-final-business.outcome == 'success' &&
             steps.final-upload.outcome == 'success' &&
             needs.test.result == 'success' &&
-            (needs.ai-smoke.result == 'success' || needs.ai-smoke.result == 'skipped') &&
+            needs.ai-contracts.result == 'success' &&
             github.event_name != 'pull_request'
           }}
         continue-on-error: true
@@ -599,7 +616,8 @@ jobs:
               --jq ".artifacts[] | select(
                 (.name | startswith(\"blob-${APP}-${GITHUB_RUN_ID}-\")) or
                 (.name | startswith(\"business-${APP}-${GITHUB_RUN_ID}-\")) or
-                (.name | startswith(\"ai-audit-${APP}-${GITHUB_RUN_ID}-\"))
+                (.name | startswith(\"ai-audit-${APP}-${GITHUB_RUN_ID}-\")) or
+                (.name | startswith(\"ai-canary-${APP}-${GITHUB_RUN_ID}-\"))
               ) | .id"
           } || true)"
 
