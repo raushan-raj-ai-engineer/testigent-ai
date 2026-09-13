@@ -1,6 +1,6 @@
 # Release Validation
 
-Current certified baseline: **v1.5.3**. Exact current evidence is recorded in `41-CURRENT-RELEASE-STATUS.md`; Git/GitHub CLI operational commands are in `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+Current certified baseline: **v1.6.0**. Exact current evidence is recorded in `41-CURRENT-RELEASE-STATUS.md`; Git/GitHub CLI operational commands are in `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
 
 ## One-command release gate
 
@@ -219,53 +219,10 @@ gh run view <RUN_ID> --log-failed
 
 A pushed `v*` tag automatically triggers `TestigentAI Release Compatibility`; `workflow_dispatch` remains available for manual/pre-release evidence generation.
 
-## v1.6.0 evidence-intelligence candidate
+## v1.6.0 evidence-intelligence certification
 
-The v1.6.0 candidate adds one-click claim provenance, score-free release risk, advisory change impact, incremental migration slices and seeded false-heal safety. See `45-v1.6.0-DEEP-REVIEW-VALIDATION.md` for the exact pre-package review evidence and the connected certification still required before v1.6.0 can replace v1.5.3 as the certified baseline.
+v1.6.0 added one-click claim provenance, score-free release risk, advisory change impact, incremental migration slices and seeded false-heal safety. Connected Node 22 validation, trusted main/rerun evidence and Release Compatibility run `34760349497` completed successfully; v1.6.0 is now the certified immutable baseline. `45-v1.6.0-DEEP-REVIEW-VALIDATION.md` remains the historical pre-package/deep-review record.
 
-<!-- V1.6.0-CERTIFICATION-RECORD -->
+## v1.6.1 certification additions
 
-## v1.6.0 Final Certification Record
-
-TestigentAI v1.6.0 is now the certified release baseline.
-
-- Release tag: `v1.6.0`
-- Certified commit: `4225e151fadcc85fd0a9861b385bda82bd1c96c0`
-- Tag object: `80e723eb45af82147ff1e0d4044b8b31bce8e19c`
-- Release Compatibility workflow run: `34760349497`
-- Certification status: **PASS**
-
-Compatibility matrix:
-
-| Platform | Browser | Result |
-| --- | --- | --- |
-| Ubuntu | Chromium | PASS |
-| Ubuntu | Firefox | PASS |
-| Ubuntu | WebKit | PASS |
-| macOS | WebKit | PASS |
-| Windows | Chromium | PASS |
-
-The compatibility workflow validated locked dependency installation, static and TypeScript checks, architect-review/recovery regressions, runtime/browser version capture, and compatibility evidence publication.
-
-Additional v1.6.0 evidence completed before certification included:
-
-- Node 22 connected `validate:final` validation
-- 40/40 review-hardening tests
-- 127/127 framework regression tests
-- zero high/critical dependency advisories
-- governed Quality Evidence Graph and one-click Evidence Ledger validation
-- false-heal safety validation
-- explainable release-risk validation
-- change-impact fail-safe contracts
-- Gemini retry-budget contracts
-- real Gemini AI-healing execution
-- failed-job rerun recovery
-- mixed-attempt artifact provenance validation
-- business/technical report provenance alignment
-- workflow-run artifact acquisition and retention validation
-
-Live external AI-provider availability remains operationally observable and may independently experience provider-side transient failures such as HTTP 503. Such provider availability events remain visible in CI evidence and are not represented as successful AI healing.
-
-This certification record supersedes earlier pre-tag or awaiting-certification status statements for v1.6.0.
-
-The `v1.6.0` tag is an immutable release marker and must not be moved or recreated after this documentation update.
+In addition to the v1.6.0 gates, v1.6.1 must prove the blocking deterministic AI job, non-blocking degraded-canary behavior, provider-health report generation, healthy-canary AI evidence inclusion, main rerun provenance, and the full five-platform/browser compatibility matrix. Until those pass, v1.6.0 remains the certified baseline.

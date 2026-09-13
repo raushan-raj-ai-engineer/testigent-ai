@@ -26,9 +26,7 @@
 
 ## Current Release State
 
-**Development candidate: `v1.6.0`** — adds deterministic claim provenance, one-click evidence verification, explainable score-free release risk, advisory change-impact analysis, incremental migration slices and an explicit false-heal safety benchmark. Connected Node 22 validation and PR/PR-rerun CI are green. Pre-tag main CI additionally proved the AI retry contract and exposed a final GitHub partial-rerun artifact-acquisition edge; this candidate uses authenticated workflow-run artifact downloads plus fail-safe evidence retention so the provenance resolver can verify prior/current attempt evidence without relying on a mutable latest pointer. `v1.5.3` remains the certified tag until the replacement main CI and compatibility matrix pass.
-
-**Stable certified baseline: `v1.5.3`** — Node.js 22.x, main multi-project CI green, AI healing lane green on trusted `main`, rerun-safe report provenance enabled, and the tag-triggered Release Compatibility matrix certified on Ubuntu/Chromium, Ubuntu/Firefox, Ubuntu/WebKit, macOS/WebKit and Windows/Chromium.
+**Certified baseline: `v1.6.0`** — tag `v1.6.0` points to certified commit `4225e151fadcc85fd0a9861b385bda82bd1c96c0`; Release Compatibility run `34760349497` passed Ubuntu Chromium/Firefox/WebKit, macOS WebKit and Windows Chromium. **Development candidate: `v1.6.1`** — separates blocking deterministic AI safety from a non-blocking live-provider canary, adds environment-scoped provider-health history, and exposes one-click operational health without changing deterministic release facts.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -1257,6 +1255,7 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | v1.6 deep-review validation | [`docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md`](docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md) |
 | v1.6 pre-tag CI hotfix | [`docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`](docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md) |
 | v1.6 rerun artifact acquisition closure | [`docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md`](docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md) |
+| v1.6.1 AI operational reliability | [`docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`](docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |
@@ -1308,49 +1307,5 @@ Maintained as an intelligent quality-engineering platform for scalable multi-pro
 
 </div>
 
-<!-- V1.6.0-CERTIFICATION-RECORD -->
-
-## v1.6.0 Final Certification Record
-
-TestigentAI v1.6.0 is now the certified release baseline.
-
-- Release tag: `v1.6.0`
-- Certified commit: `4225e151fadcc85fd0a9861b385bda82bd1c96c0`
-- Tag object: `80e723eb45af82147ff1e0d4044b8b31bce8e19c`
-- Release Compatibility workflow run: `34760349497`
-- Certification status: **PASS**
-
-Compatibility matrix:
-
-| Platform | Browser | Result |
-| --- | --- | --- |
-| Ubuntu | Chromium | PASS |
-| Ubuntu | Firefox | PASS |
-| Ubuntu | WebKit | PASS |
-| macOS | WebKit | PASS |
-| Windows | Chromium | PASS |
-
-The compatibility workflow validated locked dependency installation, static and TypeScript checks, architect-review/recovery regressions, runtime/browser version capture, and compatibility evidence publication.
-
-Additional v1.6.0 evidence completed before certification included:
-
-- Node 22 connected `validate:final` validation
-- 40/40 review-hardening tests
-- 127/127 framework regression tests
-- zero high/critical dependency advisories
-- governed Quality Evidence Graph and one-click Evidence Ledger validation
-- false-heal safety validation
-- explainable release-risk validation
-- change-impact fail-safe contracts
-- Gemini retry-budget contracts
-- real Gemini AI-healing execution
-- failed-job rerun recovery
-- mixed-attempt artifact provenance validation
-- business/technical report provenance alignment
-- workflow-run artifact acquisition and retention validation
-
-Live external AI-provider availability remains operationally observable and may independently experience provider-side transient failures such as HTTP 503. Such provider availability events remain visible in CI evidence and are not represented as successful AI healing.
-
-This certification record supersedes earlier pre-tag or awaiting-certification status statements for v1.6.0.
-
-The `v1.6.0` tag is an immutable release marker and must not be moved or recreated after this documentation update.
+- `docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`
+- `docs/49-v1.6.1-DEEP-REVIEW-VALIDATION.md`

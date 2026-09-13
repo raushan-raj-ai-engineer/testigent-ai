@@ -1,6 +1,6 @@
 # Release Compatibility Matrix
 
-TestigentAI **v1.5.3** treats **Node.js 22.x** (pinned by `.nvmrc`) as the supported release runtime. Do not infer support for a Node version merely because a source-only check happens to run on it.
+TestigentAI **v1.6.0** treats **Node.js 22.x** (pinned by `.nvmrc`) as the supported release runtime. Do not infer support for a Node version merely because a source-only check happens to run on it.
 
 ## Trigger policy
 
@@ -11,11 +11,11 @@ TestigentAI **v1.5.3** treats **Node.js 22.x** (pinned by `.nvmrc`) as the suppo
 
 Normal `main` pushes use `TestigentAI Multi-Project CI`; the broader OS/browser compatibility matrix is intentionally release-oriented rather than running on every commit.
 
-## Certified v1.5.3 matrix
+## Certified v1.6.0 matrix
 
-The tag-triggered v1.5.3 run `34744507321` completed successfully across all supported matrix entries:
+The tag-triggered v1.6.0 run `34760349497` completed successfully across all supported matrix entries:
 
-| OS / hosted runner | Browser | v1.5.3 result |
+| OS / hosted runner | Browser | v1.6.0 result |
 | --- | --- | --- |
 | Ubuntu | Chromium | PASS |
 | Ubuntu | Firefox | PASS |
@@ -23,7 +23,7 @@ The tag-triggered v1.5.3 run `34744507321` completed successfully across all sup
 | macOS | WebKit | PASS |
 | Windows | Chromium | PASS |
 
-The Windows/Chromium entry is an important v1.5.3 acceptance point: it proves `release:static` is line-ending portable under Windows CRLF checkout behavior before the browser-backed recovery regression executes.
+The Windows/Chromium entry remains an important cross-platform acceptance point: it proves `release:static` is line-ending portable under Windows CRLF checkout behavior before the browser-backed recovery regression executes.
 
 ## What every matrix job proves
 

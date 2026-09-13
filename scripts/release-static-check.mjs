@@ -259,8 +259,8 @@ try {
       !githubWorkflow.includes('pattern: blob-${{ env.APP }}-${{ github.run_id }}-*-*')) {
     issues.push('GitHub technical artifacts must retain immutable attempt IDs while downloading only the same workflow-run family');
   }
-  if (!githubWorkflow.includes("EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}")) {
-    issues.push('GitHub merge must expect the AI lane only when the AI job succeeded');
+  if (!githubWorkflow.includes("EXPECT_AI_LANE: ${{ steps.provider-health.outputs.canary_healthy == 'true' && 'true' || 'false' }}")) {
+    issues.push('GitHub merge must include AI business evidence only when the live canary completed healthy');
   }
   if (!pkg.scripts?.['ci:report:rerun:resolve']?.includes('ci-resolve-rerun-artifacts.ts') || !githubWorkflow.includes('Resolve rerun-safe report provenance')) {
     issues.push('GitHub merge must resolve same-run prior-attempt artifacts before report validation/merge');
@@ -271,6 +271,7 @@ try {
   const publicRunArtifactDownloads = [
     'Download workflow-run technical blobs',
     'Download workflow-run business reports',
+    'Download workflow-run AI provider canaries',
     'Download AI audit',
     'github-token: ${{ github.token }}',
     'repository: ${{ github.repository }}',
@@ -280,12 +281,13 @@ try {
     issues.push('CI rerun reporting must acquire artifacts through the workflow-run public API path');
   }
   if (!githubWorkflow.includes("needs.test.result == 'success'") ||
-      !githubWorkflow.includes("needs.ai-smoke.result == 'success' || needs.ai-smoke.result == 'skipped'")) {
-    issues.push('Intermediate report artifacts must be retained whenever any required execution lane fails');
+      !githubWorkflow.includes("needs.ai-contracts.result == 'success'")) {
+    issues.push('Intermediate report cleanup must require successful core execution and deterministic AI safety while live-provider canary remains non-blocking');
   }
   if (!githubWorkflow.includes('blob-${APP}-${GITHUB_RUN_ID}-') ||
       !githubWorkflow.includes('business-${APP}-${GITHUB_RUN_ID}-') ||
-      !githubWorkflow.includes('ai-audit-${APP}-${GITHUB_RUN_ID}-')) {
+      !githubWorkflow.includes('ai-audit-${APP}-${GITHUB_RUN_ID}-') ||
+      !githubWorkflow.includes('ai-canary-${APP}-${GITHUB_RUN_ID}-')) {
     issues.push('Successful cleanup must remove intermediate artifacts across the complete workflow-run attempt family');
   }
   if (!pkg.scripts?.['test:review:hardening']?.includes('ai-retry-budget-contract.spec.ts')) {
@@ -398,7 +400,7 @@ try {
   if (!githubWorkflow.includes('npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"')) issues.push('GitHub merged-report summary must use the dedicated summary script');
   if (!hasInformationalBusinessSummaryContract(githubWorkflow)) issues.push('GitHub merged-report summary must remain informational/non-blocking');
   if (githubWorkflow.includes("<<'NODE'") || githubWorkflow.includes('GITHUB\\_STEP\\_SUMMARY')) issues.push('GitHub merged-report summary must not use fragile heredoc/escaped step-summary syntax');
-  if (!merge.includes('EXPECTED_CORE_WORKERS') || !merge.includes('EXPECT_AI_LANE') || !githubWorkflow.includes('EXPECTED_CORE_WORKERS:') || !githubWorkflow.includes('EXPECT_AI_LANE:') || !azurePipeline.includes('EXPECTED_CORE_WORKERS="${{ parameters.shards }}"') || !azurePipeline.includes('EXPECT_AI_LANE="${{ parameters.runAi }}"')) issues.push('CI merged-report core-worker/AI topology guard missing');
+  if (!merge.includes('EXPECTED_CORE_WORKERS') || !merge.includes('EXPECT_AI_LANE') || !githubWorkflow.includes('EXPECTED_CORE_WORKERS:') || !githubWorkflow.includes('EXPECT_AI_LANE:') || !azurePipeline.includes('EXPECTED_CORE_WORKERS="${{ parameters.shards }}"') || !azurePipeline.includes('EXPECT_AI_LANE="${EXPECT_AI}"')) issues.push('CI merged-report core-worker/AI topology guard missing');
   if (!githubWorkflow.includes('--pass-with-no-tests') || !azurePipeline.includes('--pass-with-no-tests') || !githubWorkflow.includes('ci:report:bundle -- core ${{ matrix.index }} ${{ matrix.total }} auto') || !azurePipeline.includes('ci:report:bundle -- core "$(System.JobPositionInPhase)" "$(System.TotalJobsInPhase)" auto')) issues.push('CI empty-shard topology contract missing');
   if (!merge.includes('No core business scenarios were selected') || !mergeContract.includes('intentionally empty over-sharded worker') || !mergeContract.includes('all core workers selecting zero business tests')) issues.push('zero-selection vs over-sharding merge contract missing');
 } catch (error) {
@@ -419,7 +421,7 @@ try {
   const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
   if (!portfolioRunner.includes('writePortfolioDashboard') || !portfolioRunner.includes('Known defects') && !portfolioWriter.includes('Known defects')) issues.push('business-friendly portfolio dashboard contract missing');
   if (!portfolioRunner.includes('resolveProviderOrder') || !portfolioRunner.includes('--include-ai requires AI_ENABLED=true')) issues.push('portfolio AI provider preflight contract missing');
-  if (!githubWorkflow.includes("ALLOW_AI_TESTS: 'true'") || !azurePipeline.includes('ALLOW_AI_TESTS=true')) issues.push('dedicated CI AI lane must explicitly allow @ai tests');
+  if (!githubWorkflow.includes("ALLOW_AI_TESTS: 'true'") || !(azurePipeline.includes("ALLOW_AI_TESTS: 'true'") || azurePipeline.includes('ALLOW_AI_TESTS=true'))) issues.push('dedicated CI AI lane must explicitly allow @ai tests');
   for (const scriptName of ['test:ai-healing', 'test:ai-healing:ollama', 'test:ai-healing:gemini']) {
     if (!String(pkg.scripts?.[scriptName] ?? '').includes('ALLOW_AI_TESTS=true')) issues.push(`${scriptName} must explicitly opt into @ai selection`);
   }
@@ -492,6 +494,9 @@ try {
   const githubWorkflow = normalizeContractText(fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8'));
   const azurePipeline = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
+  const aiProviderHealth = fs.readFileSync(path.join(root, 'src/framework/ai/ai-provider-health.store.ts'), 'utf8');
+  const aiProviderHealthRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/ai-provider-health.renderer.ts'), 'utf8');
+  const aiProviderHealthContract = fs.readFileSync(path.join(root, 'tests/framework/ai-provider-health-contract.spec.ts'), 'utf8');
 
   if (!sdetAuthProvider.includes("requiredSecret('AUTH_USERNAME')") || !sdetAuthProvider.includes("requiredSecret('AUTH_PASSWORD')")) issues.push('A1 sample auth provider must not commit credential-shaped fallbacks');
   if (!redactor.includes('sanitizeText') || !redactor.includes('sanitizeUrl') || !redactor.includes('sanitizeAndTruncate')) issues.push('A1 shared free-text/URL/sanitize-before-truncate redaction contract missing');
@@ -525,6 +530,11 @@ try {
   if (!falseHealSafety.includes('cannot override a failed business post-condition') || !falseHealSafety.includes('never promoted into reusable cache')) issues.push('v1.6.0 seeded false-heal acceptance coverage missing');
   if (!pkg.scripts?.['release:compat:probe'] || !fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8').includes('Architect-review and recovery regression')) issues.push('release compatibility evidence workflow/probe missing');
   if (!reportHistory.includes("'.report-history', application, environment") || !reportHistory.includes("openSync(lock, 'wx')") || !durationHistory.includes("'.report-history', app, env") || !durationHistory.includes("openSync(lock, 'wx')")) issues.push('shared history must be environment-scoped and lock-protected');
+  if (!pkg.scripts?.['test:ai:deterministic'] || !pkg.scripts?.['ai:canary:preflight'] || !githubWorkflow.includes('AI Deterministic Safety') || !githubWorkflow.includes('AI Live Provider Canary (non-blocking)') || !githubWorkflow.includes('continue-on-error: true') || !githubWorkflow.includes('canary_healthy') || !azurePipeline.includes('AI Deterministic Safety') || !azurePipeline.includes('AI Live Provider Canary (non-blocking)') || !azurePipeline.includes('npm run ai:canary:preflight')) issues.push('v1.6.1 deterministic AI gate/live-provider canary separation missing across GitHub/Azure');
+  if (!githubWorkflow.includes('Download workflow-run AI provider canaries') || !githubWorkflow.includes('Record AI provider health history') || !githubWorkflow.includes('ai-canary-${{ env.APP }}-${{ env.RUN_ID }}') || !azurePipeline.includes('Download live AI provider canary records') || !azurePipeline.includes('npm run ci:ai:health')) issues.push('v1.6.1 live-provider canary evidence/history workflow missing across GitHub/Azure');
+  if (!aiProviderHealth.includes("'.report-history', application, environment, 'ai-provider-health.json'") || !aiProviderHealth.includes("openSync(lock, 'wx')") || !aiProviderHealth.includes('availabilityPercent')) issues.push('v1.6.1 provider-health history must be environment-scoped, lock-protected and summarized');
+  if (!dashboardWriter.includes('ai-provider-health.html') || !dashboardRenderer.includes('AI provider health') || !aiProviderHealthRenderer.includes('Operational canary only') || !aiProviderHealthRenderer.includes('Truth boundary')) issues.push('v1.6.1 one-click provider-health dashboard/truth-boundary contract missing');
+  if (!aiProviderHealthContract.includes('separate from deterministic release facts') || !aiProviderHealthContract.includes('de-duplicates rerun records') || !aiProviderHealthContract.includes('fails closed when expected evidence is missing') || !aiProviderHealthContract.includes('AI_PROVIDER_CANARY_MISSING')) issues.push('v1.6.1 AI provider-health regression coverage missing');
 } catch (error) {
   issues.push(`unable to validate architect-review hardening contracts: ${error.message}`);
 }

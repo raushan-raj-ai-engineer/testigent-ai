@@ -1,76 +1,36 @@
 # Current Certified Release Status
 
-> **v1.6.0 development candidate:** connected macOS Node 22.23.2 `npm run validate:final` is green with the pre-tag hotfix (40/40 review-hardening tests, 127/127 framework tests and zero high/critical advisories). PR #12 and its rerun are green. Trusted-main proved the AI retry implementation reaches all attempts; a later failed-only rerun also proved the AI provider/healing lane green but exposed one remaining GitHub artifact-acquisition edge: the default download context did not surface required core artifacts to the resolver. The current closure candidate switches merge downloads to authenticated workflow-run lookup and retains intermediates whenever a required lane fails. **v1.5.3 remains the certified release** until replacement main CI + rerun and the v1.6.0 compatibility matrix pass.
+## Certified baseline
 
-## Current stable baseline
+**TestigentAI v1.6.0 is the certified immutable baseline.**
 
 | Item | Certified state |
 |---|---|
-| Release | `v1.5.3` |
-| Package version | `1.5.3` |
-| Main release commit | `14f0a487d3d762fd660d3697f2ed315e709565f3` (`14f0a48`) |
+| Release | `v1.6.0` |
+| Package version | `1.6.0` |
+| Certified commit | `4225e151fadcc85fd0a9861b385bda82bd1c96c0` |
 | Runtime | Node.js 22.x |
-| Main CI | PASS |
-| AI healing lane on trusted `main` | PASS |
-| Core sharded execution | PASS |
-| Downloaded bundle provenance validation | PASS |
-| Business/technical merge | PASS |
+| Local connected `validate:final` | PASS |
+| Review hardening | 40/40 PASS |
+| Framework regression | 127/127 PASS |
+| Security | 0 high/critical advisories |
+| Failed-job rerun recovery | PASS |
+| Mixed-attempt report provenance | PASS |
+| Evidence/dashboard publication | PASS |
 | Release Compatibility matrix | PASS 5/5 |
 
-The repository's historical v1.4.x-v1.5.2 documents remain audit evidence. This file is the concise source for the current certified release state.
-
-## Main CI certification
-
-GitHub Actions run:
+Annotated tag verification:
 
 ```text
-TestigentAI Multi-Project CI
-Run ID: 34744306756
-Branch: main
-Conclusion: success
+refs/tags/v1.6.0    80e723eb45af82147ff1e0d4044b8b31bce8e19c
+refs/tags/v1.6.0^{} 4225e151fadcc85fd0a9861b385bda82bd1c96c0
 ```
 
-Certified jobs:
+The tag must not be moved or recreated.
 
-```text
-Framework Validation          PASS
-Execution Plan                PASS
-AI Healing Validation         PASS
-Project Tests - Shard 1       PASS
-Project Tests - Shard 2       PASS
-Merge TestigentAI Reports     PASS
-```
+## v1.6.0 certification evidence
 
-The merge job passed:
-
-```text
-Restore business report history
-Download all technical blobs
-Download all business reports
-Download AI audit
-Validate downloaded report bundles
-Merge Playwright technical report
-Merge business reports
-Finalize business execution facts
-Generate TestigentAI business dashboard
-Validate final business bundle
-Publish merged report summary
-Upload final TestigentAI report
-Remove intermediate CI artifacts
-```
-
-## Release Compatibility certification
-
-Tag-triggered GitHub Actions run:
-
-```text
-TestigentAI Release Compatibility
-Run ID: 34744507321
-Tag: v1.5.3
-Conclusion: success
-```
-
-Certified matrix:
+Release Compatibility run `34760349497` passed:
 
 | Hosted runner | Browser | Result |
 |---|---|---|
@@ -80,29 +40,22 @@ Certified matrix:
 | macOS | WebKit | PASS |
 | Windows | Chromium | PASS |
 
-Each compatibility job passed locked dependency install, supported Node setup, browser installation, static/type validation, architect-review/recovery regression, exact runtime/browser evidence capture and compatibility evidence upload.
+Each compatibility job validated locked dependencies, supported Node, browser installation, static/type validation, architect-review/recovery regression, runtime/browser evidence capture and compatibility evidence upload.
 
-## What v1.5.3 closes
+Before tagging, v1.6.0 also proved the real failed-job rerun scenario: a transient Gemini outage failed the live AI lane, a later rerun succeeded, and report acquisition/provenance correctly combined same-workflow evidence without using a mutable latest pointer.
 
-v1.5.3 preserves all earlier architect-review controls and adds the final Windows portability correction:
+## Development candidate: v1.6.1
 
-- sensitive-data/evidence redaction and retention controls;
-- explicit destination-origin AI egress governance;
-- browser-free API/data/DB fixture lane;
-- application/environment/run-scoped runtime and reporting;
-- healing cache provenance/concurrency controls;
-- bounded primary-locator readiness before recovery;
-- bounded/schema-validated HTTP AI provider behavior;
-- advisory-specific fail-closed security exceptions;
-- minimal healing collaborator/logger runtime contract;
-- GitHub rerun artifacts scoped by immutable `run_id-run_attempt`;
-- downloaded report bundle provenance validation before merge;
-- exact current-attempt cleanup behavior;
-- Windows CRLF/LF-insensitive release static policy checks.
+v1.6.1 is intentionally small and operational. It keeps all v1.6.0 release/evidence semantics unchanged while separating:
 
-## Current release workflow
+- **AI Deterministic Safety** — blocking, provider-neutral correctness gate;
+- **AI Live Provider Canary (non-blocking)** — real external-provider/generation/healing availability signal.
 
-The authoritative path is:
+The candidate adds environment-scoped provider-health history and one-click `ai-provider-health.html` drill-down. A provider `503` can therefore be visible as `DEGRADED` without falsely representing deterministic TestigentAI correctness as failed.
+
+See `48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`. Until v1.6.1 passes connected validation, PR/main/rerun CI and the 5/5 compatibility matrix, **v1.6.0 remains the certified baseline**.
+
+## Authoritative release workflow
 
 ```text
 feature branch
@@ -114,96 +67,4 @@ feature branch
  -> automatic TestigentAI Release Compatibility matrix
 ```
 
-`release-compatibility.yml` remains manually dispatchable for pre-release/diagnostic use, but a pushed `v*` tag automatically triggers the matrix.
-
-## Current CI artifact identity
-
-Every GitHub execution attempt uses:
-
-```text
-RUN_ID = github.run_id-github.run_attempt
-```
-
-Core, AI, technical, audit and final report artifact names retain that immutable attempt identity. For a normal run, all selected sources are from the current attempt. For `gh run rerun --failed`, GitHub may keep successful core shards from an earlier attempt and rerun only failed/dependent jobs. The merge therefore downloads only the same `github.run_id` family, resolves the newest valid source independently per shard, requires the AI source from the current attempt when AI succeeded, and records the decision in `_rerun-resolution.json`.
-
-Prior-attempt reuse is explicitly gated by `CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS=true` plus exact `CI_WORKFLOW_RUN_ID`/attempt validation. Foreign workflow runs, future attempts, duplicate shard identities and manifest/marker mismatches fail closed. The final report keeps the current attempt as its publication identity while disclosing source attempt IDs.
-
-## Current AI policy
-
-Local development may use an approved local provider such as Ollama. Trusted CI may use an approved cloud provider such as Gemini. Provider labels do not grant network permission.
-
-Cloud execution requires both:
-
-```text
-AI_ALLOW_CLOUD_EGRESS=true
-AI_ALLOWED_EXTERNAL_ORIGINS=<exact approved origins>
-```
-
-For the certified Gemini CI path, the approved origin is:
-
-```text
-https://generativelanguage.googleapis.com
-```
-
-Secrets remain in GitHub/Azure secret stores and are never committed.
-
-## Current documentation to start with
-
-For normal project work:
-
-1. `00-START-HERE.md`
-2. `02-DAILY-COMMANDS.md`
-3. `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`
-4. `06-REPORTING-CI-CD.md`
-5. `12-RELEASE-VALIDATION.md`
-6. `33-RELEASE-COMPATIBILITY-MATRIX.md`
-7. this file
-
-For release-history details, read `FINAL-RELEASE-NOTES.md` and the version-specific closure documents.
-
-<!-- V1.6.0-CERTIFICATION-RECORD -->
-
-## v1.6.0 Final Certification Record
-
-TestigentAI v1.6.0 is now the certified release baseline.
-
-- Release tag: `v1.6.0`
-- Certified commit: `4225e151fadcc85fd0a9861b385bda82bd1c96c0`
-- Tag object: `80e723eb45af82147ff1e0d4044b8b31bce8e19c`
-- Release Compatibility workflow run: `34760349497`
-- Certification status: **PASS**
-
-Compatibility matrix:
-
-| Platform | Browser | Result |
-| --- | --- | --- |
-| Ubuntu | Chromium | PASS |
-| Ubuntu | Firefox | PASS |
-| Ubuntu | WebKit | PASS |
-| macOS | WebKit | PASS |
-| Windows | Chromium | PASS |
-
-The compatibility workflow validated locked dependency installation, static and TypeScript checks, architect-review/recovery regressions, runtime/browser version capture, and compatibility evidence publication.
-
-Additional v1.6.0 evidence completed before certification included:
-
-- Node 22 connected `validate:final` validation
-- 40/40 review-hardening tests
-- 127/127 framework regression tests
-- zero high/critical dependency advisories
-- governed Quality Evidence Graph and one-click Evidence Ledger validation
-- false-heal safety validation
-- explainable release-risk validation
-- change-impact fail-safe contracts
-- Gemini retry-budget contracts
-- real Gemini AI-healing execution
-- failed-job rerun recovery
-- mixed-attempt artifact provenance validation
-- business/technical report provenance alignment
-- workflow-run artifact acquisition and retention validation
-
-Live external AI-provider availability remains operationally observable and may independently experience provider-side transient failures such as HTTP 503. Such provider availability events remain visible in CI evidence and are not represented as successful AI healing.
-
-This certification record supersedes earlier pre-tag or awaiting-certification status statements for v1.6.0.
-
-The `v1.6.0` tag is an immutable release marker and must not be moved or recreated after this documentation update.
+Historical v1.4.x-v1.5.x and v1.6.0 pre-tag documents remain audit evidence; they do not override this current-status file.

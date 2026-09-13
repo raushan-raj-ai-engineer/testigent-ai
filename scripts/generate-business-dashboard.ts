@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { ExecutionFacts } from '../src/framework/analytics/report.types';
 import { writeBusinessDashboard } from '../src/framework/reporting/business-dashboard.writer';
 import { ReportHistoryStore } from '../src/framework/reporting/report-history.store';
+import { AiProviderHealthStore } from '../src/framework/ai/ai-provider-health.store';
 import { ProjectPaths } from '../src/framework/core/config/project.paths';
 
 /**
@@ -18,7 +19,8 @@ function main(): void {
   if (!fs.existsSync(jsonPath)) throw new Error(`Missing ${jsonPath}. Run tests first.`);
   const facts = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as ExecutionFacts;
   const history = new ReportHistoryStore().read();
-  writeBusinessDashboard(reportDir, facts, { history, reportUrl: process.env.REPORT_PUBLIC_URL });
+  const providerHealth = new AiProviderHealthStore().summary();
+  writeBusinessDashboard(reportDir, facts, { history, providerHealth, reportUrl: process.env.REPORT_PUBLIC_URL });
   console.log(`Dashboard bundle generated: ${path.join(reportDir, 'index.html')}`);
 }
 main();

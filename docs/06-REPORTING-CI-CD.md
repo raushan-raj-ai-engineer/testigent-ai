@@ -1,6 +1,6 @@
 # Reporting and CI/CD
 
-Current certified baseline: **v1.5.3**. See `41-CURRENT-RELEASE-STATUS.md` for the green main CI and 5/5 compatibility evidence.
+Current certified baseline: **v1.6.0**. See `41-CURRENT-RELEASE-STATUS.md` for the green main CI and 5/5 compatibility evidence.
 
 Every project writes isolated output:
 
@@ -126,3 +126,7 @@ Every generated business dashboard now includes `evidence-ledger.html` and `evid
 ### Failed-run artifact retention
 
 Intermediate core/AI report artifacts are deleted only when the core test job succeeded and the AI job either succeeded or was intentionally skipped, in addition to successful merge/final validation/upload. A required-lane failure therefore retains immutable evidence for diagnostics and a later provenance-safe partial rerun.
+
+## v1.6.1 live AI provider canary
+
+The blocking AI correctness gate is `AI Deterministic Safety`; it uses deterministic/provider-neutral contracts. `AI Live Provider Canary (non-blocking)` exercises the configured external provider and real `@ai` healing journey. Canary degradation is recorded and surfaced, but does not rewrite deterministic release facts. Merge CI persists same-workflow provider-health evidence and the final dashboard links to `ai-provider-health.html`.

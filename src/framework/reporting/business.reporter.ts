@@ -12,6 +12,7 @@ import { RuntimeConfig } from '../core/config/runtime.config';
 import { shouldIncludeInBusinessReport } from './business-report-scope';
 import { writeBusinessDashboard } from './business-dashboard.writer';
 import { ReportHistoryStore } from './report-history.store';
+import { AiProviderHealthStore } from '../ai/ai-provider-health.store';
 import { classifySkipReason } from './skip-reason.classifier';
 
 interface MutableBusinessTest {
@@ -131,7 +132,7 @@ export default class BusinessReporter implements Reporter {
 
     const historyStore = new ReportHistoryStore();
     const history = process.env.CI ? historyStore.read() : historyStore.append(facts);
-    writeBusinessDashboard(this.outputDir, facts, { history, reportUrl: process.env.REPORT_PUBLIC_URL });
+    writeBusinessDashboard(this.outputDir, facts, { history, providerHealth: new AiProviderHealthStore().summary(), reportUrl: process.env.REPORT_PUBLIC_URL });
     printBusinessOutcomeSummary(facts);
   }
 

@@ -5,6 +5,7 @@ import { buildExecutionFacts } from '../src/framework/analytics/execution-facts'
 import type { AiRuntimeAuditRecord, AiRuntimeUsageSummary, BusinessAttachment, BusinessTestResult, ExecutionFacts, HealingAuditRecord, HealingSummary } from '../src/framework/analytics/report.types';
 import { writeBusinessDashboard } from '../src/framework/reporting/business-dashboard.writer';
 import { ReportHistoryStore } from '../src/framework/reporting/report-history.store';
+import { AiProviderHealthStore } from '../src/framework/ai/ai-provider-health.store';
 
 type ReportLane = 'core' | 'ai';
 
@@ -130,7 +131,9 @@ export function mergeBusinessReports(rootInput = process.argv[2] ?? 'all-busines
       ?? path.join(ProjectPaths.reports(executionIdentity.application, executionIdentity.environment, executionIdentity.runId), 'business-merged')
   );
   fs.rmSync(outputDir, { recursive: true, force: true });
-  const written = writeBusinessDashboard(outputDir, merged, { history, reportUrl: cleanEnv('REPORT_PUBLIC_URL') });
+  const providerHealthFile = path.resolve(process.env.AI_PROVIDER_HEALTH_FILE ?? path.join('.report-history', executionIdentity.application, executionIdentity.environment, 'ai-provider-health.json'));
+  const providerHealth = new AiProviderHealthStore(providerHealthFile).summary();
+  const written = writeBusinessDashboard(outputDir, merged, { history, providerHealth, reportUrl: cleanEnv('REPORT_PUBLIC_URL') });
   console.log(`Merged ${files.length} business report bundle(s) (${coreReports} core, ${aiReports} AI) into ${path.join(outputDir, 'index.html')}`);
   console.log(`Merged business scenarios: ${written.total} selected; ${written.executed}/${written.executionEligible} applicable scenarios executed; ${aiResults} AI-specific result(s); ${written.healing.count} validated healing event(s); ${written.aiUsage?.calls ?? 0} AI runtime call(s).`);
   return written;

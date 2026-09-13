@@ -137,6 +137,7 @@ function main(): void {
       const written = writeBusinessDashboard(bundleDir, evidenceFacts);
       const html = fs.readFileSync(path.join(bundleDir, 'index.html'), 'utf8');
       const evidenceLedger = fs.readFileSync(path.join(bundleDir, 'evidence-ledger.html'), 'utf8');
+      const providerHealth = fs.readFileSync(path.join(bundleDir, 'ai-provider-health.html'), 'utf8');
       const evidenceGraph = JSON.parse(fs.readFileSync(path.join(bundleDir, 'evidence-graph.json'), 'utf8')) as { schemaVersion: number; claims: Array<{ id: string }>; runId: string };
       assert.equal(evidenceGraph.schemaVersion, 1);
       assert.equal(evidenceGraph.runId, 'reporting-contract-evidence');
@@ -145,6 +146,9 @@ function main(): void {
       assert.ok(evidenceLedger.includes('Truth boundary:'), 'Evidence ledger must state its claim boundary explicitly.');
       assert.ok(evidenceLedger.includes('failure-screenshot'), 'Evidence ledger must link materialized scenario evidence directly.');
       assert.ok(html.includes('evidence-ledger.html'), 'Business dashboard must expose the evidence ledger in one click.');
+      assert.ok(html.includes('ai-provider-health.html'), 'Business dashboard must expose live AI provider health in one click.');
+      assert.ok(providerHealth.includes('Operational canary only'), 'AI provider health must state that the live canary is operational rather than a release-correctness fact.');
+      assert.ok(providerHealth.includes('Truth boundary'), 'AI provider health drill-down must preserve its truth boundary.');
       assert.ok(html.includes('Failure evidence'), 'Failed test.step must expose failure evidence inline.');
       assert.ok(html.includes('<img'), 'Failure screenshot must render as an inline image preview.');
       assert.equal((html.match(/<img\b/g) ?? []).length, 1, 'Primary failure screenshot must render exactly once in the business dashboard.');
