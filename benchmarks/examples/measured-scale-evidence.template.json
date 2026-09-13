@@ -1,0 +1,23 @@
+{
+  "templateOnly": true,
+  "id": "replace-scale-run-id",
+  "application": "replace-app",
+  "environment": "qa",
+  "datasetVersion": "replace-dataset-version",
+  "selection": "replace-with-exact-test-selection",
+  "profile": "regression",
+  "lane": "ui",
+  "caseCount": 500,
+  "executedCases": 0,
+  "duplicateCases": 0,
+  "droppedCases": 0,
+  "workers": 4,
+  "shards": 4,
+  "wallClockMs": 0,
+  "shardDurationsMs": [0, 0, 0, 0],
+  "environmentDescription": "replace-with-runner-hardware-or-cloud-description",
+  "methodology": "replace-with-measured-browser-execution-methodology",
+  "evidenceRef": "replace-with-raw-ci-or-report-artifact-reference",
+  "failures": [],
+  "exclusions": []
+}

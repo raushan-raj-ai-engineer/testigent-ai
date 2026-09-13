@@ -1,0 +1,19 @@
+{
+  "templateOnly": true,
+  "samples": [
+    {
+      "id": "replace-app-a-authoring-1",
+      "application": "replace-app-a",
+      "datasetVersion": "replace-dataset-version",
+      "metric": "authoring-minutes",
+      "unit": "minutes",
+      "baselineLabel": "plain-playwright",
+      "baselineValue": 0,
+      "testigentValue": 0,
+      "environmentDescription": "replace-with-runner-hardware-or-cloud-description",
+      "methodology": "replace-with-controlled-comparison-methodology",
+      "evidenceRef": "replace-with-raw-evidence-reference",
+      "exclusions": []
+    }
+  ]
+}

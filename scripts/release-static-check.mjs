@@ -194,6 +194,47 @@ for (const required of [
   'docs/52-v1.7.0-AGENTIC-MCP-GUIDE.md',
   'docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md',
   'docs/54-v1.7.0-CANDIDATE-HANDOFF.md',
+  'docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md',
+  'docs/56-v1.8.0-API-CONTRACT-INTELLIGENCE.md',
+  'docs/57-v1.8.0-SCALE-CERTIFICATION.md',
+  'docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md',
+  'docs/59-v1.8.0-CANDIDATE-HANDOFF.md',
+  'src/framework/adoption/adoption.types.ts',
+  'src/framework/adoption/adoption-store.ts',
+  'src/framework/adoption/adoption-analyzer.ts',
+  'src/framework/benchmark/benchmark.types.ts',
+  'src/framework/benchmark/benchmark-provenance.ts',
+  'src/framework/benchmark/benchmark-store.ts',
+  'src/framework/benchmark/benchmark-analyzer.ts',
+  'src/framework/benchmark/comparative-benchmark.ts',
+  'src/framework/benchmark/false-heal-benchmark.ts',
+  'src/framework/benchmark/scale-certification.ts',
+  'src/framework/api-contract/openapi.types.ts',
+  'src/framework/api-contract/openapi-loader.ts',
+  'src/framework/api-contract/schema-validator.ts',
+  'src/framework/api-contract/response-contract-validator.ts',
+  'src/framework/api-contract/breaking-change-detector.ts',
+  'src/framework/reporting/adoption-intelligence.renderer.ts',
+  'src/framework/reporting/benchmark-intelligence.renderer.ts',
+  'src/framework/reporting/api-contract-intelligence.renderer.ts',
+  'scripts/adoption-pilot.ts',
+  'scripts/benchmark-compare.ts',
+  'scripts/benchmark-false-heal.ts',
+  'scripts/benchmark-scale.ts',
+  'scripts/api-contract.ts',
+  'tests/framework/adoption-intelligence-contract.spec.ts',
+  'tests/framework/benchmark-intelligence-contract.spec.ts',
+  'tests/framework/api-contract-intelligence-contract.spec.ts',
+  'tests/framework/product-intelligence-reporting-contract.spec.ts',
+  'schemas/testigent-benchmark-samples.schema.json',
+  'schemas/testigent-false-heal-evidence.schema.json',
+  'schemas/testigent-scale-evidence.schema.json',
+  'benchmarks/examples/comparative-benchmark.template.json',
+  'benchmarks/examples/false-heal-evidence.template.json',
+  'benchmarks/examples/measured-scale-evidence.template.json',
+  'benchmarks/examples/openapi-baseline.yaml',
+  'benchmarks/examples/openapi-breaking.yaml',
+  'benchmarks/examples/response-user.json',
   'src/framework/agentic/policy/agentic-policy.ts',
   'src/framework/agentic/evidence/agent-decision-ledger.ts',
   'src/framework/agentic/orchestration/agentic-orchestrator.ts',
@@ -203,6 +244,7 @@ for (const required of [
   'tests/framework/agentic-policy-contract.spec.ts',
   'tests/framework/agentic-mcp-contract.spec.ts',
   'tests/framework/agentic-ledger-contract.spec.ts',
+  'tests/helpers/agent-ledger-writer.ts',
   'scripts/offline-release-check.mjs',
   'scripts/generate-sbom.mjs',
   'scripts/generate-release-manifest.mjs',
@@ -227,25 +269,62 @@ try {
   if (!finalValidationContract.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
   if (!pkg.scripts?.['mcp:agentic']?.includes('start-agentic-mcp.ts')) issues.push('missing controlled TestigentAI agentic MCP server script');
-
   const agenticDeterministicScript = pkg.scripts?.['test:agentic:deterministic'] ?? '';
-  if (!agenticDeterministicScript.includes('agentic-policy-contract.spec.ts')) {
-    issues.push('missing deterministic agentic safety contract suite');
+  if (!agenticDeterministicScript.includes('agentic-policy-contract.spec.ts')) issues.push('missing deterministic agentic safety contract suite');
+  if (/--project(?:=|\s+)\S+/.test(agenticDeterministicScript)) issues.push('test:agentic:deterministic must remain browser-neutral; release compatibility selects the Playwright project through PW_BROWSERS');
+  if (!finalValidationContract.includes('test:agentic:deterministic')) issues.push('validate:final must enforce deterministic agentic safety');
+  const agentLedgerSource = fs.readFileSync(path.join(root, 'src/framework/agentic/evidence/agent-decision-ledger.ts'), 'utf8');
+  const agentLedgerContract = fs.readFileSync(path.join(root, 'tests/framework/agentic-ledger-contract.spec.ts'), 'utf8');
+  if (!agentLedgerSource.includes("openSync(lock, 'wx'") || !agentLedgerSource.includes('exportJsonlUnlocked') || !agentLedgerSource.includes('atomicWrite')) issues.push('v1.7 agent ledger must retain process-safe locking and atomic JSONL publication');
+  if (!agentLedgerContract.includes('parallel processes preserve all immutable decisions')) issues.push('v1.7 agent ledger must retain real multi-process regression coverage');
+  const dashboardContract = fs.readFileSync(path.join(root, 'tests/framework/dashboard-interactive.spec.ts'), 'utf8');
+  if (!dashboardContract.includes('closeIdleConnections') || !dashboardContract.includes('closeAllConnections') || !dashboardContract.includes('download.path()')) issues.push('v1.7 dashboard lifecycle/download completion hardening must be retained');
+
+  const productIntelligenceScript = pkg.scripts?.['test:product-intelligence'] ?? '';
+  for (const requiredContract of [
+    'adoption-intelligence-contract.spec.ts',
+    'benchmark-intelligence-contract.spec.ts',
+    'api-contract-intelligence-contract.spec.ts',
+    'product-intelligence-reporting-contract.spec.ts'
+  ]) {
+    if (!productIntelligenceScript.includes(requiredContract)) issues.push(`missing v1.8.0 product-intelligence contract: ${requiredContract}`);
   }
-  if (/--project(?:=|\s+)\S+/.test(agenticDeterministicScript)) {
-    issues.push('test:agentic:deterministic must remain browser-neutral; release compatibility selects the Playwright project through PW_BROWSERS');
+  if (/--project(?:=|\s+)\S+/.test(productIntelligenceScript)) issues.push('test:product-intelligence must remain browser-neutral for release compatibility');
+  if (!finalValidationContract.includes('test:product-intelligence')) issues.push('validate:final must enforce v1.8.0 product-intelligence safety');
+  for (const cliScript of ['adoption:report', 'benchmark:compare', 'benchmark:false-heal', 'benchmark:scale:evaluate', 'api:contract:breaking']) {
+    if (!pkg.scripts?.[cliScript]) issues.push(`missing v1.8.0 CLI contract: ${cliScript}`);
   }
 
-  if (!finalValidationContract.includes('test:agentic:deterministic')) issues.push('validate:final must enforce deterministic agentic safety');
+  const adoptionStore = fs.readFileSync(path.join(root, 'src/framework/adoption/adoption-store.ts'), 'utf8');
+  const adoptionAnalyzer = fs.readFileSync(path.join(root, 'src/framework/adoption/adoption-analyzer.ts'), 'utf8');
+  if (!adoptionStore.includes('readWorkspace') || !adoptionStore.includes("openSync(lock, 'wx'")) issues.push('v1.8.0 adoption evidence must remain portfolio-readable and lock-protected');
+  if (!adoptionAnalyzer.includes('applications.length >= 2') || !adoptionAnalyzer.includes('contributors.length >= 2')) issues.push('v1.8.0 pilot readiness must require at least two applications and two contributors');
+
+  const benchmarkComparison = fs.readFileSync(path.join(root, 'src/framework/benchmark/comparative-benchmark.ts'), 'utf8');
+  const benchmarkProvenance = fs.readFileSync(path.join(root, 'src/framework/benchmark/benchmark-provenance.ts'), 'utf8');
+  const benchmarkScale = fs.readFileSync(path.join(root, 'src/framework/benchmark/scale-certification.ts'), 'utf8');
+  const benchmarkStore = fs.readFileSync(path.join(root, 'src/framework/benchmark/benchmark-store.ts'), 'utf8');
+  const benchmarkAnalyzer = fs.readFileSync(path.join(root, 'src/framework/benchmark/benchmark-analyzer.ts'), 'utf8');
+  const benchmarkContract = fs.readFileSync(path.join(root, 'tests/framework/benchmark-intelligence-contract.spec.ts'), 'utf8');
+  if (!benchmarkComparison.includes('samples.every(hasCompleteBenchmarkProvenance)') || !benchmarkComparison.includes('datasetVersion') || !benchmarkComparison.includes('baselineLabel') || !benchmarkProvenance.includes("!value.evidenceRef.startsWith('synthetic:')") || !benchmarkProvenance.includes('evidenceSha256')) issues.push('v1.8.0 differentiation claims must require complete non-synthetic provenance and keep datasets/baselines isolated');
+  if (!benchmarkScale.includes('Synthetic evidence cannot certify real browser/runtime execution scale.') || !benchmarkScale.includes("status: failed ? 'FAIL' : incomplete ? 'INSUFFICIENT_EVIDENCE' : 'PASS'")) issues.push('v1.8.0 scale certification must keep synthetic evidence non-certifying and fail closed on incomplete measurement');
+  if (!benchmarkStore.includes('appendFalseHeal') || !benchmarkAnalyzer.includes('falseHealPasses') || !pkg.scripts?.['benchmark:false-heal']) issues.push('v1.8.0 false-heal benchmark must persist immutable provenance-backed evidence and render it with benchmark intelligence');
+  if (!benchmarkContract.includes('BENCHMARK_EVIDENCE_CONFLICT') || !benchmarkContract.includes('incomplete provenance is visible but never qualifies') || !benchmarkContract.includes('keeps unrelated dataset versions')) issues.push('v1.8.0 benchmark contracts must protect immutability, dataset isolation and incomplete-provenance claim boundaries');
+
+  const responseContract = fs.readFileSync(path.join(root, 'src/framework/api-contract/response-contract-validator.ts'), 'utf8');
+  const breakingDetector = fs.readFileSync(path.join(root, 'src/framework/api-contract/breaking-change-detector.ts'), 'utf8');
+  const apiContractTests = fs.readFileSync(path.join(root, 'tests/framework/api-contract-intelligence-contract.spec.ts'), 'utf8');
+  if (!responseContract.includes("rule: 'contentType'") || !responseContract.includes('!input.contentType ? fallbackJsonSchema')) issues.push('v1.8.0 response-contract validation must fail closed for explicitly undeclared media types');
+  if (!breakingDetector.includes('REQUEST_REQUIRED_ADDED') || !breakingDetector.includes('RESPONSE_REQUIRED_REMOVED') || !breakingDetector.includes('RESPONSE_ENUM_VALUE_ADDED')) issues.push('v1.8.0 OpenAPI breaking-change detection must retain request/response compatibility boundaries');
+  if (!apiContractTests.includes('removed response media types and newly introduced response enum values')) issues.push('v1.8.0 OpenAPI regression coverage must include media-type removal and response enum expansion');
   if (pkg.engines?.node !== '>=22 <23' || fs.readFileSync(path.join(root, '.nvmrc'), 'utf8').trim() !== '22') issues.push('release runtime must be consistently pinned to Node 22 in package engines and .nvmrc');
   const copilotSetup = fs.readFileSync(path.join(root, '.github/workflows/copilot-setup-steps.yml'), 'utf8');
   if (!copilotSetup.includes("node-version-file: '.nvmrc'")) issues.push('Copilot setup workflow must use the same .nvmrc release runtime');
   const compatibilityWorkflow = fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8');
   if (!compatibilityWorkflow.includes("- 'v*'")) issues.push('release compatibility workflow must run automatically for version tags as well as manual dispatch');
   if (!compatibilityWorkflow.includes('npm run test:agentic:deterministic')) issues.push('release compatibility matrix must exercise deterministic agentic safety on every supported OS/browser lane');
-  if (!compatibilityWorkflow.includes('PW_BROWSERS: ${{ matrix.browser }}')) {
-    issues.push('release compatibility matrix must select each Playwright project through PW_BROWSERS');
-  }
+  if (!compatibilityWorkflow.includes('npm run test:product-intelligence')) issues.push('release compatibility matrix must exercise deterministic product intelligence on every supported OS/browser lane');
+  if (!compatibilityWorkflow.includes('PW_BROWSERS: ${{ matrix.browser }}')) issues.push('release compatibility matrix must select each Playwright browser through PW_BROWSERS');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
 }
@@ -311,11 +390,15 @@ try {
   }
   if (!githubWorkflow.includes("needs.test.result == 'success'") ||
       !githubWorkflow.includes("needs.ai-contracts.result == 'success'") ||
-      !githubWorkflow.includes("needs.agentic-contracts.result == 'success'")) {
-    issues.push('Intermediate report cleanup must require successful core execution, deterministic AI safety, and deterministic agentic safety while live-provider canary remains non-blocking');
+      !githubWorkflow.includes("needs.agentic-contracts.result == 'success'") ||
+      !githubWorkflow.includes("needs.product-intelligence-contracts.result == 'success'")) {
+    issues.push('Intermediate report cleanup must require successful core execution, deterministic AI safety, deterministic agentic safety, and deterministic product intelligence while live-provider canary remains non-blocking');
   }
   if (!githubWorkflow.includes('Agentic Deterministic Safety') || !githubWorkflow.includes('npm run test:agentic:deterministic')) {
     issues.push('GitHub CI must keep deterministic agentic safety as a blocking release gate');
+  }
+  if (!githubWorkflow.includes('Product Intelligence Deterministic Safety') || !githubWorkflow.includes('npm run test:product-intelligence') || !githubWorkflow.includes('product-intelligence-contracts')) {
+    issues.push('GitHub CI must keep v1.8.0 product-intelligence safety as a blocking release gate');
   }
   if (!githubWorkflow.includes('blob-${APP}-${GITHUB_RUN_ID}-') ||
       !githubWorkflow.includes('business-${APP}-${GITHUB_RUN_ID}-') ||
@@ -347,6 +430,7 @@ try {
   if (!azureWorkflow.includes('EXPECTED_CORE_WORKERS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core workers and AI lane');
   if (!azureWorkflow.includes('SHARD_TOTAL > 1')) issues.push('Azure CI must omit Playwright --shard for sequential single-worker execution');
   if (!azureWorkflow.includes('Agentic Deterministic Safety') || !azureWorkflow.includes('npm run test:agentic:deterministic')) issues.push('Azure CI must keep deterministic agentic safety as a blocking release gate');
+  if (!azureWorkflow.includes('Product Intelligence Deterministic Safety') || !azureWorkflow.includes('npm run test:product-intelligence')) issues.push('Azure CI must keep v1.8.0 product-intelligence safety as a blocking release gate');
 } catch (error) {
   issues.push(`unable to validate CI report topology contracts: ${error.message}`);
 }

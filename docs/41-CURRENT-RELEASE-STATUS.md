@@ -1,51 +1,47 @@
 # Current Certified Release Status
 
-## Previous certified baseline: v1.6.1
+## Certified baseline: v1.7.0
 
-**TestigentAI v1.6.1 is the previous immutable certified baseline.**
+**TestigentAI v1.7.0 — Agentic Test Intelligence is the current immutable certified baseline.**
 
 | Item | Certified state |
-|---|---|
-| Release | `v1.6.1` |
-| Tagged commit | `5c2c785` |
+| --- | --- |
+| Release | `v1.7.0` |
+| Tagged commit | `d9a228bc826e2bfaf4036535b61593ca25dad4b4` |
 | Runtime | Node.js 22.x |
-| Main CI | PASS |
-| Main full rerun | PASS |
-| AI deterministic safety | PASS |
-| Live provider degradation semantics | PASS |
-| Provider-health history | PASS |
-| Rerun-safe provenance | PASS |
-| Final business bundle | PASS |
-| Release Compatibility matrix | PASS 5/5 |
+| Local final validation | PASS — 154 tests in the connected final validation |
+| Main CI + full rerun | PASS |
+| Main Release Compatibility | PASS 5/5 — run `34779238283` |
+| Tag Release Compatibility | PASS 5/5 — run `34779586495` |
+| Security policy | PASS — 0 high/critical advisories at certification |
+| Agentic deterministic safety | PASS |
+| Rerun-safe report provenance | PASS |
 
-Main CI run `34766206400` proved the v1.6.1 operational-reliability contract. The live Gemini provider was allowed to become `DEGRADED` under external availability/rate-limit conditions while deterministic AI safety, provider-health evidence, report provenance and the overall workflow remained valid. The full rerun also passed.
+The `v1.7.0` tag is immutable and must not be moved or recreated. `v1.6.1` remains preserved as the previous certified baseline.
 
-The `v1.6.1` tag must not be moved or recreated. `v1.6.0` remains preserved as the previous certified baseline.
+## Development candidate: v1.8.0
 
-## Current certified release: v1.7.0
+v1.8.0 consolidates the next priority architect-review items into one candidate:
 
-v1.7.0 introduces **Agentic Test Intelligence** on top of the certified v1.6.1 baseline:
+- multi-application, multi-engineer Adoption & Pilot Intelligence;
+- baseline-backed comparative benchmark evidence with commit/SHA-256 provenance;
+- seeded false-heal measurement;
+- synthetic 500/2,000 planning diagnostics separated from measured scale certification;
+- measured 100/500/2,000-case scale evidence evaluation;
+- deterministic OpenAPI response validation and breaking-change detection;
+- adoption, benchmark/scale and API contract dashboard drill-downs;
+- browser-neutral Product Intelligence deterministic safety;
+- blocking GitHub/Azure/release-compatibility gates.
 
-- deterministic agentic trust contracts;
-- requirement-to-plan and change-impact planning;
-- proposal-only generation boundary;
-- deterministic generated-source reviewer;
-- immutable sanitized agent decision ledger;
-- governed TestigentAI MCP server;
-- one-click `agentic-intelligence.html` reporting;
-- blocking Agentic Deterministic Safety gates in GitHub and Azure;
-- carry-forward of the certified v1.6.1 canary outcome/runtime-path hotfix.
-
-Connected Node 22 validation for the current v1.7.0 feature-branch candidate has passed, including the complete `validate:final` gate and security policy.
-
-v1.7.0 is **certified and released** at immutable tagged commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Main CI and its rerun passed, main Release Compatibility run `34779238283` passed 5/5, and tag-triggered Release Compatibility run `34779586495` passed 5/5.
+The v1.8.0 candidate is **not certified** until connected Node 22 validation, PR/main/rerun CI and Release Compatibility 5/5 complete on the applied repository. Pilot/benchmark claims additionally require real measured evidence; sparse or synthetic data remains `INSUFFICIENT_EVIDENCE`.
 
 See:
 
-- `docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md`
-- `docs/51-v1.7.0-IMPLEMENTATION-PLAN.md`
-- `docs/52-v1.7.0-AGENTIC-MCP-GUIDE.md`
-- `docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md`
+- `docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md`
+- `docs/56-v1.8.0-API-CONTRACT-INTELLIGENCE.md`
+- `docs/57-v1.8.0-SCALE-CERTIFICATION.md`
+- `docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md`
+- `docs/59-v1.8.0-CANDIDATE-HANDOFF.md`
 
 ## Authoritative release workflow
 
@@ -55,7 +51,8 @@ feature branch
  -> PR checks + rerun
  -> merge to main
  -> main CI + rerun
+ -> Release Compatibility 5/5
  -> annotated vX.Y.Z tag
- -> automatic TestigentAI Release Compatibility matrix
+ -> tag-triggered Release Compatibility 5/5
  -> certification record
 ```

@@ -6,6 +6,13 @@ import { buildEvidenceGraph, renderEvidenceLedgerHtml } from '../analytics/evide
 import { renderAiProviderHealthHtml } from './ai-provider-health.renderer';
 import { AgentDecisionLedger } from '../agentic/evidence/agent-decision-ledger';
 import { renderAgenticIntelligenceHtml } from './agentic-intelligence.renderer';
+import { AdoptionObservationStore } from '../adoption/adoption-store.js';
+import { analyzeAdoption } from '../adoption/adoption-analyzer.js';
+import { renderAdoptionIntelligenceHtml } from './adoption-intelligence.renderer.js';
+import { BenchmarkEvidenceStore } from '../benchmark/benchmark-store.js';
+import { analyzeBenchmarks } from '../benchmark/benchmark-analyzer.js';
+import { renderBenchmarkIntelligenceHtml } from './benchmark-intelligence.renderer.js';
+import { renderApiContractIntelligenceHtml, type ApiContractIntelligenceSummary } from './api-contract-intelligence.renderer.js';
 
 /**
  * Author: Raushan Raj
@@ -31,6 +38,12 @@ export function writeBusinessDashboard(outputDir: string, input: ExecutionFacts,
   const agenticLedger = new AgentDecisionLedger(path.join(path.dirname(outputDir), 'agentic'));
   const agenticSummary = options.agenticSummary ?? agenticLedger.summary();
   fs.writeFileSync(path.join(outputDir, 'agentic-intelligence.html'), renderAgenticIntelligenceHtml(agenticSummary, agenticLedger.read()), 'utf8');
+  const adoptionSummary = analyzeAdoption(AdoptionObservationStore.readWorkspace(process.cwd(), facts.environment));
+  fs.writeFileSync(path.join(outputDir, 'adoption-intelligence.html'), renderAdoptionIntelligenceHtml(adoptionSummary), 'utf8');
+  const benchmarkStore = BenchmarkEvidenceStore.forWorkspace(process.cwd());
+  const benchmarkSummary = analyzeBenchmarks(benchmarkStore.comparative(), benchmarkStore.scale(), benchmarkStore.falseHeal());
+  fs.writeFileSync(path.join(outputDir, 'benchmark-intelligence.html'), renderBenchmarkIntelligenceHtml(benchmarkSummary), 'utf8');
+  fs.writeFileSync(path.join(outputDir, 'api-contract-intelligence.html'), renderApiContractIntelligenceHtml(readApiContractSummary(outputDir)), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'index.html'), renderBusinessHtml(facts, { ...options, agenticSummary }), 'utf8');
   return facts;
 }
@@ -99,3 +112,15 @@ function toCsv(facts: ExecutionFacts): string {
 function csvCell(value: unknown): string { return `"${String(value ?? '').replaceAll('"', '""')}"`; }
 function safeFile(value: string): string { return value.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 140); }
 function cloneFacts(value: ExecutionFacts): ExecutionFacts { return JSON.parse(JSON.stringify(value)) as ExecutionFacts; }
+
+function readApiContractSummary(outputDir: string): ApiContractIntelligenceSummary {
+  const source = path.join(path.dirname(outputDir), 'api-contract', 'api-contract-summary.json');
+  if (!fs.existsSync(source)) return { status: 'NO_EVIDENCE', generatedAt: new Date().toISOString(), breakingChanges: [], responseValidations: [] };
+  try {
+    const parsed = JSON.parse(fs.readFileSync(source, 'utf8')) as ApiContractIntelligenceSummary;
+    if (!parsed || !['NO_EVIDENCE', 'PASS', 'BREAKING_CHANGES', 'VALIDATION_FAILURES'].includes(parsed.status)) throw new Error('unsupported status');
+    return parsed;
+  } catch {
+    return { status: 'VALIDATION_FAILURES', generatedAt: new Date().toISOString(), breakingChanges: [], responseValidations: [] };
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://testigent.ai/schemas/testigent-false-heal-evidence.schema.json",
+  "title": "TestigentAI False-Heal Benchmark Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "application", "environment", "datasetVersion", "environmentDescription", "methodology", "scenarios"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+    "application": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+    "environment": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+    "datasetVersion": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+    "environmentDescription": { "type": "string", "minLength": 1 },
+    "methodology": { "type": "string", "minLength": 1 },
+    "synthetic": { "type": "boolean" },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "injectedFault", "expectedBusinessOutcome", "observedAutomationOutcome"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+          "injectedFault": { "type": "string", "minLength": 1 },
+          "expectedBusinessOutcome": { "enum": ["PASS", "FAIL"] },
+          "observedAutomationOutcome": { "enum": ["CLEAN_PASS", "FAILED", "HEALED_PASS", "RETRY_PASS"] }
+        }
+      }
+    }
+  }
+}

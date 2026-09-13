@@ -18,7 +18,7 @@
 
 **One reusable core. Many products. Explicit project ownership. Business-readable quality reporting.**
 
-[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md)
+[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md)
 
 </div>
 
@@ -26,9 +26,22 @@
 
 ## Current Release State
 
-**Current certified release: `v1.7.0` — Agentic Test Intelligence.** Immutable tag `v1.7.0` points to certified commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Main CI and rerun passed, the main Release Compatibility matrix passed 5/5, and the tag-triggered Release Compatibility matrix also passed 5/5. `v1.6.1` remains preserved as the previous certified baseline.
+**Certified baseline: `v1.7.0` — Agentic Test Intelligence.** Immutable tag `v1.7.0` points to certified commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`; main CI/rerun and both main and tag-triggered 5/5 Release Compatibility matrices passed. **Development candidate: `v1.8.0`** — consolidates the remaining priority architect-review work into Adoption & Benchmark Intelligence, evidence-backed plain-baseline comparison, false-heal measurement, measured scale certification, OpenAPI contract intelligence, one-click reporting and blocking deterministic CI/release gates.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
+
+
+### v1.8 product-intelligence workflows
+
+```bash
+npm run qa:adoption -- report
+npm run qa:benchmark -- --input=benchmarks/my-pilot-comparison.json
+npm run qa:false-heal -- --input=benchmarks/my-false-heal-run.json
+npm run qa:scale -- evaluate --input=benchmarks/my-measured-scale-run.json
+npm run qa:api-contract -- breaking --previous=api/openapi.previous.yaml --current=api/openapi.current.yaml
+```
+
+These commands consume measured/versioned evidence. Example templates and synthetic scale planning are deliberately non-certifying; the dashboard reports `INSUFFICIENT_EVIDENCE` until the required provenance and pilot/measurement boundaries are satisfied.
 
 ---
 
@@ -59,6 +72,8 @@ That rule makes the framework reusable across teams without turning it into a si
 | 🧭 **Change impact** | Explainable, advisory changed-code test selection with transitive project dependency reasons and fail-safe shared-core handling |
 | 🚦 **Execution governance** | Profiles, lanes, tags, workers, retries, sharding and zero-selection protection |
 | 🔄 **CI/CD** | GitHub Actions and Azure Pipelines with sequential, sharded and optional AI execution |
+| 📈 **Adoption & benchmark intelligence** | Pilot metrics, baseline-backed comparison, false-heal measurement and provenance-bound scale evidence |
+| 📜 **API contract intelligence** | OpenAPI 3 response validation and conservative breaking-change detection |
 | 🛡️ **Quality gates** | Architecture, scale, reporting, type, framework, documentation and security contracts |
 
 ---
@@ -1258,6 +1273,12 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | v1.6 pre-tag CI hotfix | [`docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`](docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md) |
 | v1.6 rerun artifact acquisition closure | [`docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md`](docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md) |
 | v1.6.1 AI operational reliability | [`docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`](docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md) |
+| v1.7 Agentic Test Intelligence | [`docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md`](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) |
+| v1.8 Adoption & benchmark intelligence | [`docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md`](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) |
+| v1.8 API contract intelligence | [`docs/56-v1.8.0-API-CONTRACT-INTELLIGENCE.md`](docs/56-v1.8.0-API-CONTRACT-INTELLIGENCE.md) |
+| v1.8 scale certification | [`docs/57-v1.8.0-SCALE-CERTIFICATION.md`](docs/57-v1.8.0-SCALE-CERTIFICATION.md) |
+| v1.8 implementation/review closure | [`docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md`](docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md) |
+| v1.8 candidate handoff | [`docs/59-v1.8.0-CANDIDATE-HANDOFF.md`](docs/59-v1.8.0-CANDIDATE-HANDOFF.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |
@@ -1294,6 +1315,7 @@ Release-specific history belongs in [`FINAL-RELEASE-NOTES.md`](FINAL-RELEASE-NOT
 10. **Every CI topology must produce one authoritative merged quality view.**
 11. **Agent-generated UI/API/DB/E2E automation becomes trusted only after human approval.**
 12. **Recovery may repair mechanics/transients, never silently rewrite business contracts.**
+13. **Measured evidence, not feature count, is the boundary for adoption, benchmark and scale claims.**
 
 ---
 
@@ -1308,6 +1330,3 @@ Maintained as an intelligent quality-engineering platform for scalable multi-pro
 **Author: Raushan Raj**
 
 </div>
-
-- `docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`
-- `docs/49-v1.6.1-DEEP-REVIEW-VALIDATION.md`
