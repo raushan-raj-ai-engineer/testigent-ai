@@ -1,8 +1,8 @@
-# TestigentAI v1.7.0 Candidate Verification Report
+# TestigentAI v1.7.0 Certified Release Verification Report
 
-## Certified baseline
+## Previous certified baseline: v1.6.1
 
-`v1.6.1` is the current certified and immutable baseline. The annotated release tag points at commit `5c2c785` (the v1.6.1 AI-canary outcome-normalization hotfix merge). Certification proved:
+`v1.6.1` is the previous certified and immutable baseline. The annotated release tag points at commit `5c2c785` (the v1.6.1 AI-canary outcome-normalization hotfix merge). Certification proved:
 
 - main CI PASS;
 - full main rerun PASS;
@@ -14,7 +14,7 @@
 
 The previous `v1.6.0` certified tag remains immutable historical evidence.
 
-## v1.7.0 candidate scope
+## v1.7.0 release scope
 
 v1.7.0 introduces Agentic Test Intelligence while preserving the v1.6.1 release truth boundary:
 
@@ -51,7 +51,7 @@ The standalone candidate package was assembled in an offline packaging environme
 
 `npm ci`, Playwright-backed deterministic contract execution and the full repository `npm run validate:final` require the connected Node 22 environment and are intentionally not claimed by this offline package build.
 
-## Connected validation required before merge/certification
+## Historical connected validation requirements
 
 Run from the extracted candidate on Node 22:
 
@@ -76,9 +76,9 @@ Then require:
 - report merge/final business bundle PASS;
 - Release Compatibility 5/5 PASS.
 
-## Certification rule
+## Historical certification rule
 
-This ZIP is a **v1.7.0 development candidate**, not a certified release. Do not create or move a `v1.7.0` tag until connected validation, PR/main reruns and all five compatibility lanes pass. Never move/recreate the certified `v1.6.1` tag.
+The v1.7.0 candidate subsequently completed connected validation, PR/main validation, rerun proof and all five compatibility lanes. Immutable tag `v1.7.0` identifies certified commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Never move or recreate certified release tags.
 
 ## Connected feature-branch validation
 
@@ -102,4 +102,4 @@ The connected review also closed two concurrency risks:
 1. dashboard HTTP-test teardown now releases the Playwright page before shutting down its local server and terminates test-owned keep-alive connections;
 2. Agent Decision Ledger concurrent writers are serialized and its JSONL view is published atomically with real child-process regression coverage.
 
-This evidence does not constitute release certification. PR/main reruns and the full 5/5 Release Compatibility matrix remain mandatory.
+This feature-branch evidence was not sufficient by itself for certification. Certification was subsequently completed through PR/main reruns, main Release Compatibility 5/5 and tag-triggered Release Compatibility 5/5.

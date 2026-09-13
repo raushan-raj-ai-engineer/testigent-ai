@@ -1,8 +1,8 @@
 # Current Certified Release Status
 
-## Certified baseline
+## Previous certified baseline: v1.6.1
 
-**TestigentAI v1.6.1 is the current immutable certified baseline.**
+**TestigentAI v1.6.1 is the previous immutable certified baseline.**
 
 | Item | Certified state |
 |---|---|
@@ -22,7 +22,7 @@ Main CI run `34766206400` proved the v1.6.1 operational-reliability contract. Th
 
 The `v1.6.1` tag must not be moved or recreated. `v1.6.0` remains preserved as the previous certified baseline.
 
-## Development candidate: v1.7.0
+## Current certified release: v1.7.0
 
 v1.7.0 introduces **Agentic Test Intelligence** on top of the certified v1.6.1 baseline:
 
@@ -38,7 +38,7 @@ v1.7.0 introduces **Agentic Test Intelligence** on top of the certified v1.6.1 b
 
 Connected Node 22 validation for the current v1.7.0 feature-branch candidate has passed, including the complete `validate:final` gate and security policy.
 
-v1.7.0 remains **not certified** until PR/main/rerun CI and the full 5/5 Release Compatibility matrix pass.
+v1.7.0 is **certified and released** at immutable tagged commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Main CI and its rerun passed, main Release Compatibility run `34779238283` passed 5/5, and tag-triggered Release Compatibility run `34779586495` passed 5/5.
 
 See:
 
