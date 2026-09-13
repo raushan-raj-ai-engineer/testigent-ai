@@ -1,3 +1,12 @@
+# TestigentAI v1.5.3 — Windows static-gate portability hardening
+
+- Fixed a Windows-only false failure in `release:static` caused by LF-only multi-line workflow matching against CRLF checkout content.
+- Structural workflow/pipeline checks now normalize line endings before applying release policy.
+- The merged-report summary policy remains unchanged: dedicated summary script, `shell: bash`, and `continue-on-error: true`.
+- Added an executable LF/CRLF portability regression and made it part of `npm run release:static`.
+- Added release documentation for the Windows compatibility incident and acceptance criteria.
+- Retains all v1.5.2 CI rerun artifact-provenance hardening and v1.5.1/v1.5.0 reliability/security controls.
+
 # TestigentAI v1.5.2 — CI rerun artifact provenance hardening
 
 - Fixed GitHub Actions rerun provenance so every technical, business and AI artifact name includes the immutable `RUN_ID` (`github.run_id-github.run_attempt`). A rerun can no longer ambiguously download artifacts created by another attempt of the same workflow run.

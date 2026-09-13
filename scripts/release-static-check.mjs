@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { hasInformationalBusinessSummaryContract, normalizeContractText } from './lib/release-text-contracts.mjs';
 
 const root = process.cwd();
 const issues = [];
@@ -140,8 +141,11 @@ for (const required of [
   'docs/33-RELEASE-COMPATIBILITY-MATRIX.md',
   'docs/34-v1.5.0-VALIDATION-EVIDENCE.md',
   'docs/38-v1.5.2-CI-RERUN-ARTIFACT-PROVENANCE.md',
+  'docs/39-v1.5.3-WINDOWS-STATIC-GATE-PORTABILITY.md',
   '.github/workflows/release-compatibility.yml',
   'scripts/release-compatibility-probe.mjs',
+  'scripts/release-static-portability-contract.mjs',
+  'scripts/lib/release-text-contracts.mjs',
   'config/security-exceptions.json',
   'src/framework/ai/ai-egress.policy.ts',
   'src/framework/logging/evidence.policy.ts',
@@ -192,6 +196,7 @@ try {
   if (!pkg.scripts?.['agents:policy']) issues.push('missing agent enterprise-policy script');
   if (!pkg.scripts?.['authoring:report']) issues.push('missing authoring productivity report script');
   if (!pkg.scripts?.['comments:audit']?.includes('docs:comment-audit')) issues.push('comments:audit must alias docs:comment-audit for CLI compatibility');
+  if (!pkg.scripts?.['release:static']?.includes('release-static-portability-contract.mjs')) issues.push('release:static must execute the LF/CRLF portability regression contract');
   for (const scenarioScript of ['scenario:help', 'scenario:list', 'scenario:validate', 'scenario:new', 'scenario:run', 'scenario:doctor', 'scenario:schema', 'scenario:schema:check']) {
     if (!pkg.scripts?.[scenarioScript]) issues.push(`missing declarative authoring script: ${scenarioScript}`);
   }
@@ -231,7 +236,7 @@ if (fs.existsSync(envExamplePath)) {
 try {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   if (!pkg.scripts?.['ci:report:bundle']?.includes('ci-report-bundle.ts')) issues.push('missing ci:report:bundle topology marker script');
-  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
+  const githubWorkflow = normalizeContractText(fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8'));
   if (!githubWorkflow.includes('EXPECTED_CORE_WORKERS')) issues.push('GitHub merge must enforce core worker topology independently');
   if (!githubWorkflow.includes('EXPECT_AI_LANE')) issues.push('GitHub merge must validate the optional AI lane independently');
   if (!githubWorkflow.includes('ci:report:bundle -- core') || !githubWorkflow.includes('ci:report:bundle -- ai')) issues.push('GitHub CI must publish core/AI bundle topology markers');
@@ -255,7 +260,7 @@ try {
   if (githubWorkflow.includes('actions/cache@v4')) issues.push('GitHub CI must not use the deprecated Node 20 actions/cache@v4 runtime');
   if (!githubWorkflow.includes('actions/cache@v6')) issues.push('GitHub report-history cache must use the supported Node 24 actions/cache@v6 runtime');
   if (githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'")) issues.push('GitHub merge must not hardcode two business reports');
-  const azureWorkflow = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const azureWorkflow = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   if (!azureWorkflow.includes('EXPECTED_CORE_WORKERS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core workers and AI lane');
   if (!azureWorkflow.includes('SHARD_TOTAL > 1')) issues.push('Azure CI must omit Playwright --shard for sequential single-worker execution');
 } catch (error) {
@@ -328,8 +333,8 @@ try {
   const merge = fs.readFileSync(path.join(root, 'scripts/merge-business-reports.ts'), 'utf8');
   const mergeContract = fs.readFileSync(path.join(root, 'scripts/reporting-merge-contract.ts'), 'utf8');
   const bundleValidator = fs.readFileSync(path.join(root, 'scripts/validate-ci-business-bundle.ts'), 'utf8');
-  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
-  const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const githubWorkflow = normalizeContractText(fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8'));
+  const azurePipeline = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
   if (!reportTypes.includes('executionEligible') || !reportTypes.includes('notApplicable') || !reportTypes.includes('blockedSkipped')) issues.push('reporting applicability/execution fact contract missing');
   if (!skipClassifier.includes("'NOT_APPLICABLE'") || !skipClassifier.includes("'BLOCKED'")) issues.push('skip disposition contract missing');
@@ -343,7 +348,7 @@ try {
   if (!/failed UI/i.test(bundleValidator) || !bundleValidator.includes("contentType.startsWith('image/')")) issues.push('CI business bundle must require screenshot evidence for failed UI scenarios');
   if (!githubWorkflow.includes('--grep-invert="@ai"') || !azurePipeline.includes('--grep-invert="@ai"')) issues.push('normal CI shards must exclude dedicated AI tests');
   if (!githubWorkflow.includes('npm run --silent ci:business:summary >> "$GITHUB_STEP_SUMMARY"')) issues.push('GitHub merged-report summary must use the dedicated summary script');
-  if (!githubWorkflow.includes('continue-on-error: true\n        shell: bash\n        run: npm run --silent ci:business:summary')) issues.push('GitHub merged-report summary must remain informational/non-blocking');
+  if (!hasInformationalBusinessSummaryContract(githubWorkflow)) issues.push('GitHub merged-report summary must remain informational/non-blocking');
   if (githubWorkflow.includes("<<'NODE'") || githubWorkflow.includes('GITHUB\\_STEP\\_SUMMARY')) issues.push('GitHub merged-report summary must not use fragile heredoc/escaped step-summary syntax');
   if (!merge.includes('EXPECTED_CORE_WORKERS') || !merge.includes('EXPECT_AI_LANE') || !githubWorkflow.includes('EXPECTED_CORE_WORKERS:') || !githubWorkflow.includes('EXPECT_AI_LANE:') || !azurePipeline.includes('EXPECTED_CORE_WORKERS="${{ parameters.shards }}"') || !azurePipeline.includes('EXPECT_AI_LANE="${{ parameters.runAi }}"')) issues.push('CI merged-report core-worker/AI topology guard missing');
   if (!githubWorkflow.includes('--pass-with-no-tests') || !azurePipeline.includes('--pass-with-no-tests') || !githubWorkflow.includes('ci:report:bundle -- core ${{ matrix.index }} ${{ matrix.total }} auto') || !azurePipeline.includes('ci:report:bundle -- core "$(System.JobPositionInPhase)" "$(System.TotalJobsInPhase)" auto')) issues.push('CI empty-shard topology contract missing');
@@ -361,8 +366,8 @@ try {
   const proposalReview = fs.readFileSync(path.join(root, 'src/framework/intelligence/review/proposal.review.ts'), 'utf8');
   const generator = fs.readFileSync(path.join(root, 'src/framework/intelligence/generation/framework.generator.ts'), 'utf8');
   const newTest = fs.readFileSync(path.join(root, 'scripts/new-test.ts'), 'utf8');
-  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
-  const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const githubWorkflow = normalizeContractText(fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8'));
+  const azurePipeline = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
   if (!portfolioRunner.includes('writePortfolioDashboard') || !portfolioRunner.includes('Known defects') && !portfolioWriter.includes('Known defects')) issues.push('business-friendly portfolio dashboard contract missing');
   if (!portfolioRunner.includes('resolveProviderOrder') || !portfolioRunner.includes('--include-ai requires AI_ENABLED=true')) issues.push('portfolio AI provider preflight contract missing');
@@ -431,8 +436,8 @@ try {
   const evidenceRetention = fs.readFileSync(path.join(root, 'src/framework/logging/evidence.retention.ts'), 'utf8');
   const mergeReports = fs.readFileSync(path.join(root, 'scripts/merge-business-reports.ts'), 'utf8');
   const portfolioRunner = fs.readFileSync(path.join(root, 'scripts/test-projects.ts'), 'utf8');
-  const githubWorkflow = fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8');
-  const azurePipeline = fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8');
+  const githubWorkflow = normalizeContractText(fs.readFileSync(path.join(root, '.github/workflows/playwright-sharded.yml'), 'utf8'));
+  const azurePipeline = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   const sdetAuthProvider = fs.readFileSync(path.join(root, 'projects/sdet-practice/auth/auth.provider.ts'), 'utf8');
 
   if (!sdetAuthProvider.includes("requiredSecret('AUTH_USERNAME')") || !sdetAuthProvider.includes("requiredSecret('AUTH_PASSWORD')")) issues.push('A1 sample auth provider must not commit credential-shaped fallbacks');

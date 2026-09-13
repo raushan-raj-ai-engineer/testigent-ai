@@ -186,3 +186,9 @@ v1.5.1 adds browser-backed regressions proving locator-readiness diagnostics rem
 ## v1.5.2 GitHub rerun artifact-provenance gate
 
 GitHub intermediate artifact names and merge download patterns include the full `RUN_ID` (`github.run_id-github.run_attempt`). This prevents reruns from mixing or ambiguously resolving artifacts created by another attempt of the same workflow run. The merge stage also validates downloaded topology markers before aggregation and only expects the optional AI lane when the AI job succeeded. See `docs/38-v1.5.2-CI-RERUN-ARTIFACT-PROVENANCE.md`.
+
+## v1.5.3 Windows line-ending portability gate
+
+`npm run release:static` validates structural GitHub/Azure workflow policy independently of checkout line endings. The release checker normalizes CRLF/CR to LF before multi-line policy evaluation and executes `scripts/release-static-portability-contract.mjs`, which proves the merged-report informational summary rule against both LF and simulated Windows CRLF workflow content.
+
+The Windows release-compatibility job must pass `Static and type validation` before browser recovery regressions execute. A platform-specific checkout conversion must never change release-policy results.
