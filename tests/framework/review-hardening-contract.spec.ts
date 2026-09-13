@@ -18,6 +18,10 @@ import { HealingCache } from '../../src/framework/healing/healing.cache';
 import type { LocatorPlan } from '../../src/framework/healing/healing.types';
 import { redact, sanitizeText, sanitizeUrl } from '../../src/framework/logging/redactor';
 import { evaluateSecurityAudit, type SecurityExceptionFile } from '../../src/framework/security/advisory.policy';
+import {
+  buildBulkAdvisoryPayload,
+  normalizeBulkAdvisoryResponse,
+} from '../../src/framework/security/npm-bulk-audit';
 
 const envKeys = [
   'AI_ENABLED', 'HEALING_AI_ENABLED', 'AI_AUDIT_ENABLED', 'AI_RUNTIME_LOGGING', 'AI_ENDPOINT', 'AI_MODEL',
@@ -256,6 +260,54 @@ test.describe('Architect review hardening contracts', () => {
     expect(unresolved.blocking).toHaveLength(1);
     expect(unresolved.blocking[0]?.advisoryId).toBe('unresolved:parent');
   });
+
+  test('A8 npm Bulk Advisory fallback preserves installed versions and advisory identity', () => {
+    const payload = buildBulkAdvisoryPayload({
+      lockfileVersion: 3,
+      packages: {
+        '': { name: 'testigent-ai', version: '1.8.0' },
+        'node_modules/xlsx': { version: '0.20.3' },
+        'node_modules/tool/node_modules/xlsx': { version: '0.18.5' },
+        'node_modules/@scope/example': { version: '2.1.0' },
+      },
+    });
+
+    expect(payload).toEqual({
+      '@scope/example': ['2.1.0'],
+      xlsx: ['0.18.5', '0.20.3'],
+    });
+
+    const audit = normalizeBulkAdvisoryResponse({
+      xlsx: [{
+        id: 222,
+        severity: 'high',
+        vulnerable_versions: '<=0.20.3',
+        title: 'bulk advisory contract',
+        url: 'https://github.com/advisories/GHSA-contract',
+      }],
+    });
+
+    const evaluated = evaluateSecurityAudit(
+      audit,
+      { schemaVersion: 1, exceptions: [] },
+      new Date('2026-09-13T00:00:00Z'),
+    );
+
+    expect(evaluated.blocking).toMatchObject([{
+      package: 'xlsx',
+      advisoryId: '222',
+      severity: 'high',
+      affectedRange: '<=0.20.3',
+    }]);
+
+    expect(() => normalizeBulkAdvisoryResponse({
+      malformed: [{
+        id: 333,
+        vulnerable_versions: '*',
+      }],
+    })).toThrow(/severity/i);
+  });
+
 });
 
 function saveEnv(keys: readonly string[]): () => void {
