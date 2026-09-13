@@ -225,4 +225,4 @@ v1.6.0 added one-click claim provenance, score-free release risk, advisory chang
 
 ## v1.6.1 certification additions
 
-In addition to the v1.6.0 gates, v1.6.1 must prove the blocking deterministic AI job, non-blocking degraded-canary behavior, provider-health report generation, healthy-canary AI evidence inclusion, main rerun provenance, and the full five-platform/browser compatibility matrix. Until those pass, v1.6.0 remains the certified baseline.
+Historical v1.6.1 certification note: connected Node 22 validation, PR/main CI, the full main rerun, degraded live-provider behavior, provider-health/report provenance, and the five-lane compatibility matrix all passed. v1.6.1 is now the immutable certified baseline; v1.7.0 must repeat the same connected certification discipline with the additional Agentic Deterministic Safety gate.

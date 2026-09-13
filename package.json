@@ -1,6 +1,6 @@
 {
   "name": "testigent-ai",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "private": true,
   "description": "TestigentAI - Intelligent Quality Engineering Platform",
   "author": "Raushan Raj",
@@ -148,7 +148,7 @@
     "reporting:contract": "tsx scripts/reporting-contract.ts && tsx scripts/ci-rerun-artifact-contract.ts && tsx scripts/reporting-merge-contract.ts",
     "reporting:merge-contract": "tsx scripts/reporting-merge-contract.ts",
     "framework:health:release": "cross-env APP=demo ENV=qa tsx scripts/framework-health.ts",
-    "validate:final:steps": "npm run release:static && npm run architecture:check && npm run framework:health && npm run scale:audit && npm run scenario:doctor && npm run docs:comment-audit && npm run reporting:contract && npm run typecheck && npm run test:review:hardening && npm run test:framework:critical && npm run security:check",
+    "validate:final:steps": "npm run release:static && npm run architecture:check && npm run framework:health && npm run scale:audit && npm run scenario:doctor && npm run docs:comment-audit && npm run reporting:contract && npm run typecheck && npm run test:review:hardening && npm run test:agentic:deterministic && npm run test:framework:critical && npm run security:check",
     "ci:business:summary": "tsx scripts/ci-business-step-summary.ts",
     "ci:report:bundle": "tsx scripts/ci-report-bundle.ts",
     "test:projects": "tsx scripts/test-projects.ts",
@@ -167,7 +167,13 @@
     "test:ai:deterministic": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa AI_ENABLED=false HEALING_AI_ENABLED=false playwright test tests/framework/ai-evaluation-contract.spec.ts tests/framework/ai-failover-contract.spec.ts tests/framework/ai-retry-budget-contract.spec.ts tests/framework/ai-runtime-audit.spec.ts tests/framework/false-heal-safety.spec.ts --project=chromium",
     "ai:canary:finalize": "tsx scripts/ai-canary-finalize.ts",
     "ci:ai:health": "tsx scripts/ci-provider-health.ts",
-    "ai:canary:preflight": "tsx scripts/ai-canary-preflight.ts"
+    "ai:canary:preflight": "tsx scripts/ai-canary-preflight.ts",
+    "mcp:agentic": "tsx scripts/start-agentic-mcp.ts",
+    "agentic:plan": "tsx scripts/agentic-plan.ts",
+    "agentic:impact": "tsx scripts/agentic-impact.ts",
+    "agentic:review": "tsx scripts/agentic-review.ts",
+    "agentic:evidence": "tsx scripts/agentic-evidence.ts",
+    "test:agentic:deterministic": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa AI_ENABLED=false HEALING_AI_ENABLED=false playwright test tests/framework/agentic-policy-contract.spec.ts tests/framework/agentic-planner-contract.spec.ts tests/framework/agentic-reviewer-contract.spec.ts tests/framework/agentic-ledger-contract.spec.ts tests/framework/agentic-mcp-contract.spec.ts tests/framework/agentic-reporting-contract.spec.ts --project=chromium"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

@@ -6,6 +6,16 @@
         "playwright",
         "run-test-mcp-server"
       ]
+    },
+    "testigent-agentic": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "scripts/start-agentic-mcp.ts"
+      ],
+      "env": {
+        "ENV": "qa"
+      }
     }
   }
 }

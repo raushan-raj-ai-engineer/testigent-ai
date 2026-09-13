@@ -1,6 +1,30 @@
-# TestigentAI v1.6.1 — AI Operational Reliability Candidate
+# TestigentAI v1.7.0 — Agentic Test Intelligence Candidate
 
-## Baseline
+## Certified baseline
+
+`v1.6.1` is the immutable certified baseline at tagged commit `5c2c785`. Main CI run `34766206400` and its full rerun proved the AI Operational Reliability contract, and the 5/5 Release Compatibility matrix passed.
+
+## v1.7.0 candidate scope
+
+- deterministic planner and change-impact intelligence built on the existing requirement engine;
+- proposal-only generation with project/path/size/duplicate safeguards;
+- deterministic generated-source reviewer for secrets, raw Playwright bypasses, direct infrastructure access and traceability gaps;
+- trust policy where only `ACCEPTED` evidence may be promoted and required human approval cannot be bypassed by model confidence;
+- immutable, sanitized run-scoped agent decision ledger;
+- governed TestigentAI MCP stdio server with planning/impact/discovery/review/evidence tools and no source-promotion or arbitrary-execution tools;
+- one-click `agentic-intelligence.html` dashboard drill-down while deterministic release facts remain authoritative;
+- blocking Agentic Deterministic Safety jobs in GitHub Actions and Azure Pipelines;
+- certified v1.6.1 canary fixes carried forward: GitHub outcome normalization plus runtime canary paths.
+
+This package is a **development candidate**, not a certified release. Connected Node 22 validation, PR/main/rerun CI and the full 5/5 Release Compatibility matrix remain mandatory before tagging `v1.7.0`.
+
+See `docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md` through `docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md`.
+
+---
+
+# TestigentAI v1.6.1 — AI Operational Reliability (Historical Candidate Record)
+
+## Historical baseline at candidate creation
 
 `v1.6.0` is the immutable certified baseline at commit `4225e151fadcc85fd0a9861b385bda82bd1c96c0`. Tag-triggered Release Compatibility run `34760349497` passed the full 5/5 Ubuntu/macOS/Windows browser matrix.
 
@@ -14,7 +38,7 @@
 - healthy live AI evidence is merged only when the canary is healthy; provider degradation never rewrites deterministic release facts.
 - merge-time AI evidence selection is artifact-driven and rerun-safe: newest same-workflow canary wins, missing expected evidence fails closed, and intentional skips record `SKIPPED`.
 
-See `docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`. v1.6.1 remains a candidate until connected validation, main/rerun CI and the compatibility matrix pass.
+See `docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`. This section preserves the pre-certification candidate state; those PR/main/rerun and compatibility gates later passed and v1.6.1 is now the immutable certified baseline.
 
 ---
 
@@ -466,4 +490,15 @@ The current development candidate is **v1.6.1 — AI Operational Reliability**. 
 - explicit `SKIPPED` evidence when a canary is intentionally not run;
 - matching GitHub Actions and Azure Pipelines policy boundaries.
 
-v1.6.1 remains a **candidate**, not a certified release, until connected Node 22 `npm run validate:final`, PR/main/rerun CI and the 5/5 Release Compatibility matrix pass.
+Connected Node 22 `npm run validate:final` has passed for v1.6.1. It remains a **candidate**, not a certified release, until PR/main/rerun CI and the 5/5 Release Compatibility matrix pass.
+
+## Connected deep-review hardening
+
+- Closed a reproducible dashboard parallel-execution teardown race without increasing timeouts, adding retries, skipping coverage or weakening assertions.
+- Strengthened CSV export validation to confirm the download actually completed.
+- Hardened Agent Decision Ledger concurrent writes using exclusive lock ownership and atomic JSONL publication while preserving immutable decision files.
+- Added real multi-process ledger regression coverage: 4/4 contract tests and 20/20 four-worker stress executions passed.
+- Final connected framework validation passed with 154 tests.
+- Security policy passed with zero high/critical advisories.
+- Release SBOM, manifest and offline verification were regenerated after hardening.
+- v1.7.0 remains a development candidate until PR/main reruns and the complete 5/5 Release Compatibility matrix pass.
