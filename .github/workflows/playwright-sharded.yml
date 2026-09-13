@@ -203,13 +203,13 @@ jobs:
       AI_ALLOWED_PRIVATE_ORIGINS: ${{ vars.AI_ALLOWED_PRIVATE_ORIGINS || '' }}
       AI_ALLOWED_EXTERNAL_ORIGINS: ${{ vars.AI_ALLOWED_EXTERNAL_ORIGINS || '' }}
       AI_ALLOW_CROSS_ORIGIN_REDIRECTS: 'false'
-      AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '60000' }}
+      AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '30000' }}
       AI_TOTAL_TIMEOUT_MS: ${{ vars.AI_TOTAL_TIMEOUT_MS || '90000' }}
       AI_RETRY_MAX_ATTEMPTS: ${{ vars.AI_RETRY_MAX_ATTEMPTS || '3' }}
       AI_RETRY_BASE_DELAY_MS: ${{ vars.AI_RETRY_BASE_DELAY_MS || '1000' }}
       AI_RETRY_MAX_DELAY_MS: ${{ vars.AI_RETRY_MAX_DELAY_MS || '8000' }}
       AI_RETRY_JITTER_MS: ${{ vars.AI_RETRY_JITTER_MS || '250' }}
-      AI_RETRY_ON_TIMEOUT: ${{ vars.AI_RETRY_ON_TIMEOUT || 'false' }}
+      AI_RETRY_ON_TIMEOUT: ${{ vars.AI_RETRY_ON_TIMEOUT || 'true' }}
       AI_MAX_CALLS_PER_TEST: ${{ vars.AI_MAX_CALLS_PER_TEST || '2' }}
       AI_PROVIDER_GENERATION_CHECK: ${{ vars.AI_PROVIDER_GENERATION_CHECK || 'true' }}
 
@@ -468,15 +468,22 @@ jobs:
       - name: Download all technical blobs
         uses: actions/download-artifact@v8
         with:
-          pattern: blob-${{ env.APP }}-${{ env.RUN_ID }}-*
-          path: all-blob-reports
-          merge-multiple: true
+          pattern: blob-${{ env.APP }}-${{ github.run_id }}-*-*
+          path: all-blob-reports-raw
 
       - name: Download all business reports
         uses: actions/download-artifact@v8
         with:
-          pattern: business-${{ env.APP }}-${{ env.RUN_ID }}-*
-          path: all-business-reports
+          pattern: business-${{ env.APP }}-${{ github.run_id }}-*-*
+          path: all-business-reports-raw
+
+      - name: Resolve rerun-safe report provenance
+        run: npm run ci:report:rerun:resolve -- all-business-reports-raw all-business-reports all-blob-reports-raw all-blob-reports
+        env:
+          EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
+          EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
+          CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
 
       - name: Download AI audit
         if: ${{ needs.ai-smoke.result == 'success' }}
@@ -491,6 +498,10 @@ jobs:
         run: npm run ci:report:download:validate -- all-business-reports
         env:
           EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
+          EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
+          CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS: 'true'
+          CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
 
       - name: Merge Playwright technical report
         run: npm run report:merge:technical
@@ -502,6 +513,9 @@ jobs:
           RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
           EXPECTED_CORE_WORKERS: ${{ needs.plan.outputs.expected_core_reports }}
           EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}
+          CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS: 'true'
+          CI_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          CI_WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
 
       - name: Finalize business execution facts
         run: npm run ci:business:finalize

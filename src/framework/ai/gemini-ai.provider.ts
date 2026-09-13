@@ -51,7 +51,8 @@ export class GeminiAiProvider implements AiProvider {
   private readonly retryBaseDelayMs = Number(process.env.AI_RETRY_BASE_DELAY_MS ?? 1_000);
   private readonly retryMaxDelayMs = Number(process.env.AI_RETRY_MAX_DELAY_MS ?? 8_000);
   private readonly retryJitterMs = Number(process.env.AI_RETRY_JITTER_MS ?? 250);
-  private readonly retryOnTimeout = (process.env.AI_RETRY_ON_TIMEOUT ?? 'false').toLowerCase() === 'true';
+  private readonly retryOnTimeoutRaw = (process.env.AI_RETRY_ON_TIMEOUT ?? 'true').toLowerCase();
+  private readonly retryOnTimeout = this.retryOnTimeoutRaw === 'true';
   private readonly thinkingLevel = (process.env.GEMINI_THINKING_LEVEL ?? 'low').toLowerCase();
   private readonly maxOutputTokens = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS ?? 512);
 
@@ -158,7 +159,7 @@ export class GeminiAiProvider implements AiProvider {
         );
       }
 
-      const attemptTimeoutMs = Math.max(1, Math.min(this.timeoutMs, remainingBeforeAttempt));
+      const attemptTimeoutMs = this.resolveAttemptTimeoutMs(totalStarted, attempt, remainingBeforeAttempt);
 
       try {
         const response = await fetchWithTimeout(endpoint, {
@@ -282,6 +283,31 @@ export class GeminiAiProvider implements AiProvider {
     );
   }
 
+  /**
+   * Shares the remaining wall-clock budget across the current and future attempts.
+   * This prevents an early slow 5xx/timeout from consuming the budget promised to later retries.
+   */
+  private resolveAttemptTimeoutMs(totalStarted: number, attempt: number, remainingBeforeAttempt = this.remainingBudget(totalStarted)): number {
+    const attemptsRemaining = this.maxAttempts - attempt + 1;
+    if (attemptsRemaining <= 1) return Math.max(1, Math.min(this.timeoutMs, remainingBeforeAttempt));
+
+    const futureBackoffReserve = this.minimumFutureBackoffReserve(attempt);
+    const requestBudget = Math.max(attemptsRemaining, remainingBeforeAttempt - futureBackoffReserve);
+    const fairShare = Math.max(1, Math.floor(requestBudget / attemptsRemaining));
+    return Math.max(1, Math.min(this.timeoutMs, fairShare));
+  }
+
+  private minimumFutureBackoffReserve(currentAttempt: number): number {
+    let reserve = 0;
+    for (let failedAttempt = currentAttempt; failedAttempt < this.maxAttempts; failedAttempt += 1) {
+      reserve += Math.min(
+        this.retryMaxDelayMs,
+        this.retryBaseDelayMs * (2 ** Math.max(0, failedAttempt - 1))
+      ) + this.retryJitterMs;
+    }
+    return reserve;
+  }
+
   private async waitForRetry(totalStarted: number, failedAttempt: number, reason: string): Promise<boolean> {
     const exponential = Math.min(
       this.retryMaxDelayMs,
@@ -354,6 +380,9 @@ export class GeminiAiProvider implements AiProvider {
     }
     if (!Number.isFinite(this.retryJitterMs) || this.retryJitterMs < 0) {
       return 'AI_RETRY_JITTER_MS must be a non-negative number.';
+    }
+    if (!['true', 'false'].includes(this.retryOnTimeoutRaw)) {
+      return 'AI_RETRY_ON_TIMEOUT must be true or false.';
     }
     return undefined;
   }

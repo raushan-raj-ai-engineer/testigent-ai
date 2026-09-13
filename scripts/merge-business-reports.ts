@@ -153,17 +153,20 @@ function enforceExecutionIdentity(reports: LocatedReport[], markers: LocatedMark
     const actual = { application: report.facts.application, environment: report.facts.environment, runId: report.facts.runId };
     for (const field of ['application', 'environment', 'runId'] as const) {
       if (actual[field] !== expected[field]) {
-        throw new Error(`Cross-execution business merge blocked: ${path.relative(process.cwd(), report.file)} has ${field}='${actual[field]}' but expected '${expected[field]}'. Never merge artifacts from different applications, environments or run IDs.`);
+        const allowedPriorAttempt = field === 'runId' && isAllowedPriorAttemptRunId(actual[field], expected.runId);
+        if (!allowedPriorAttempt) {
+          throw new Error(`Cross-execution business merge blocked: ${path.relative(process.cwd(), report.file)} has ${field}='${actual[field]}' but expected '${expected[field]}'. Never merge artifacts from different applications, environments or workflow runs.`);
+        }
       }
     }
     for (const record of report.facts.healing?.attempts ?? report.facts.healing?.records ?? []) {
-      if (record.runId && record.runId !== expected.runId) {
-        throw new Error(`Cross-execution healing evidence blocked: ${path.relative(process.cwd(), report.file)} contains runId='${record.runId}' but expected '${expected.runId}'.`);
+      if (record.runId && record.runId !== expected.runId && !isAllowedPriorAttemptRunId(record.runId, expected.runId)) {
+        throw new Error(`Cross-execution healing evidence blocked: ${path.relative(process.cwd(), report.file)} contains runId='${record.runId}' but expected '${expected.runId}' or a verified prior attempt from the same workflow run.`);
       }
     }
     for (const record of report.facts.aiUsage?.records ?? []) {
-      if (record.runId && record.runId !== expected.runId) {
-        throw new Error(`Cross-execution AI evidence blocked: ${path.relative(process.cwd(), report.file)} contains runId='${record.runId}' but expected '${expected.runId}'.`);
+      if (record.runId && record.runId !== expected.runId && !isAllowedPriorAttemptRunId(record.runId, expected.runId)) {
+        throw new Error(`Cross-execution AI evidence blocked: ${path.relative(process.cwd(), report.file)} contains runId='${record.runId}' but expected '${expected.runId}' or a verified prior attempt from the same workflow run.`);
       }
     }
   }
@@ -173,11 +176,29 @@ function enforceExecutionIdentity(reports: LocatedReport[], markers: LocatedMark
     for (const field of ['application', 'environment', 'runId'] as const) {
       const value = marker[field];
       if (value !== undefined && value !== expected[field]) {
-        throw new Error(`Cross-execution CI marker blocked: ${path.relative(process.cwd(), located.file)} has ${field}='${value}' but expected '${expected[field]}'.`);
+        const allowedPriorAttempt = field === 'runId' && isAllowedPriorAttemptRunId(value, expected.runId);
+        if (!allowedPriorAttempt) {
+          throw new Error(`Cross-execution CI marker blocked: ${path.relative(process.cwd(), located.file)} has ${field}='${value}' but expected '${expected[field]}'.`);
+        }
       }
     }
   }
   return expected;
+}
+
+function isAllowedPriorAttemptRunId(actual: string | undefined, expectedCurrentRunId: string): boolean {
+  if (process.env.CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS !== 'true' || !actual) return false;
+  const workflowRunId = cleanEnv('CI_WORKFLOW_RUN_ID');
+  const currentAttemptRaw = cleanEnv('CI_WORKFLOW_RUN_ATTEMPT');
+  if (!workflowRunId || !currentAttemptRaw) return false;
+  const currentAttempt = Number(currentAttemptRaw);
+  if (!Number.isInteger(currentAttempt) || currentAttempt < 1) return false;
+  if (expectedCurrentRunId !== `${workflowRunId}-${currentAttempt}`) return false;
+  const prefix = `${workflowRunId}-`;
+  if (!actual.startsWith(prefix)) return false;
+  const attemptRaw = actual.slice(prefix.length);
+  const attempt = Number(attemptRaw);
+  return Number.isInteger(attempt) && attempt >= 1 && attempt <= currentAttempt && String(attempt) === attemptRaw;
 }
 
 function enforceBundleTopology(reports: LocatedReport[], markers: LocatedMarker[]): void {

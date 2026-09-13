@@ -146,9 +146,11 @@ GitHub artifacts are attempt-scoped with the full immutable framework run ID:
 <github.run_id>-<github.run_attempt>
 ```
 
-Core shard business bundles, technical blobs, AI business/audit bundles and the final report artifact include this identity in their artifact names. The merge job downloads only the current-attempt pattern and runs `npm run ci:report:download:validate` before Playwright/business aggregation. The validator fails closed for missing/duplicate core topology markers or application/environment/run-ID mismatches.
+Core shard business bundles, technical blobs, AI business/audit bundles and the final report artifact include this identity in their artifact names. A normal first attempt resolves entirely from the current attempt. For GitHub `rerun --failed`, successful shard jobs may not execute again, so the merge downloads the **same workflow-run family** (`github.run_id`) and runs `npm run ci:report:rerun:resolve` before validation. The resolver chooses the newest valid attempt independently per core shard and, when the AI job succeeds, requires the AI source to be from the current attempt. It produces `_rerun-resolution.json` as an auditable provenance decision and carries the matching technical blobs from the same source attempts.
 
-The optional AI lane is expected only when the AI job result is `success`. This preserves the original AI failure as the primary diagnostic instead of manufacturing a second missing-report failure. Intermediate artifacts are cleaned only after successful merge/final validation and cleanup is limited to the current attempt.
+`npm run ci:report:download:validate` then requires the resolver manifest whenever prior-attempt reuse is enabled, checks exact app/environment/workflow-run identity, rejects foreign/future/duplicate shard artifacts, and requires the resolved marker set to match the manifest exactly. `merge-business-reports` publishes the current attempt as the report identity while exposing all source attempt IDs in aggregation provenance.
+
+The optional AI lane is expected only when the AI job result is `success`. A failed AI provider check therefore does not fabricate an AI business result; the merge can still publish truthful core evidence. Intermediate artifacts are cleaned only after successful merge/final validation and cleanup remains scoped to the current attempt.
 
 ## Cross-platform release-policy portability (v1.5.3)
 
