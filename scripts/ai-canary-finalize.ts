@@ -61,7 +61,26 @@ function readExisting(file: string): AiProviderCanaryRecord | undefined {
 }
 
 function outcome(value?: string): AiProviderCheckOutcome {
-  return value === 'passed' || value === 'failed' || value === 'skipped' ? value : 'skipped';
+  const normalized = (value ?? '').trim().toLowerCase();
+
+  if (
+    normalized === 'passed' ||
+    normalized === 'success' ||
+    normalized === 'succeeded'
+  ) {
+    return 'passed';
+  }
+
+  if (
+    normalized === 'failed' ||
+    normalized === 'failure' ||
+    normalized === 'cancelled' ||
+    normalized === 'canceled'
+  ) {
+    return 'failed';
+  }
+
+  return 'skipped';
 }
 
 function configuredProviders(): string[] {
