@@ -1,85 +1,77 @@
-# TestigentAI v1.4.2 Verification Report
+# TestigentAI v1.6.0 Pre-Tag Verification Report
 
-## Scope
+## Status
 
-v1.4.2 is a focused compatibility/isolation patch on top of the validated v1.4.1 architecture. It preserves the portfolio, reporting, agent-authoring, auth and healing contracts while closing a cross-project database-capability leak and hardening the dormant demo UI/API/DB reference scenario.
+**Pre-tag release candidate.** `v1.5.3` remains the certified baseline until this v1.6.0 closure candidate passes replacement trusted-main CI, a trusted-main rerun proof, and the tag-triggered five-platform/browser compatibility matrix.
 
-## Architecture review outcomes
+## Connected validation already proven
 
-- **Reusable core remains project-neutral.** Application selectors, endpoint contracts, schema knowledge and business workflows remain under `projects/<project>`.
-- **AI is optional and lazy.** A healthy primary locator, deterministic fallback or validated cache path does not initialize an AI provider.
-- **Runtime healing is deliberately narrow.** UI locator recovery may use deterministic and AI-assisted recovery only after semantic validation. Authentication has its own recovery lifecycle. API and database business-contract/schema mismatches are diagnosed or proposed for source maintenance rather than silently rewritten.
-- **One governed authoring lifecycle.** Existing requirement intelligence and proposal review now cover UI, API, database and mixed E2E automation. Generated code remains review-blocked until a human approves it.
-- **Database safety defaults to read-only.** Agent-generated DB validation cannot be promoted with mutating/destructive SQL.
-- **Business reporting remains the primary stakeholder view.** The new portfolio dashboard aggregates estate health while per-project reports remain the engineering drill-down source.
-- **Complexity is intentionally bounded.** No second agent framework and no nested cross-project local concurrency layer were introduced.
+On macOS with Node.js `22.23.2`, the R3 pre-tag candidate passed the complete connected `npm run validate:final` chain:
 
-- **Database capability ownership is project-scoped.** `projects/<project>/config/<env>.json` exclusively selects `none|postgres|mysql|mssql`; machine/repository `DB_TYPE` values cannot activate another project's `@db` scenarios.
-- **Cross-layer samples must establish UI state explicitly.** The demo UI/API/DB reference journey opens the application before UI interaction instead of relying on prior page state.
+- release static + LF/CRLF portability: PASS;
+- architecture/framework health/scale/scenario/comment audits: PASS;
+- reporting + rerun provenance contracts: PASS;
+- TypeScript `tsc --noEmit`: PASS;
+- review hardening: **40/40 PASS**;
+- complete framework regression: **127/127 PASS**;
+- security: **0 high/critical advisories**.
 
-## Evidence executed in the packaging environment
+PR #12 and its full workflow rerun passed. Trusted-main then proved the fair AI retry implementation reached all configured attempts. A later failed-only rerun passed provider generation and the real AI healing lane, but exposed a final acquisition boundary: default artifact-download context did not surface required core shard artifacts to the resolver.
+
+The resolver failed closed rather than publishing incomplete evidence.
+
+## R4 closure in this package
+
+This candidate keeps the strict R3 resolver and changes how merge evidence is acquired/retained:
+
+1. technical blobs and business reports use authenticated workflow-run artifact lookup with `github-token`, `repository`, and `run-id`;
+2. the AI audit uses the same authenticated workflow-run lookup;
+3. artifact-name patterns remain restricted to the current `github.run_id` family;
+4. application/environment/run/attempt/shard validation remains fail-closed in `ci:report:rerun:resolve`;
+5. business and technical evidence must resolve from the same selected source attempt;
+6. intermediate artifacts are retained whenever a required core/AI lane fails;
+7. after a genuinely successful run, cleanup removes intermediate artifacts across the complete workflow-run attempt family.
+
+No mutable `latest` pointer is used for release evidence.
+
+## Packaging-environment evidence for R4
 
 | Check | Result |
 |---|---|
-| Release static contract | PASS — 353 files inspected |
-| Offline release inventory | PASS — 28 JSON, 345 text, 18 required artifacts |
-| Architecture boundary check | PASS — demo + sdet-practice, 0 issues |
-| Reusable export documentation audit | PASS — 188 declarations, 0 issues |
-| TypeScript/TSX syntax transpilation | PASS — 242 files, 0 syntax errors |
-| JSON parsing | PASS — 28 files |
-| YAML parsing | PASS — 6 files |
-| Shell syntax | PASS |
-| Markdown local-link integrity | PASS — 47 Markdown files |
-| Multi-project dynamic dry-run | PASS — demo/qa + sdet-practice/qa discovered |
-| Portfolio summary + HTML dashboard generation | PASS |
-| Business dashboard accepted-risk semantics | PASS |
-| AI-inclusive portfolio missing-config preflight | PASS — fails before project execution with actionable error |
-| Generated API proposal boundary guard | PASS — direct `APIRequestContext` proposal blocked |
-| Generated database safety guard | PASS — mutating SQL proposal blocked |
-| Project-scoped database isolation contract | PASS — shared `DB_TYPE` cannot activate a `database.type=none` project |
-| Demo cross-layer navigation hardening | PASS — UI journey explicitly opens application before interaction |
+| Release static contract | PASS |
+| LF/CRLF workflow portability | PASS |
+| Offline release inventory | PASS |
+| Synthetic mixed-attempt resolver contract | PASS |
+| Workflow acquisition/retention regression contract | PASS |
+| TypeScript/TSX syntax parse | PASS |
+| JSON parsing | PASS |
+| YAML parsing | PASS |
+| Markdown local-link integrity | PASS |
+| Trailing whitespace | PASS |
+| Release manifest verification | PASS |
+| Generated/cache/runtime artifact hygiene | PASS |
 
-## Tests included for dependency-backed execution
+The packaging environment does not replace the connected Node 22 `npm ci` + Playwright/typecheck/framework/security gates. Those already passed for R3, and must be rerun after applying R4 because the workflow/contracts/docs changed.
 
-The release includes framework regression coverage for:
+## Remaining certification gates
 
-- lazy AI gateway creation after deterministic UI recovery is exhausted;
-- business portfolio reporting;
-- generated API/domain-service boundaries;
-- generated database read-only safety;
-- existing multi-project selection/discovery contracts;
-- existing proposal ownership/approval/promotion behavior.
-
-These tests run through the normal dependency-backed framework suite on the consumer Mac/CI.
-
-## Environment-limited checks
-
-The isolated packaging environment could not complete `npm ci` because dependency retrieval timed out. Consequently:
-
-- full `npm run validate:final` was **not claimed as passed** in the packaging environment;
-- `scale:audit` could not execute there because the partial environment lacked `csv-parse`;
-- `security:check` could not complete because `npm audit` could not reach the npm registry.
-
-These are environment limitations, not substituted successes. They remain mandatory consumer Mac/CI certification gates.
-
-## Consumer Mac / CI certification
+After applying this exact candidate on a hotfix branch:
 
 ```bash
+rm -rf node_modules
 npm ci
 npx playwright install chromium
 npm run validate:final
-npm run test:projects -- --all --env=qa --dry-run --project=chromium
-npm run test:projects -- --all --env=qa --project=chromium
 ```
 
-For an AI-inclusive portfolio run, configure an approved provider/model/key through local/CI secrets and then run:
+Then require, in order:
 
-```bash
-AI_ENABLED=true \
-AI_PROVIDER_MODE=single \
-AI_PROVIDER=<approved-provider> \
-HEALING_AI_ENABLED=true \
-npm run test:projects -- --all --env=qa --include-ai --project=chromium
-```
+1. hotfix PR CI green;
+2. PR rerun green;
+3. merge to `main`;
+4. trusted-main core + AI + reporting all green;
+5. trusted-main rerun green with `Resolve rerun-safe report provenance` passing;
+6. only then create annotated tag `v1.6.0`;
+7. Ubuntu Chromium/Firefox/WebKit, macOS WebKit, and Windows Chromium compatibility all green.
 
-Cloud providers additionally require the explicit cloud-egress policy setting documented in `.env.example`. Never place provider secrets in source-controlled files.
+Until all seven are satisfied, documentation must not describe v1.6.0 as certified.

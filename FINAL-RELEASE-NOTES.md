@@ -420,3 +420,13 @@ Connected Node 22.23.2 validation passed locally (37/37 review-hardening, 124/12
 - GitHub `rerun --failed` may not rerun already-successful core shard jobs. Report merge now resolves immutable same-workflow-run artifacts per shard, records `_rerun-resolution.json`, carries technical blobs from the same source attempts, rejects cross-run/future/duplicate provenance, and allows mixed attempt IDs only when explicitly verified as members of the same workflow run.
 
 No `v1.6.0` tag should be created until the replacement trusted-main run, rerun proof and release compatibility matrix are green. See `docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`.
+
+
+## v1.6.0 pre-tag closure — workflow-run artifact acquisition
+
+- Trusted-main R3 proved the AI retry budget reaches all configured attempts; a later failed-only rerun passed Gemini provider generation and AI healing.
+- The same rerun exposed that default artifact-download context can omit required core artifacts from resolver input even when same-workflow evidence exists.
+- Merge downloads now supply `github-token`, `repository`, and `run-id` so artifact lookup uses the authenticated workflow-run API path before strict provenance resolution.
+- Intermediate core/AI artifacts are retained whenever a required execution lane fails; cleanup occurs only after required lanes plus final merge/validation/upload succeed.
+- Static and synthetic rerun contracts protect acquisition, retention, shard-attempt selection, technical/business alignment, and cross-run rejection.
+- `v1.6.0` remains untagged until replacement main CI, main rerun, and the 5/5 compatibility matrix pass.

@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Development candidate: `v1.6.0`** — adds deterministic claim provenance, one-click evidence verification, explainable score-free release risk, advisory change-impact analysis, incremental migration slices and an explicit false-heal safety benchmark. Connected Node 22 validation and PR/PR-rerun CI are green. Pre-tag main CI exposed and this candidate now fixes two release-hardening issues: fair AI retry budgeting for transient provider outages and provenance-safe reuse of unchanged shard artifacts during GitHub `--failed` reruns. `v1.5.3` remains the certified tag until the replacement main CI and compatibility matrix pass.
+**Development candidate: `v1.6.0`** — adds deterministic claim provenance, one-click evidence verification, explainable score-free release risk, advisory change-impact analysis, incremental migration slices and an explicit false-heal safety benchmark. Connected Node 22 validation and PR/PR-rerun CI are green. Pre-tag main CI additionally proved the AI retry contract and exposed a final GitHub partial-rerun artifact-acquisition edge; this candidate uses authenticated workflow-run artifact downloads plus fail-safe evidence retention so the provenance resolver can verify prior/current attempt evidence without relying on a mutable latest pointer. `v1.5.3` remains the certified tag until the replacement main CI and compatibility matrix pass.
 
 **Stable certified baseline: `v1.5.3`** — Node.js 22.x, main multi-project CI green, AI healing lane green on trusted `main`, rerun-safe report provenance enabled, and the tag-triggered Release Compatibility matrix certified on Ubuntu/Chromium, Ubuntu/Firefox, Ubuntu/WebKit, macOS/WebKit and Windows/Chromium.
 
@@ -1256,6 +1256,7 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | False-heal safety benchmark | [`docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md`](docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md) |
 | v1.6 deep-review validation | [`docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md`](docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md) |
 | v1.6 pre-tag CI hotfix | [`docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`](docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md) |
+| v1.6 rerun artifact acquisition closure | [`docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md`](docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |

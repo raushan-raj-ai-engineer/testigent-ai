@@ -465,17 +465,26 @@ jobs:
           restore-keys: |
             testigent-report-history-${{ env.APP }}-
 
-      - name: Download all technical blobs
+      # Supplying github-token + run-id forces the public artifacts API path.
+      # That is required for partial reruns because the default current-attempt
+      # backend view does not expose sibling/prior-attempt artifacts reliably.
+      - name: Download workflow-run technical blobs
         uses: actions/download-artifact@v8
         with:
           pattern: blob-${{ env.APP }}-${{ github.run_id }}-*-*
           path: all-blob-reports-raw
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
 
-      - name: Download all business reports
+      - name: Download workflow-run business reports
         uses: actions/download-artifact@v8
         with:
           pattern: business-${{ env.APP }}-${{ github.run_id }}-*-*
           path: all-business-reports-raw
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
 
       - name: Resolve rerun-safe report provenance
         run: npm run ci:report:rerun:resolve -- all-business-reports-raw all-business-reports all-blob-reports-raw all-blob-reports
@@ -493,6 +502,9 @@ jobs:
           pattern: ai-audit-${{ env.APP }}-${{ env.RUN_ID }}
           path: reports/${{ env.APP }}/${{ env.ENV }}/${{ env.RUN_ID }}/ai
           merge-multiple: true
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
 
       - name: Validate downloaded report bundles
         run: npm run ci:report:download:validate -- all-business-reports
@@ -570,6 +582,8 @@ jobs:
             steps.merge-business.outcome == 'success' &&
             steps.validate-final-business.outcome == 'success' &&
             steps.final-upload.outcome == 'success' &&
+            needs.test.result == 'success' &&
+            (needs.ai-smoke.result == 'success' || needs.ai-smoke.result == 'skipped') &&
             github.event_name != 'pull_request'
           }}
         continue-on-error: true
@@ -583,9 +597,9 @@ jobs:
             gh api \
               "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
               --jq ".artifacts[] | select(
-                (.name | startswith(\"blob-${APP}-${RUN_ID}-\")) or
-                (.name | startswith(\"business-${APP}-${RUN_ID}-\")) or
-                (.name == \"ai-audit-${APP}-${RUN_ID}\")
+                (.name | startswith(\"blob-${APP}-${GITHUB_RUN_ID}-\")) or
+                (.name | startswith(\"business-${APP}-${GITHUB_RUN_ID}-\")) or
+                (.name | startswith(\"ai-audit-${APP}-${GITHUB_RUN_ID}-\"))
               ) | .id"
           } || true)"
 
