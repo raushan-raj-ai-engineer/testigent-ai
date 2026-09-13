@@ -153,3 +153,7 @@ The optional AI lane is expected only when the AI job result is `success`. This 
 ## Cross-platform release-policy portability (v1.5.3)
 
 Release static checks normalize CRLF/CR to LF before evaluating multi-line GitHub/Azure policy contracts. The policy itself is unchanged. `scripts/release-static-portability-contract.mjs` proves the informational/non-blocking merged-summary rule against LF and simulated Windows CRLF content, preventing a Windows checkout conversion from changing release-gate results.
+
+## v1.6.0 claim provenance
+
+Every final business bundle must now contain `evidence-ledger.html` and `evidence-graph.json`. The final CI bundle validator checks both files, the run identity, truth-boundary statement and core claim IDs before publication. The executive dashboard remains compact; the ledger is the one-click audit surface for anyone who wants to challenge a reported value.

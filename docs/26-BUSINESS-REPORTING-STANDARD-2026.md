@@ -165,3 +165,20 @@ For a failed business step, the business dashboard presents one primary screensh
 ## Portfolio reporting
 
 Multi-project/customer execution adds an estate-level business view under `reports/multi-project/<RUN_ID>/index.html` while preserving each project dashboard as the detailed source. The portfolio page uses the same deterministic project reports and does not recalculate alternative pass/fail semantics. It highlights project gate, selected/executed scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical traces remain in project-level drill-down reports.
+
+## v1.6.0 claim provenance and one-click evidence
+
+The executive dashboard remains intentionally compact. A stakeholder who wants to verify a number can select **Verify dashboard claims** and open `evidence-ledger.html` without navigating the technical Playwright report.
+
+The business bundle now publishes:
+
+```text
+business-report.json     deterministic report facts
+evidence-graph.json      machine-readable claim/scenario/requirement/evidence relationships
+evidence-ledger.html     human-readable formulas and supporting facts
+```
+
+Release risk is **score-free**. LOW/MEDIUM/HIGH is derived from named signals such as CI blockers, accepted known defects, blocked applicable scenarios, flaky execution and rejected/unverified healing. Evidence confidence is COMPLETE only when reported scenarios are traceable and applicable execution coverage is complete.
+
+The ledger explicitly states its truth boundary: it proves how TestigentAI calculated the report claim from captured facts; it does not claim full production correctness or absence of untested defects.
+

@@ -1,14 +1,14 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:0332ad24-7290-43bc-a732-e4ea515f2c4e",
+  "serialNumber": "urn:uuid:9e99c54b-c212-409a-ac1d-0cd854d9a7e8",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-13T07:26:56.595Z",
+    "timestamp": "2026-09-13T11:07:12.820Z",
     "component": {
       "type": "application",
       "name": "testigent-ai",
-      "version": "1.5.3"
+      "version": "1.6.0"
     },
     "tools": [
       {

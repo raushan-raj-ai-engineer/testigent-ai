@@ -24,9 +24,11 @@
 
 ---
 
-## Current Certified Release
+## Current Release State
 
-**Stable baseline: `v1.5.3`** — Node.js 22.x, main multi-project CI green, AI healing lane green on trusted `main`, rerun-safe report provenance enabled, and the tag-triggered Release Compatibility matrix certified on Ubuntu/Chromium, Ubuntu/Firefox, Ubuntu/WebKit, macOS/WebKit and Windows/Chromium.
+**Development candidate: `v1.6.0`** — adds deterministic claim provenance, one-click evidence verification, explainable score-free release risk, advisory change-impact analysis, incremental migration slices and an explicit false-heal safety benchmark. This candidate must complete the connected release gates before it becomes the next certified tag.
+
+**Stable certified baseline: `v1.5.3`** — Node.js 22.x, main multi-project CI green, AI healing lane green on trusted `main`, rerun-safe report provenance enabled, and the tag-triggered Release Compatibility matrix certified on Ubuntu/Chromium, Ubuntu/Firefox, Ubuntu/WebKit, macOS/WebKit and Windows/Chromium.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -55,6 +57,8 @@ That rule makes the framework reusable across teams without turning it into a si
 | ✨ **AI / agent quality** | Provider-neutral, opt-in AI contracts, healing support, MCP tooling and AI-lane reporting |
 | 🧠 **Requirement intelligence** | Requirement analysis, test-plan generation, review-gated proposals and application knowledge |
 | 🧾 **Business reporting** | Executive KPIs, known-defect semantics, evidence, steps, merged shard reporting and email preview |
+| 🔎 **Quality evidence graph** | One-click claim verification with formulas, source fields, requirements, scenarios, defects, healing, AI audit and materialized evidence |
+| 🧭 **Change impact** | Explainable, advisory changed-code test selection with transitive project dependency reasons and fail-safe shared-core handling |
 | 🚦 **Execution governance** | Profiles, lanes, tags, workers, retries, sharding and zero-selection protection |
 | 🔄 **CI/CD** | GitHub Actions and Azure Pipelines with sequential, sharded and optional AI execution |
 | 🛡️ **Quality gates** | Architecture, scale, reporting, type, framework, documentation and security contracts |
@@ -178,6 +182,8 @@ npm run qa:test -- --project=chromium
 
 ```bash
 npm run qa:report
+npm run qa:impact -- --base main --head HEAD
+npm run qa:migrate -- projects/<project>/tests
 ```
 
 ### 6. Validate the framework/repository
@@ -199,6 +205,8 @@ npm run qa:new -- <requirement-id-or-file>
 npm run qa:test -- --project=chromium
 npm run qa:validate
 npm run qa:report
+npm run qa:impact -- --base main --head HEAD
+npm run qa:migrate -- projects/<project>/tests
 ```
 
 For auth-required products:
@@ -799,6 +807,8 @@ If generated files change after approval, the approval hash becomes invalid and 
 npm run qa:test -- --project=chromium
 npm run qa:validate
 npm run qa:report
+npm run qa:impact -- --base main --head HEAD
+npm run qa:migrate -- projects/<project>/tests
 ```
 
 Once promoted, the test is no longer treated as special "agent code". It must satisfy the same architecture, reporting, auth, execution-profile and CI quality gates as hand-written automation.
@@ -962,7 +972,7 @@ npm run report:mail:preview
 npm run report:business:complete
 ```
 
-The interactive product dashboard supports KPI cards, filters, layer/status graphs, scenario drill-down, `test.step()` details and evidence links. Multi-project runs additionally produce a portfolio dashboard focused on estate health, quality risk, known defects, CI blockers, execution applicability, healing and AI usage; engineering evidence stays one click deeper in each product report.
+The interactive product dashboard supports KPI cards, filters, layer/status graphs, scenario drill-down, `test.step()` details and evidence links. v1.6.0 keeps this executive view compact and adds a **Verify dashboard claims** action that opens `evidence-ledger.html`; `evidence-graph.json` provides the same provenance in machine-readable form. Multi-project runs additionally produce a portfolio dashboard focused on estate health, quality risk, known defects, CI blockers, execution applicability, healing and AI usage; engineering evidence stays one click deeper in each product report.
 
 Run identity is immutable for a process and is established before Playwright resolves output paths. `.runtime/latest-run/<APP>/<ENV>.json` is only a convenience pointer for commands such as report opening; active workers never use it as their identity. Default visual evidence policy is `masked`: automatic trace/video/screenshots are disabled unless a project explicitly approves unmasked visual retention, while framework-managed failure screenshots can mask configured sensitive selectors.
 
@@ -1241,6 +1251,9 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | Daily commands | [`docs/02-DAILY-COMMANDS.md`](docs/02-DAILY-COMMANDS.md) |
 | Git + GitHub CLI terminal guide | [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md) |
 | Current certified release status | [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md) |
+| Quality evidence & release intelligence | [`docs/42-QUALITY-EVIDENCE-AND-RELEASE-INTELLIGENCE.md`](docs/42-QUALITY-EVIDENCE-AND-RELEASE-INTELLIGENCE.md) |
+| Change impact & incremental migration | [`docs/43-CHANGE-IMPACT-AND-MIGRATION.md`](docs/43-CHANGE-IMPACT-AND-MIGRATION.md) |
+| False-heal safety benchmark | [`docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md`](docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |

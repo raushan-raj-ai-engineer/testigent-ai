@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { WorkspaceContext } from '../src/framework/core/config/workspace.context';
+import { RunContext } from '../src/framework/core/config/run.context';
+import { ProjectPaths } from '../src/framework/core/config/project.paths';
 
 type FindingKind = 'raw-ui' | 'navigation' | 'raw-api' | 'raw-db' | 'direct-healing' | 'direct-ai';
 
@@ -22,6 +24,7 @@ interface Assessment {
   findings: Finding[];
   summary: Record<FindingKind, number>;
   migrationOrder: string[];
+  migrationSlices: Array<{ name: string; findingKinds: FindingKind[]; files: string[]; objective: string }>;
 }
 
 const RULES: Array<{ kind: FindingKind; regex: RegExp; recommendation: string }> = [
@@ -83,10 +86,12 @@ function main(): void {
       'Move direct service/database access behind project API clients/repositories using framework capabilities.',
       'Replace direct healing/AI usage in application tests with governed framework entry points.',
       'Run architecture:check, typecheck and the affected project suite after each migration slice.'
-    ]
+    ],
+    migrationSlices: buildMigrationSlices(findings)
   };
 
-  const outputDir = path.resolve('reports', target.application, target.environment, 'migration');
+  const run = RunContext.persistCurrent();
+  const outputDir = path.join(ProjectPaths.reports(target.application, target.environment, run.runId), 'migration');
   fs.mkdirSync(outputDir, { recursive: true });
   const jsonPath = path.join(outputDir, 'migration-assessment.json');
   const markdownPath = path.join(outputDir, 'migration-assessment.md');
@@ -152,7 +157,20 @@ function toMarkdown(value: Assessment): string {
     `This is an adoption aid, not an automatic rewrite. It inventories likely framework-bypass hotspots so teams can migrate existing Playwright suites incrementally without discarding working assertions.\n\n` +
     `## Summary\n\n| Finding | Count |\n| --- | ---: |\n${byKind}\n\n` +
     `## Recommended migration order\n\n${value.migrationOrder.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n\n` +
+    `## Migration slices\n\n${value.migrationSlices.length ? value.migrationSlices.map((slice, index) => `${index + 1}. **${slice.name}** — ${slice.objective}\n   - Files: ${slice.files.map(file => `\`${file}\``).join(', ') || 'none'}`).join('\n') : '- No migration slice is required by the static rules.'}\n\n` +
     `## Findings\n\n${findings}\n`;
+}
+
+function buildMigrationSlices(findings: Finding[]): Assessment['migrationSlices'] {
+  const definitions: Array<{ name: string; findingKinds: FindingKind[]; objective: string }> = [
+    { name: 'UI ownership', findingKinds: ['raw-ui', 'navigation'], objective: 'Move selectors, navigation and mechanics behind project page/workflow boundaries without changing assertions.' },
+    { name: 'Service and data ownership', findingKinds: ['raw-api', 'raw-db'], objective: 'Move direct transport/database access behind project API clients and repositories while preserving test intent.' },
+    { name: 'Governed recovery and AI', findingKinds: ['direct-healing', 'direct-ai'], objective: 'Replace direct framework internals with approved project/framework entry points and review gates.' }
+  ];
+  return definitions.map(definition => ({
+    ...definition,
+    files: [...new Set(findings.filter(item => definition.findingKinds.includes(item.kind)).map(item => item.file))].sort()
+  })).filter(slice => slice.files.length > 0);
 }
 
 function escapeMarkdown(value: string): string {

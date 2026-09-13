@@ -66,12 +66,20 @@ function main(): void {
 
     const dashboard = renderBusinessHtml(knownDefectFacts);
     const email = buildBusinessEmailText(knownDefectFacts);
-    for (const token of ['Quality failed', 'Known defects &amp; accepted risk', 'CI-blocking issues', 'BUG-101', 'Slowest scenarios']) {
+    for (const token of ['Quality failed', 'Known defects &amp; accepted risk', 'CI-blocking issues', 'BUG-101', 'Slowest scenarios', 'Verify dashboard claims', 'Release risk:']) {
       assert.ok(dashboard.includes(token), `Business dashboard is missing required token: ${token}`);
     }
     for (const token of ['Quality failed: 1', 'Known defects: 1', 'CI-blocking issues: 0']) {
       assert.ok(email.includes(token), `Business email is missing required token: ${token}`);
     }
+
+
+    const emptyFacts = buildExecutionFacts({ runId: 'reporting-contract-empty', environment: 'qa', application: 'contract', healing: noHealing(), results: [] });
+    const emptyDashboard = renderBusinessHtml(emptyFacts);
+    assert.ok(emptyDashboard.includes('INSUFFICIENT EVIDENCE'), 'Empty scope must not render a release-ready decision.');
+    assert.ok(emptyDashboard.includes('Release risk:</b> UNKNOWN'), 'Empty scope must expose unknown release risk.');
+    assert.ok(emptyDashboard.includes('No quality-executed denominator'), 'Empty scope must not present a synthetic quality pass percentage.');
+    assert.ok(!emptyDashboard.includes('N/A%'), 'N/A metrics must never be rendered as percentages.');
 
     const blockingFacts = buildExecutionFacts({
       runId: 'reporting-contract-blocking',
@@ -128,6 +136,15 @@ function main(): void {
       const bundleDir = path.join(evidenceRoot, 'bundle');
       const written = writeBusinessDashboard(bundleDir, evidenceFacts);
       const html = fs.readFileSync(path.join(bundleDir, 'index.html'), 'utf8');
+      const evidenceLedger = fs.readFileSync(path.join(bundleDir, 'evidence-ledger.html'), 'utf8');
+      const evidenceGraph = JSON.parse(fs.readFileSync(path.join(bundleDir, 'evidence-graph.json'), 'utf8')) as { schemaVersion: number; claims: Array<{ id: string }>; runId: string };
+      assert.equal(evidenceGraph.schemaVersion, 1);
+      assert.equal(evidenceGraph.runId, 'reporting-contract-evidence');
+      assert.ok(evidenceGraph.claims.some(claim => claim.id === 'release-decision'), 'Evidence graph must include the release decision claim.');
+      assert.ok(evidenceGraph.claims.some(claim => claim.id === 'release-risk'), 'Evidence graph must include explainable release risk.');
+      assert.ok(evidenceLedger.includes('Truth boundary:'), 'Evidence ledger must state its claim boundary explicitly.');
+      assert.ok(evidenceLedger.includes('failure-screenshot'), 'Evidence ledger must link materialized scenario evidence directly.');
+      assert.ok(html.includes('evidence-ledger.html'), 'Business dashboard must expose the evidence ledger in one click.');
       assert.ok(html.includes('Failure evidence'), 'Failed test.step must expose failure evidence inline.');
       assert.ok(html.includes('<img'), 'Failure screenshot must render as an inline image preview.');
       assert.equal((html.match(/<img\b/g) ?? []).length, 1, 'Primary failure screenshot must render exactly once in the business dashboard.');

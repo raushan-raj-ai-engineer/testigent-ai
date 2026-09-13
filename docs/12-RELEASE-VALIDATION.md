@@ -218,3 +218,7 @@ gh run view <RUN_ID> --log-failed
 ```
 
 A pushed `v*` tag automatically triggers `TestigentAI Release Compatibility`; `workflow_dispatch` remains available for manual/pre-release evidence generation.
+
+## v1.6.0 evidence-intelligence candidate
+
+The v1.6.0 candidate adds one-click claim provenance, score-free release risk, advisory change impact, incremental migration slices and seeded false-heal safety. See `45-v1.6.0-DEEP-REVIEW-VALIDATION.md` for the exact pre-package review evidence and the connected certification still required before v1.6.0 can replace v1.5.3 as the certified baseline.

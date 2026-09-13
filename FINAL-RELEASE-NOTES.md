@@ -1,3 +1,41 @@
+# TestigentAI v1.6.0 — Review Candidate
+
+### Connected type-safety correction
+
+- A connected `validate:final` attempt reached `tsc --noEmit` and exposed `TS18048` in the new evidence-intelligence contract test because the test mutated optional `ExecutionFacts.aiUsage` without first narrowing it.
+- The regression test now explicitly asserts that `buildExecutionFacts()` materializes AI usage before adding its synthetic record. The public/backward-compatible optional report type remains unchanged.
+- All earlier connected gates in that run (static, architecture, health, scale, scenario, documentation and reporting contracts) passed before the compiler stopped on this test-only issue.
+
+### Deep-review closure before packaging
+
+- Zero-scenario reports now fail honest: `INSUFFICIENT EVIDENCE`, `UNKNOWN` release risk and `N/A` rates instead of a misleading green signal.
+- Final CI bundle validation requires the Evidence Ledger/Graph, matching run identity, truth boundary and core claim provenance.
+- Evidence-graph edges are referentially valid and direct attachment links reject unsafe absolute/parent-traversal paths.
+- Evidence graph and change-impact analysis were optimized to avoid avoidable quadratic/repeated-file-read behavior.
+- Change-impact ownership hints now ignore generic/short filename vocabulary so heuristic noise cannot masquerade as narrow impact evidence; unresolved project changes fail safe to the full project suite.
+- Connected Node 22 `npm ci && npm run validate:final` plus the supported OS/browser matrix remain the certification boundary; v1.5.3 stays the certified baseline until those pass.
+
+# TestigentAI v1.6.0 — Evidence Intelligence Review Candidate
+
+Status: **REVIEW CANDIDATE**. v1.5.3 remains the last certified tag until connected release validation completes.
+
+## v1.6.0 product improvements
+
+- deterministic Quality Evidence Graph behind stakeholder claims
+- one-click Evidence Ledger from the existing business dashboard
+- explainable score-free LOW/MEDIUM/HIGH release risk with named factors
+- advisory change-impact analysis with transitive dependency reasons and fail-safe shared-core behavior
+- run-scoped incremental Playwright migration slices
+- seeded false-heal safety benchmark included in architect-review hardening
+- reporting contract/static release gates that prevent evidence/provenance features from silently disappearing
+- documentation updated in parallel (`docs/42` through `docs/45`)
+
+## Claim discipline
+
+The candidate does not claim measured customer adoption, maintenance savings, universal zero false-heal rate or product-market fit. Those remain pilot/benchmark outcomes.
+
+---
+
 # TestigentAI v1.5.3 — Windows static-gate portability hardening
 
 **Certified release status:** main CI run `34744306756` passed all core, AI and merged-report jobs; tag-triggered Release Compatibility run `34744507321` passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Current operational summary: `docs/41-CURRENT-RELEASE-STATUS.md`. Git/GitHub CLI operations: `docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.

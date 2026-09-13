@@ -1,5 +1,7 @@
 # Current Certified Release Status
 
+> **v1.6.0 development candidate:** the working tree adds Quality Evidence Graph, one-click claim verification, explainable score-free release risk, advisory change impact, migration slices and false-heal safety regression. Until connected `validate:final` and the supported compatibility matrix pass for the candidate, **v1.5.3 remains the certified release**.
+
 ## Current stable baseline
 
 | Item | Certified state |
