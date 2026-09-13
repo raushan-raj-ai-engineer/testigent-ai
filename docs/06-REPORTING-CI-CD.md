@@ -27,7 +27,7 @@ GitHub Actions derives the immutable execution-attempt identity as:
 RUN_ID = github.run_id-github.run_attempt
 ```
 
-Core business bundles, AI bundles, technical blobs, AI audit and the final report artifact include that full identity. Merge download patterns select only the current attempt, then `ci:report:download:validate` verifies application/environment/run identity and expected core shard markers before aggregation. A rerun therefore cannot silently merge attempt-1 and attempt-2 evidence.
+Core business bundles, AI bundles, technical blobs, AI audit and the final report artifact include that full identity. GitHub failed-job reruns do not necessarily rerun successful shard jobs, so the merge stage downloads only artifacts from the same `github.run_id` family and runs `ci:report:rerun:resolve` before validation. The resolver selects the newest available source independently for each expected shard, may reuse an earlier attempt only when the application/environment/workflow-run/shard identity is exact, and writes `_rerun-resolution.json` recording every selected source attempt. `ci:report:download:validate` then verifies that manifest and the resolved topology before aggregation. Artifacts from another workflow run are never eligible, and mixed-attempt evidence is explicit rather than silent.
 
 `EXPECT_AI_LANE` is true only when the AI lane actually succeeds; an AI configuration failure remains visible as the root failure and does not create a misleading missing-AI-report merge failure.
 

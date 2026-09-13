@@ -411,3 +411,12 @@ Provider selection is user/CI controlled: `AI_PROVIDER_MODE=single` uses exactly
 - Hardened Playwright agent policy (V2) around project fixtures/facades, seed tests and assertion safety.
 - Updated onboarding, architecture, daily commands, project handoff, agents, healing and release-validation documentation.
 - See `docs/25-AUTHORING-ARCHITECTURE-REFACTOR.md` for implementation and validation detail.
+
+## v1.6.0 pre-tag CI hardening — AI retry budget and failed-rerun provenance
+
+Connected Node 22.23.2 validation passed locally (37/37 review-hardening, 124/124 framework regression, security gate clean), and PR #11 plus its rerun passed. Trusted-main run `34755127762` then exposed two pre-tag conditions that are corrected in this candidate:
+
+- Gemini health/model validation succeeded, but two slow HTTP 503 responses consumed most of the old 90-second total retry budget. Gemini retry allocation now reserves future retry/backoff time, defaults the per-attempt CI timeout to 30 seconds, retries timeout by default, and retains strict failure after bounded attempts.
+- GitHub `rerun --failed` may not rerun already-successful core shard jobs. Report merge now resolves immutable same-workflow-run artifacts per shard, records `_rerun-resolution.json`, carries technical blobs from the same source attempts, rejects cross-run/future/duplicate provenance, and allows mixed attempt IDs only when explicitly verified as members of the same workflow run.
+
+No `v1.6.0` tag should be created until the replacement trusted-main run, rerun proof and release compatibility matrix are green. See `docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`.

@@ -11,12 +11,23 @@ interface Marker {
   environment?: string;
   runId?: string;
 }
+interface ResolutionManifest {
+  schemaVersion?: number;
+  workflowRunId?: string;
+  currentRunId?: string;
+  currentAttempt?: number;
+  application?: string;
+  environment?: string;
+  expectedCoreWorkers?: number;
+  expectAiLane?: boolean;
+  selected?: Array<{ lane?: Lane; shardIndex?: number; shardTotal?: number; sourceRunId?: string; sourceAttempt?: number }>;
+}
 
 /**
  * Author: Raushan Raj
- * Business Use: Validates that GitHub report artifacts downloaded for merge belong to the current immutable run attempt and contain the expected core shard topology.
+ * Business Use: Validates resolved GitHub report artifacts, including explicitly approved prior-attempt shard reuse within the same immutable workflow run.
  * How to use: Run `npm run ci:report:download:validate -- all-business-reports` after artifact download and before report merge.
- * Benefit: Rerun artifact ambiguity fails early with actionable provenance diagnostics instead of surfacing later as a misleading incomplete business report.
+ * Benefit: Resolver-manifest, workflow-run identity and shard/AI topology mismatches fail early instead of surfacing as misleading merged evidence.
  */
 export function validateDownloadedBundles(rootArg = process.argv[2] ?? 'all-business-reports'): void {
   const root = path.resolve(rootArg);
@@ -28,6 +39,7 @@ export function validateDownloadedBundles(rootArg = process.argv[2] ?? 'all-busi
   const markerFiles = files.filter(file => path.basename(file) === 'ci-bundle.json');
   const markers = markerFiles.map(file => ({ file, marker: parseMarker(file) }));
   const expectedCore = positiveIntegerEnv('EXPECTED_CORE_WORKERS');
+  const expectAiLane = booleanEnv('EXPECT_AI_LANE');
   const expectedIdentity = {
     application: clean(process.env.APP),
     environment: clean(process.env.ENV),
@@ -35,20 +47,87 @@ export function validateDownloadedBundles(rootArg = process.argv[2] ?? 'all-busi
   };
 
   for (const { file, marker } of markers) {
-    for (const field of ['application', 'environment', 'runId'] as const) {
+    for (const field of ['application', 'environment'] as const) {
       const expected = expectedIdentity[field];
       if (expected && marker[field] !== expected) {
         throw new Error(`Downloaded CI marker provenance mismatch: ${path.relative(process.cwd(), file)} has ${field}='${String(marker[field])}', expected '${expected}'.`);
       }
     }
+    const expectedRunId = expectedIdentity.runId;
+    if (expectedRunId && marker.runId !== expectedRunId && !isAllowedPriorAttemptRunId(marker.runId, expectedRunId)) {
+      throw new Error(`Downloaded CI marker provenance mismatch: ${path.relative(process.cwd(), file)} has runId='${String(marker.runId)}', expected current run '${expectedRunId}' or a verified prior attempt from the same workflow run.`);
+    }
+  }
+
+  if (process.env.CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS === 'true') {
+    validateResolutionManifest(root, markers, expectedCore, expectAiLane, expectedIdentity);
   }
 
   const coreMarkers = markers.filter(item => item.marker.lane === 'core');
   const coreIdentities = new Set(coreMarkers.map(item => `${item.marker.shardIndex}/${item.marker.shardTotal}`));
   console.log(`[ci-report] core markers=${coreMarkers.length}, unique shards=${coreIdentities.size}, expected=${expectedCore ?? 'unspecified'}`);
-  if (expectedCore !== undefined && coreIdentities.size !== expectedCore) {
-    throw new Error(`Current-attempt business artifacts are incomplete: expected ${expectedCore} unique core marker(s), found ${coreIdentities.size}. RUN_ID=${expectedIdentity.runId ?? '<unset>'}`);
+  if (expectedCore !== undefined && (coreIdentities.size !== expectedCore || coreMarkers.length !== expectedCore || coreMarkers.some(item => item.marker.shardTotal !== expectedCore))) {
+    throw new Error(`Resolved business artifacts are incomplete, duplicated or use the wrong shard total: expected ${expectedCore} unique core marker(s), found ${coreMarkers.length} marker(s) across ${coreIdentities.size} unique shard(s). RUN_ID=${expectedIdentity.runId ?? '<unset>'}`);
   }
+  const aiMarkers = markers.filter(item => item.marker.lane === 'ai');
+  if (expectAiLane && aiMarkers.length !== 1) throw new Error(`Resolved AI topology mismatch: expected exactly one AI marker, found ${aiMarkers.length}.`);
+  if (!expectAiLane && aiMarkers.length !== 0) throw new Error(`Resolved AI topology mismatch: AI lane was not successful but ${aiMarkers.length} AI marker(s) were selected.`);
+  if (expectAiLane && expectedIdentity.runId && aiMarkers[0]?.marker.runId !== expectedIdentity.runId) throw new Error('Resolved AI evidence must come from the current workflow attempt.');
+}
+
+function validateResolutionManifest(
+  root: string,
+  markers: Array<{ file: string; marker: Marker }>,
+  expectedCore: number | undefined,
+  expectAiLane: boolean,
+  expectedIdentity: { application?: string; environment?: string; runId?: string }
+): void {
+  const file = path.join(root, '_rerun-resolution.json');
+  if (!fs.existsSync(file)) throw new Error('Prior-attempt artifact reuse requires _rerun-resolution.json generated by the rerun provenance resolver.');
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8')) as ResolutionManifest;
+  const workflowRunId = clean(process.env.CI_WORKFLOW_RUN_ID);
+  const currentAttemptRaw = clean(process.env.CI_WORKFLOW_RUN_ATTEMPT);
+  const currentAttempt = currentAttemptRaw ? Number(currentAttemptRaw) : undefined;
+  if (manifest.schemaVersion !== 1 || !workflowRunId || currentAttempt === undefined || !Number.isInteger(currentAttempt) || currentAttempt < 1) {
+    throw new Error('Rerun resolution manifest/configuration is invalid or incomplete.');
+  }
+  if (manifest.workflowRunId !== workflowRunId || manifest.currentAttempt !== currentAttempt || manifest.currentRunId !== expectedIdentity.runId) {
+    throw new Error(`Rerun resolution identity mismatch: manifest=${String(manifest.workflowRunId)}/${String(manifest.currentAttempt)}/${String(manifest.currentRunId)}, expected=${workflowRunId}/${currentAttempt}/${String(expectedIdentity.runId)}.`);
+  }
+  if (manifest.application !== expectedIdentity.application || manifest.environment !== expectedIdentity.environment || manifest.expectedCoreWorkers !== expectedCore || manifest.expectAiLane !== expectAiLane) {
+    throw new Error('Rerun resolution manifest application/environment/core/AI topology does not match the merge job.');
+  }
+  const selected = manifest.selected ?? [];
+  const markerKeys = new Set(markers.map(({ marker }) => `${marker.lane}:${marker.shardIndex}/${marker.shardTotal}:${marker.runId}`));
+  const selectedKeys = new Set(selected.map(item => `${item.lane}:${item.shardIndex}/${item.shardTotal}:${item.sourceRunId}`));
+  if (selected.length !== markers.length || selectedKeys.size !== markerKeys.size || [...markerKeys].some(key => !selectedKeys.has(key))) {
+    throw new Error('Rerun resolution manifest does not exactly match the downloaded resolved CI markers.');
+  }
+  for (const item of selected) {
+    if (!item.sourceRunId || !isAllowedPriorAttemptRunId(item.sourceRunId, expectedIdentity.runId ?? '')) {
+      if (item.sourceRunId !== expectedIdentity.runId) throw new Error(`Rerun resolution selected invalid source run '${String(item.sourceRunId)}'.`);
+    }
+    const sourceAttempt = Number(item.sourceAttempt);
+    const suffix = item.sourceRunId?.slice(`${workflowRunId}-`.length);
+    if (!Number.isInteger(sourceAttempt) || String(sourceAttempt) !== suffix) {
+      throw new Error(`Rerun resolution source attempt does not match source runId '${String(item.sourceRunId)}'.`);
+    }
+  }
+}
+
+function isAllowedPriorAttemptRunId(actual: string | undefined, expectedCurrentRunId: string): boolean {
+  if (process.env.CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS !== 'true' || !actual) return false;
+  const workflowRunId = clean(process.env.CI_WORKFLOW_RUN_ID);
+  const currentAttemptRaw = clean(process.env.CI_WORKFLOW_RUN_ATTEMPT);
+  if (!workflowRunId || !currentAttemptRaw) return false;
+  const currentAttempt = Number(currentAttemptRaw);
+  if (!Number.isInteger(currentAttempt) || currentAttempt < 1) return false;
+  if (expectedCurrentRunId !== `${workflowRunId}-${currentAttempt}`) return false;
+  const prefix = `${workflowRunId}-`;
+  if (!actual.startsWith(prefix)) return false;
+  const attemptRaw = actual.slice(prefix.length);
+  const attempt = Number(attemptRaw);
+  return Number.isInteger(attempt) && attempt >= 1 && attempt <= currentAttempt && String(attempt) === attemptRaw;
 }
 
 function parseMarker(file: string): Marker {
@@ -56,7 +135,12 @@ function parseMarker(file: string): Marker {
   if (parsed.schemaVersion !== 1 || (parsed.lane !== 'core' && parsed.lane !== 'ai')) {
     throw new Error(`Invalid CI bundle marker: ${file}`);
   }
-  return parsed;
+  const shardIndex = Number(parsed.shardIndex);
+  const shardTotal = Number(parsed.shardTotal);
+  if (!Number.isInteger(shardIndex) || !Number.isInteger(shardTotal) || shardIndex < 1 || shardTotal < 1 || shardIndex > shardTotal) {
+    throw new Error(`Invalid CI bundle shard identity: ${file}`);
+  }
+  return { ...parsed, shardIndex, shardTotal };
 }
 
 function positiveIntegerEnv(name: string): number | undefined {
@@ -65,6 +149,14 @@ function positiveIntegerEnv(name: string): number | undefined {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer, received '${raw}'.`);
   return value;
+}
+
+function booleanEnv(name: string): boolean {
+  const raw = clean(process.env[name])?.toLowerCase();
+  if (!raw) return false;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  throw new Error(`${name} must be true or false, received '${process.env[name]}'.`);
 }
 
 function clean(value: string | undefined): string | undefined {

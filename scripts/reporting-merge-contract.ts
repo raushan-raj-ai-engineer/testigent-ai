@@ -299,4 +299,27 @@ let crossRunRejected = false;
 try { mergeBusinessReports(mixedIdentityRoot); } catch (error) { crossRunRejected = String(error).includes('Cross-execution business merge blocked'); }
 assert(crossRunRejected, 'business merge must reject artifacts from another run even when application/environment match');
 
+// GitHub failed-job reruns may legitimately combine unchanged successful shards from an earlier attempt
+// with a rerun shard/AI lane from the current attempt. This is allowed only for the same workflow run.
+const priorAttemptRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-merge-prior-attempt-'));
+process.env.RUN_ID = '90001-2';
+process.env.CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS = 'true';
+process.env.CI_WORKFLOW_RUN_ID = '90001';
+process.env.CI_WORKFLOW_RUN_ATTEMPT = '2';
+process.env.EXPECTED_CORE_WORKERS = '2';
+writeReport(priorAttemptRoot, 'core-current', [contractResult({ testId: 'current-shard', title: 'Current shard', status: 'passed', sourceFile: 'projects/demo/tests/ui/current.spec.ts', tags: ['@ui'], layers: ['UI'], testType: 'UI_ONLY', durationMs: 10 })]);
+writeMarker(priorAttemptRoot, 'core-current', 'core', 1, 2, true);
+process.env.RUN_ID = '90001-1';
+writeReport(priorAttemptRoot, 'core-prior', [contractResult({ testId: 'prior-shard', title: 'Prior shard', status: 'passed', sourceFile: 'projects/demo/tests/ui/prior.spec.ts', tags: ['@ui'], layers: ['UI'], testType: 'UI_ONLY', durationMs: 10 })]);
+writeMarker(priorAttemptRoot, 'core-prior', 'core', 2, 2, true);
+process.env.RUN_ID = '90001-2';
+const priorAttemptMerged = mergeBusinessReports(priorAttemptRoot);
+assert(priorAttemptMerged.runId === '90001-2', 'merged rerun report must use the current attempt as its publication identity');
+assert(priorAttemptMerged.aggregation?.sourceRunIds.includes('90001-1') && priorAttemptMerged.aggregation?.sourceRunIds.includes('90001-2'), 'merged rerun report must disclose all source attempt identities');
+delete process.env.CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS;
+delete process.env.CI_WORKFLOW_RUN_ID;
+delete process.env.CI_WORKFLOW_RUN_ATTEMPT;
+delete process.env.EXPECTED_CORE_WORKERS;
+process.env.RUN_ID = 'merged-contract';
+
 console.log(JSON.stringify({ ok: true, selected: merged.total, applicable: merged.executionEligible, executed: merged.executed, notApplicable: merged.notApplicable, healing: merged.healing.count, aiCalls: merged.aiUsage?.calls ?? 0, aiResults: merged.aggregation?.aiResults ?? 0, coreReports: merged.aggregation?.coreReports ?? 0, aiReports: merged.aggregation?.aiReports ?? 0, sourceReports: merged.aggregation?.sourceReports }, null, 2));

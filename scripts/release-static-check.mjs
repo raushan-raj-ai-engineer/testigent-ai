@@ -252,17 +252,36 @@ try {
   if (!githubWorkflow.includes('CI_SHARDS') || !githubWorkflow.includes('inputs.shards')) issues.push('GitHub CI must support configurable sequential/sharded execution');
   if (!githubWorkflow.includes('business-${{ env.APP }}-${{ env.RUN_ID }}-core-${{ matrix.index }}') ||
       !githubWorkflow.includes('business-${{ env.APP }}-${{ env.RUN_ID }}-ai') ||
-      !githubWorkflow.includes('pattern: business-${{ env.APP }}-${{ env.RUN_ID }}-*')) {
-    issues.push('GitHub business artifacts must be scoped by immutable RUN_ID/run attempt so reruns cannot mix artifact generations');
+      !githubWorkflow.includes('pattern: business-${{ env.APP }}-${{ github.run_id }}-*-*')) {
+    issues.push('GitHub business artifacts must retain immutable attempt IDs while downloading only the same workflow-run family for provenance resolution');
   }
   if (!githubWorkflow.includes('blob-${{ env.APP }}-${{ env.RUN_ID }}-core-${{ matrix.index }}') ||
-      !githubWorkflow.includes('pattern: blob-${{ env.APP }}-${{ env.RUN_ID }}-*')) {
-    issues.push('GitHub technical artifacts must be scoped by immutable RUN_ID/run attempt');
+      !githubWorkflow.includes('pattern: blob-${{ env.APP }}-${{ github.run_id }}-*-*')) {
+    issues.push('GitHub technical artifacts must retain immutable attempt IDs while downloading only the same workflow-run family');
   }
   if (!githubWorkflow.includes("EXPECT_AI_LANE: ${{ needs.ai-smoke.result == 'success' && 'true' || 'false' }}")) {
     issues.push('GitHub merge must expect the AI lane only when the AI job succeeded');
   }
-  if (!githubWorkflow.includes('Validate downloaded report bundles')) issues.push('GitHub merge must validate downloaded current-attempt bundle markers before report merge');
+  if (!pkg.scripts?.['ci:report:rerun:resolve']?.includes('ci-resolve-rerun-artifacts.ts') || !githubWorkflow.includes('Resolve rerun-safe report provenance')) {
+    issues.push('GitHub merge must resolve same-run prior-attempt artifacts before report validation/merge');
+  }
+  if (!pkg.scripts?.['reporting:contract']?.includes('ci-rerun-artifact-contract.ts')) {
+    issues.push('Reporting contract must exercise failed-rerun artifact provenance resolution');
+  }
+  if (!pkg.scripts?.['test:review:hardening']?.includes('ai-retry-budget-contract.spec.ts')) {
+    issues.push('Review hardening must exercise bounded Gemini retry-budget behavior');
+  }
+  const geminiProvider = normalizeContractText(fs.readFileSync(path.join(root, 'src/framework/ai/gemini-ai.provider.ts'), 'utf8'));
+  if (!geminiProvider.includes('resolveAttemptTimeoutMs') || !geminiProvider.includes('minimumFutureBackoffReserve')) {
+    issues.push('Gemini provider must reserve retry/backoff budget across configured attempts');
+  }
+  if (!githubWorkflow.includes("AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS || '30000' }}") || !githubWorkflow.includes("AI_RETRY_ON_TIMEOUT: ${{ vars.AI_RETRY_ON_TIMEOUT || 'true' }}")) {
+    issues.push('GitHub AI lane must retain the bounded 30s per-attempt timeout and timeout-retry default');
+  }
+  if (!githubWorkflow.includes("CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS: 'true'") || !githubWorkflow.includes('CI_WORKFLOW_RUN_ID: ${{ github.run_id }}')) {
+    issues.push('GitHub merge must explicitly scope prior-attempt reuse to the same workflow run');
+  }
+  if (!githubWorkflow.includes('Validate downloaded report bundles')) issues.push('GitHub merge must validate resolved bundle markers before report merge');
   if (!githubWorkflow.includes("steps.merge-business.outcome == 'success'") || !githubWorkflow.includes("steps.validate-final-business.outcome == 'success'")) {
     issues.push('GitHub CI must preserve intermediate artifacts when report merge/final validation fails');
   }

@@ -1,6 +1,6 @@
 # Current Certified Release Status
 
-> **v1.6.0 development candidate:** the working tree adds Quality Evidence Graph, one-click claim verification, explainable score-free release risk, advisory change impact, migration slices and false-heal safety regression. Until connected `validate:final` and the supported compatibility matrix pass for the candidate, **v1.5.3 remains the certified release**.
+> **v1.6.0 development candidate:** connected macOS Node 22.23.2 `npm run validate:final` is green, including 37/37 review-hardening tests, 124/124 framework tests and zero high/critical advisories. PR #11 and its rerun are green. The first trusted-main run exposed two pre-tag hardening issues—Gemini generation `503` responses could consume the retry budget before attempt 3, and GitHub `rerun --failed` can reuse successful shard jobs from a prior attempt while the merge originally searched only the current attempt. The current candidate contains focused fixes for both. **v1.5.3 remains the certified release** until replacement main CI, a failed-job rerun proof and the v1.6.0 compatibility matrix pass.
 
 ## Current stable baseline
 
@@ -124,9 +124,9 @@ Every GitHub execution attempt uses:
 RUN_ID = github.run_id-github.run_attempt
 ```
 
-Core, AI, technical, audit and final report artifact names include the immutable run identity. The merge downloads only current-attempt artifacts and validates bundle markers before aggregation.
+Core, AI, technical, audit and final report artifact names retain that immutable attempt identity. For a normal run, all selected sources are from the current attempt. For `gh run rerun --failed`, GitHub may keep successful core shards from an earlier attempt and rerun only failed/dependent jobs. The merge therefore downloads only the same `github.run_id` family, resolves the newest valid source independently per shard, requires the AI source from the current attempt when AI succeeded, and records the decision in `_rerun-resolution.json`.
 
-This prevents attempt 1 and attempt 2 from being silently combined when a workflow is rerun.
+Prior-attempt reuse is explicitly gated by `CI_ALLOW_SAME_WORKFLOW_PRIOR_ATTEMPTS=true` plus exact `CI_WORKFLOW_RUN_ID`/attempt validation. Foreign workflow runs, future attempts, duplicate shard identities and manifest/marker mismatches fail closed. The final report keeps the current attempt as its publication identity while disclosing source attempt IDs.
 
 ## Current AI policy
 
