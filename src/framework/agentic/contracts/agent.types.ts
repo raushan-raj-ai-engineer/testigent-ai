@@ -1,6 +1,4 @@
-/**
- * Stable operational states used by TestigentAI agentic components.
- */
+/** Agentic operational states surfaced consistently across planner, generator, reviewer, MCP and reporting. */
 export const AGENTIC_OPERATIONAL_STATES = [
   'ACCEPTED',
   'REJECTED',
@@ -10,68 +8,41 @@ export const AGENTIC_OPERATIONAL_STATES = [
   'DEGRADED',
 ] as const;
 
-/**
- * Operational state emitted by an agentic decision.
- */
-export type AgenticOperationalState =
-  (typeof AGENTIC_OPERATIONAL_STATES)[number];
+export type AgenticOperationalState = (typeof AGENTIC_OPERATIONAL_STATES)[number];
+export type AgentKind = 'planner' | 'generator' | 'reviewer' | 'healer' | 'mcp';
+export type AgentEvidenceKind = 'requirement' | 'scenario' | 'test' | 'source' | 'execution' | 'defect' | 'healing' | 'policy' | 'external';
 
-/**
- * Supported logical agent roles.
- */
-export type AgentKind =
-  | 'planner'
-  | 'generator'
-  | 'reviewer'
-  | 'healer'
-  | 'mcp';
-
-/**
- * Evidence reference attached to an agentic decision.
- */
 export interface AgentEvidenceReference {
-  kind:
-    | 'requirement'
-    | 'scenario'
-    | 'test'
-    | 'source'
-    | 'execution'
-    | 'defect'
-    | 'healing'
-    | 'external';
-
+  kind: AgentEvidenceKind;
   ref: string;
-
   description?: string;
+  digest?: string;
 }
 
-/**
- * Auditable decision produced by an agentic component.
- */
 export interface AgentDecisionRecord {
-  agent: AgentKind;
-
-  operation: string;
-
-  state: AgenticOperationalState;
-
-  rationale: string;
-
-  confidence: number | null;
-
-  policyPassed: boolean;
-
-  deterministicValidationPassed: boolean;
-
-  evidence: readonly AgentEvidenceReference[];
-
-  affectedArtifacts: readonly string[];
-
+  version: 1;
+  id: string;
   runId: string;
-
+  application: string;
+  environment: string;
   timestamp: string;
-
+  agent: AgentKind;
+  operation: string;
+  state: AgenticOperationalState;
+  rationale: string;
+  confidence: number | null;
+  policyPassed: boolean;
+  deterministicValidationPassed: boolean;
+  humanApprovalRequired: boolean;
+  humanApproved: boolean;
+  inputDigest?: string;
   provider?: string;
-
   model?: string;
+  evidence: AgentEvidenceReference[];
+  affectedArtifacts: string[];
+}
+
+export interface AgentDecisionInput extends Omit<AgentDecisionRecord, 'version' | 'id' | 'timestamp'> {
+  id?: string;
+  timestamp?: string;
 }

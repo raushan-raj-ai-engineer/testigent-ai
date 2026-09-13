@@ -82,7 +82,11 @@ test('interactive dashboard filters, buttons, graphs and test-step details work 
     await page.locator('#exportBtn').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('filtered-business-tests.csv');
+    expect(await download.path()).not.toBeNull();
   } finally {
+    if (!page.isClosed()) {
+      await page.close({ runBeforeUnload: false });
+    }
     await server.close();
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -102,4 +106,40 @@ function sample(testId:string,title:string,status:'passed'|'failed'|'skipped',ta
   };
 }
 function noHealing():HealingSummary{return {count:0,fallback:0,cache:0,ai:0,affectedTests:0,records:[],attempts:[],attemptCount:0,rejected:0,suggested:0,unverified:0};}
-function serve(root:string):Promise<{url:string;close:()=>Promise<void>}>{return new Promise((resolve,reject)=>{const server=http.createServer((req,res)=>{const target=path.join(root,req.url==='/'?'index.html':String(req.url).replace(/^\//,''));if(!fs.existsSync(target)){res.writeHead(404);res.end();return;}const ext=path.extname(target);res.setHeader('Content-Type',ext==='.js'?'text/javascript':ext==='.csv'?'text/csv':'text/html');fs.createReadStream(target).pipe(res);});server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const address=server.address();if(!address||typeof address==='string')return reject(new Error('No server address'));resolve({url:`http://127.0.0.1:${address.port}/`,close:()=>new Promise<void>((r,j)=>server.close(e=>e?j(e):r()))});});});}
+function serve(root: string): Promise<{ url: string; close: () => Promise<void> }> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const target = path.join(root, req.url === '/' ? 'index.html' : String(req.url).replace(/^\//, ''));
+      if (!fs.existsSync(target)) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+
+      const ext = path.extname(target);
+      res.setHeader('Content-Type', ext === '.js' ? 'text/javascript' : ext === '.csv' ? 'text/csv' : 'text/html');
+      fs.createReadStream(target).pipe(res);
+    });
+
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        reject(new Error('No server address'));
+        return;
+      }
+
+      resolve({
+        url: `http://127.0.0.1:${address.port}/`,
+        close: () => new Promise<void>((resolveClose, rejectClose) => {
+          server.close(error => error ? rejectClose(error) : resolveClose());
+
+          // Test-owned server: terminate browser keep-alive sockets after
+          // shutdown begins so parallel workers cannot stall teardown.
+          server.closeIdleConnections();
+          server.closeAllConnections();
+        })
+      });
+    });
+  });
+}

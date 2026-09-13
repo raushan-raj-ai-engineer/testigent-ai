@@ -192,6 +192,27 @@ jobs:
       - name: Run deterministic AI safety contracts
         run: npm run test:ai:deterministic
 
+  agentic-contracts:
+    name: Agentic Deterministic Safety
+    needs: [validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AI_ENABLED: 'false'
+      HEALING_AI_ENABLED: 'false'
+    steps:
+      - name: Checkout TestigentAI
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run deterministic agentic safety contracts
+        run: npm run test:agentic:deterministic
+
   ai-canary:
     name: AI Live Provider Canary (non-blocking)
     needs: [validate]
@@ -423,7 +444,7 @@ jobs:
 
   merge:
     name: Merge TestigentAI Reports
-    needs: [plan, test, ai-contracts, ai-canary]
+    needs: [plan, test, ai-contracts, agentic-contracts, ai-canary]
     if: >-
       ${{
         always() &&
@@ -601,6 +622,7 @@ jobs:
             steps.final-upload.outcome == 'success' &&
             needs.test.result == 'success' &&
             needs.ai-contracts.result == 'success' &&
+            needs.agentic-contracts.result == 'success' &&
             github.event_name != 'pull_request'
           }}
         continue-on-error: true

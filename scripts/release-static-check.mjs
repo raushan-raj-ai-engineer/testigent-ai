@@ -189,6 +189,20 @@ for (const required of [
   'docs/20-V6-DATA-PARALLEL-EXECUTION.md',
   'docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md',
   'docs/22-COMPETITIVE-BENCHMARK-PLAN.md',
+  'docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md',
+  'docs/51-v1.7.0-IMPLEMENTATION-PLAN.md',
+  'docs/52-v1.7.0-AGENTIC-MCP-GUIDE.md',
+  'docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md',
+  'docs/54-v1.7.0-CANDIDATE-HANDOFF.md',
+  'src/framework/agentic/policy/agentic-policy.ts',
+  'src/framework/agentic/evidence/agent-decision-ledger.ts',
+  'src/framework/agentic/orchestration/agentic-orchestrator.ts',
+  'src/framework/mcp/server.ts',
+  'src/framework/mcp/security-policy.ts',
+  'scripts/start-agentic-mcp.ts',
+  'tests/framework/agentic-policy-contract.spec.ts',
+  'tests/framework/agentic-mcp-contract.spec.ts',
+  'tests/framework/agentic-ledger-contract.spec.ts',
   'scripts/offline-release-check.mjs',
   'scripts/generate-sbom.mjs',
   'scripts/generate-release-manifest.mjs',
@@ -212,11 +226,15 @@ try {
   const finalValidationContract = `${pkg.scripts?.['validate:final'] ?? ''} ${pkg.scripts?.['validate:final:steps'] ?? ''}`;
   if (!finalValidationContract.includes('scenario:doctor')) issues.push('validate:final must enforce scenario:doctor');
   if (!pkg.scripts?.['mcp:start']?.includes('start-mcp.ts')) issues.push('mcp:start must use env-driven start-mcp.ts wrapper');
+  if (!pkg.scripts?.['mcp:agentic']?.includes('start-agentic-mcp.ts')) issues.push('missing controlled TestigentAI agentic MCP server script');
+  if (!pkg.scripts?.['test:agentic:deterministic']?.includes('agentic-policy-contract.spec.ts')) issues.push('missing deterministic agentic safety contract suite');
+  if (!finalValidationContract.includes('test:agentic:deterministic')) issues.push('validate:final must enforce deterministic agentic safety');
   if (pkg.engines?.node !== '>=22 <23' || fs.readFileSync(path.join(root, '.nvmrc'), 'utf8').trim() !== '22') issues.push('release runtime must be consistently pinned to Node 22 in package engines and .nvmrc');
   const copilotSetup = fs.readFileSync(path.join(root, '.github/workflows/copilot-setup-steps.yml'), 'utf8');
   if (!copilotSetup.includes("node-version-file: '.nvmrc'")) issues.push('Copilot setup workflow must use the same .nvmrc release runtime');
   const compatibilityWorkflow = fs.readFileSync(path.join(root, '.github/workflows/release-compatibility.yml'), 'utf8');
   if (!compatibilityWorkflow.includes("- 'v*'")) issues.push('release compatibility workflow must run automatically for version tags as well as manual dispatch');
+  if (!compatibilityWorkflow.includes('npm run test:agentic:deterministic')) issues.push('release compatibility matrix must exercise deterministic agentic safety on every supported OS/browser lane');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
 }
@@ -281,8 +299,12 @@ try {
     issues.push('CI rerun reporting must acquire artifacts through the workflow-run public API path');
   }
   if (!githubWorkflow.includes("needs.test.result == 'success'") ||
-      !githubWorkflow.includes("needs.ai-contracts.result == 'success'")) {
-    issues.push('Intermediate report cleanup must require successful core execution and deterministic AI safety while live-provider canary remains non-blocking');
+      !githubWorkflow.includes("needs.ai-contracts.result == 'success'") ||
+      !githubWorkflow.includes("needs.agentic-contracts.result == 'success'")) {
+    issues.push('Intermediate report cleanup must require successful core execution, deterministic AI safety, and deterministic agentic safety while live-provider canary remains non-blocking');
+  }
+  if (!githubWorkflow.includes('Agentic Deterministic Safety') || !githubWorkflow.includes('npm run test:agentic:deterministic')) {
+    issues.push('GitHub CI must keep deterministic agentic safety as a blocking release gate');
   }
   if (!githubWorkflow.includes('blob-${APP}-${GITHUB_RUN_ID}-') ||
       !githubWorkflow.includes('business-${APP}-${GITHUB_RUN_ID}-') ||
@@ -313,6 +335,7 @@ try {
   const azureWorkflow = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   if (!azureWorkflow.includes('EXPECTED_CORE_WORKERS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core workers and AI lane');
   if (!azureWorkflow.includes('SHARD_TOTAL > 1')) issues.push('Azure CI must omit Playwright --shard for sequential single-worker execution');
+  if (!azureWorkflow.includes('Agentic Deterministic Safety') || !azureWorkflow.includes('npm run test:agentic:deterministic')) issues.push('Azure CI must keep deterministic agentic safety as a blocking release gate');
 } catch (error) {
   issues.push(`unable to validate CI report topology contracts: ${error.message}`);
 }

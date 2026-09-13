@@ -18,7 +18,7 @@
 
 **One reusable core. Many products. Explicit project ownership. Business-readable quality reporting.**
 
-[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map)
+[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Certified baseline: `v1.6.0`** — tag `v1.6.0` points to certified commit `4225e151fadcc85fd0a9861b385bda82bd1c96c0`; Release Compatibility run `34760349497` passed Ubuntu Chromium/Firefox/WebKit, macOS WebKit and Windows Chromium. **Development candidate: `v1.6.1`** — separates blocking deterministic AI safety from a non-blocking live-provider canary, adds environment-scoped provider-health history, and exposes one-click operational health without changing deterministic release facts.
+**Certified baseline: `v1.6.1`** — immutable tag `v1.6.1` points to certified commit `5c2c785`; main CI and its full rerun proved AI operational degradation does not corrupt deterministic release truth, and the 5/5 Release Compatibility matrix passed. **Development candidate: `v1.7.0`** — adds governed Agentic Test Intelligence: deterministic planning, proposal-only generation, generated-source review, immutable decision provenance, MCP tools and one-click agentic reporting.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -51,8 +51,8 @@ That rule makes the framework reusable across teams without turning it into a si
 | 📊 **Data-driven testing** | JSON, CSV, YAML and spreadsheet-oriented data flows with parallel-safe identities |
 | 🔐 **Authentication** | Verified storage state, project-owned auth providers, auto refresh and bounded runtime recovery |
 | 🩹 **Self-healing** | UI recovery: deterministic fallback, validated cache and lazy optional AI fallback with semantic post-conditions |
-| 🤖 **Agent-driven automation** | Layer-aware UI/API/DB/E2E proposal authoring from approved evidence with explicit human approval/promotion |
-| ✨ **AI / agent quality** | Provider-neutral, opt-in AI contracts, healing support, MCP tooling and AI-lane reporting |
+| 🤖 **Agent-driven automation** | Requirement planning, impact analysis, proposal-only generation, deterministic review and explicit human approval/promotion |
+| ✨ **AI / agent quality** | Provider-neutral AI contracts, safe healing, governed TestigentAI MCP tools, decision provenance and operational/provider reporting |
 | 🧠 **Requirement intelligence** | Requirement analysis, test-plan generation, review-gated proposals and application knowledge |
 | 🧾 **Business reporting** | Executive KPIs, known-defect semantics, evidence, steps, merged shard reporting and email preview |
 | 🔎 **Quality evidence graph** | One-click claim verification with formulas, source fields, requirements, scenarios, defects, healing, AI audit and materialized evidence |
@@ -105,6 +105,8 @@ TestigentAI/
 │   ├── reporting/                 # Business + technical reporting
 │   ├── healing/                   # Governed locator recovery
 │   ├── ai/                        # Provider-neutral AI abstractions
+│   ├── agentic/                   # Planner/generator/reviewer/trust/evidence
+│   ├── mcp/                       # Governed TestigentAI MCP boundary
 │   └── intelligence/              # Requirements, knowledge and generation
 │
 ├── projects/

@@ -1,39 +1,20 @@
-import type {
-  AgentEvidenceReference,
-  AgenticOperationalState,
-} from './agent.types';
+import type { AgentEvidenceReference, AgenticOperationalState } from './agent.types.js';
 
-/**
- * Severity assigned to an agentic review finding.
- */
-export type ReviewFindingSeverity =
-  | 'info'
-  | 'warning'
-  | 'error'
-  | 'critical';
+export type ReviewFindingSeverity = 'info' | 'warning' | 'error' | 'critical';
 
-/**
- * Deterministic reviewer finding.
- */
 export interface ReviewFinding {
   ruleId: string;
-
   severity: ReviewFindingSeverity;
-
   message: string;
-
-  evidence: readonly AgentEvidenceReference[];
+  evidence: AgentEvidenceReference[];
 }
 
-/**
- * Result produced by the deterministic agentic reviewer.
- */
 export interface AgenticReviewResult {
+  version: 1;
+  proposalId: string;
   state: AgenticOperationalState;
-
-  accepted: boolean;
-
-  findings: readonly ReviewFinding[];
-
+  deterministicValidationPassed: boolean;
+  requiresHumanApproval: boolean;
+  findings: ReviewFinding[];
   rationale: string;
 }

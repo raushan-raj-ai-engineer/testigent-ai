@@ -24,6 +24,10 @@ const required = [
   'docs/19-MARKET-COMPETITIVE-RESEARCH-2026.md', 'docs/22-COMPETITIVE-BENCHMARK-PLAN.md',
   'docs/23-DECLARATIVE-AUTHORING-DEEP-RESEARCH.md', 'docs/24-DECLARATIVE-AUTOMATION-GUIDE.md',
   'schemas/testigent-scenario.schema.json', 'scripts/scenario-authoring.ts',
+  'docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md', 'docs/52-v1.7.0-AGENTIC-MCP-GUIDE.md',
+  'src/framework/agentic/policy/agentic-policy.ts', 'src/framework/agentic/evidence/agent-decision-ledger.ts',
+  'src/framework/mcp/server.ts', 'src/framework/mcp/security-policy.ts',
+  'tests/framework/agentic-policy-contract.spec.ts', 'tests/framework/agentic-mcp-contract.spec.ts',
 ];
 
 function walk(dir) {

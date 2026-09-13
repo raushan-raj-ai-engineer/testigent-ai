@@ -93,6 +93,17 @@ stages:
     - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run test:ai:deterministic
       displayName: Run deterministic AI safety contracts
 
+  - job: AgenticDeterministicSafety
+    displayName: Agentic Deterministic Safety
+    pool: { vmImage: ubuntu-latest }
+    steps:
+    - task: NodeTool@0
+      inputs: { versionSpec: '$(NODE_VERSION)' }
+    - script: npm ci
+      displayName: Install locked dependencies
+    - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run test:agentic:deterministic
+      displayName: Run deterministic agentic safety contracts
+
   - job: PlaywrightShard
     pool: { vmImage: ubuntu-latest }
     strategy:

@@ -35,53 +35,20 @@ test.describe('AI operational health contract', () => {
 
   test('GitHub step outcome vocabulary produces coherent degraded canary evidence', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-ai-canary-outcome-'));
-
     try {
       const recordFile = path.join(dir, 'ai-provider-canary.json');
-
-      execFileSync(
-        process.platform === 'win32' ? 'npm.cmd' : 'npm',
-        [
-          'exec',
-          '--',
-          'tsx',
-          'scripts/ai-canary-finalize.ts'
-        ],
-        {
-          cwd: process.cwd(),
-          env: {
-            ...process.env,
-            APP: 'demo',
-            ENV: 'qa',
-            RUN_ID: '900-1',
-            GITHUB_RUN_ID: '900',
-            GITHUB_RUN_ATTEMPT: '1',
-            AI_PROVIDER_MODE: 'single',
-            AI_PROVIDER: 'gemini',
-            GEMINI_MODEL: 'contract-model',
-            AI_CANARY_RECORD_FILE: recordFile,
-            AI_CANARY_HAS_TESTS: 'true',
-            AI_CANARY_CONFIG_OUTCOME: 'success',
-            AI_CANARY_PROVIDER_OUTCOME: 'failure',
-            AI_CANARY_HEALING_OUTCOME: 'skipped'
-          },
-          stdio: 'pipe'
-        }
-      );
-
-      const record = JSON.parse(fs.readFileSync(recordFile, 'utf8')) as AiProviderCanaryRecord;
-
-      expect(record.status).toBe('DEGRADED');
-      expect(record.configurationOutcome).toBe('passed');
-      expect(record.providerCheckOutcome).toBe('failed');
-      expect(record.healingOutcome).toBe('skipped');
-
-      expect(
-        selectProviderCanary([record], '900', 1, true, 'demo', 'qa')?.status
-      ).toBe('DEGRADED');
-    } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
+      execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['exec', '--', 'tsx', 'scripts/ai-canary-finalize.ts'], {
+        cwd: process.cwd(),
+        env: { ...process.env, APP: 'demo', ENV: 'qa', RUN_ID: '900-1', GITHUB_RUN_ID: '900', GITHUB_RUN_ATTEMPT: '1', AI_PROVIDER_MODE: 'single', AI_PROVIDER: 'gemini', GEMINI_MODEL: 'contract-model', AI_CANARY_RECORD_FILE: recordFile, AI_CANARY_HAS_TESTS: 'true', AI_CANARY_CONFIG_OUTCOME: 'success', AI_CANARY_PROVIDER_OUTCOME: 'failure', AI_CANARY_HEALING_OUTCOME: 'skipped' },
+        stdio: 'pipe'
+      });
+      const current = JSON.parse(fs.readFileSync(recordFile, 'utf8')) as AiProviderCanaryRecord;
+      expect(current.status).toBe('DEGRADED');
+      expect(current.configurationOutcome).toBe('passed');
+      expect(current.providerCheckOutcome).toBe('failed');
+      expect(current.healingOutcome).toBe('skipped');
+      expect(selectProviderCanary([current], '900', 1, true, 'demo', 'qa')?.status).toBe('DEGRADED');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   });
 
   test('environment-scoped health history de-duplicates rerun records and keeps newest evidence', async () => {

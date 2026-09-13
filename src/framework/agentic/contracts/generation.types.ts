@@ -1,42 +1,36 @@
-import type {
-  AgentEvidenceReference,
-  AgenticOperationalState,
-} from './agent.types';
+import type { AgentEvidenceReference, AgenticOperationalState } from './agent.types.js';
 
-/**
- * Artifact categories that the generator may propose.
- */
-export type GeneratedArtifactKind =
-  | 'test'
-  | 'page-object'
-  | 'api-client'
-  | 'fixture'
-  | 'test-data';
+export type GeneratedArtifactKind = 'test' | 'page-object' | 'api-client' | 'fixture' | 'test-data';
 
-/**
- * Framework artifact proposed by the generator.
- *
- * Generation does not imply trust. A proposal must pass deterministic
- * review before it can be promoted to trusted framework evidence.
- */
 export interface GenerationProposal {
+  version: 1;
   id: string;
-
+  planId: string;
+  requirementRef: string;
   project: string;
-
   kind: GeneratedArtifactKind;
-
   targetPath: string;
-
   state: AgenticOperationalState;
-
   rationale: string;
-
   confidence: number | null;
-
   duplicateDetected: boolean;
-
-  evidence: readonly AgentEvidenceReference[];
-
+  contentSha256: string;
   content: string;
+  evidence: AgentEvidenceReference[];
+  provider?: string;
+  model?: string;
+}
+
+export interface GenerationProposalInput {
+  planId: string;
+  requirementRef: string;
+  project: string;
+  kind: GeneratedArtifactKind;
+  targetPath: string;
+  content: string;
+  rationale: string;
+  confidence: number | null;
+  evidence?: AgentEvidenceReference[];
+  provider?: string;
+  model?: string;
 }

@@ -2,67 +2,56 @@
 set -euo pipefail
 BUNDLE_ROOT="$(cd "$(dirname "$0")" && pwd)"
 TARGET_ROOT="${1:-$HOME/testigent-ai}"
-MANIFEST="$BUNDLE_ROOT/upgrade/v6-manifest.json"
 
-if [[ ! -f "$MANIFEST" ]]; then echo "Missing upgrade manifest: $MANIFEST" >&2; exit 2; fi
-if [[ ! -d "$TARGET_ROOT" ]]; then echo "Target framework directory not found: $TARGET_ROOT" >&2; exit 2; fi
+if [[ ! -d "$TARGET_ROOT/.git" ]]; then
+  echo "Target must be an existing TestigentAI Git worktree: $TARGET_ROOT" >&2
+  exit 2
+fi
 
-python3 - "$BUNDLE_ROOT" "$TARGET_ROOT" "$MANIFEST" <<'PY'
-import hashlib, json, os, shutil, sys, time
+branch="$(git -C "$TARGET_ROOT" branch --show-current)"
+if [[ -z "$branch" || "$branch" == "main" || "$branch" == "master" ]]; then
+  echo "Refusing to apply v1.7.0 candidate on '$branch'. Use a feature branch." >&2
+  exit 3
+fi
+
+if [[ "${TESTIGENT_ALLOW_DIRTY_UPGRADE:-false}" != "true" ]] && [[ -n "$(git -C "$TARGET_ROOT" status --porcelain)" ]]; then
+  echo "Target worktree is dirty. Commit/stash first, or set TESTIGENT_ALLOW_DIRTY_UPGRADE=true deliberately." >&2
+  exit 4
+fi
+
+bundle_version="$(node -p "require('$BUNDLE_ROOT/package.json').version")"
+if [[ "$bundle_version" != "1.7.0" ]]; then
+  echo "Unexpected bundle version: $bundle_version" >&2
+  exit 5
+fi
+
+target_version="$(node -p "require('$TARGET_ROOT/package.json').version" 2>/dev/null || true)"
+if [[ "$target_version" != "1.6.1" && "$target_version" != "1.7.0" ]]; then
+  echo "Expected target version 1.6.1 or 1.7.0, found '${target_version:-unknown}'." >&2
+  exit 6
+fi
+
+python3 - "$BUNDLE_ROOT" "$TARGET_ROOT" <<'PY'
+import json, shutil, sys, time
 from pathlib import Path
-bundle, target, manifest = map(Path, sys.argv[1:4])
-data=json.loads(manifest.read_text())
-
-def sha(p: Path):
-    return hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() and p.is_file() else None
-
-conflicts=[]; plan=[]
-for entry in data['entries']:
-    rel=entry['path']; op=entry['operation']; baseline=entry.get('baselineSha256'); desired=entry.get('desiredSha256')
-    dst=target/rel; current=sha(dst)
-    if op=='copy':
-        if current==desired: plan.append(('skip',entry)); continue
-        if baseline is None:
-            if current is not None: conflicts.append(f"{rel}: new V6 file already exists with different content")
-            else: plan.append(('copy',entry))
-        elif current==baseline: plan.append(('copy',entry))
-        else: conflicts.append(f"{rel}: target was modified from the supported baseline")
-    elif op=='delete':
-        if current is None: plan.append(('skip',entry))
-        elif current==baseline: plan.append(('delete',entry))
-        else: conflicts.append(f"{rel}: target deletion conflicts with local modification")
-    else: conflicts.append(f"{rel}: unsupported operation {op}")
-
-if conflicts:
-    print('Upgrade aborted before changing files. Conflicts:', file=sys.stderr)
-    for item in conflicts: print(' - '+item, file=sys.stderr)
-    sys.exit(3)
-
-backup_root=Path.home()/'testigent-ai-upgrade-backups'/time.strftime('%Y%m%d-%H%M%S')
-changed=0; skipped=0
-for action, entry in plan:
-    rel=entry['path']; dst=target/rel; src=bundle/rel
-    if action=='skip': skipped+=1; continue
-    if dst.exists():
-        b=backup_root/rel; b.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(dst,b)
-    if action=='copy':
-        dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst); changed+=1
-    else:
-        dst.unlink(); changed+=1
-
-# Generated/bundle-owned release metadata must not participate in baseline conflict checks.
-# Sync these files after the conflict-safe content plan; VERIFY_UPGRADE compares them byte-for-byte.
-metadata_synced=0
-for rel in ['upgrade/v6-manifest.json', 'release/SBOM.cdx.json', 'release/RELEASE-MANIFEST.sha256']:
-    src=bundle/rel; dst=target/rel
-    if not src.exists():
-        continue
-    if sha(dst)==sha(src):
-        continue
-    if dst.exists():
-        b=backup_root/rel; b.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(dst,b)
-    dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst); metadata_synced+=1
-
-print(json.dumps({'ok':True,'changed':changed,'skipped':skipped,'metadataSynced':metadata_synced,'backup':str(backup_root) if backup_root.exists() else None},indent=2))
+bundle, target = map(Path, sys.argv[1:3])
+excluded_roots={'.git','node_modules','reports','test-results','playwright-report','blob-report','.runtime','.auth','.healing','.report-history','coverage','dist','upgrade'}
+excluded_files={'.env','.DS_Store'}
+backup=Path.home()/'testigent-ai-upgrade-backups'/f"v1.7.0-{time.strftime('%Y%m%d-%H%M%S')}"
+changed=skipped=0
+for src in sorted(p for p in bundle.rglob('*') if p.is_file()):
+    rel=src.relative_to(bundle)
+    if rel.parts and rel.parts[0] in excluded_roots: continue
+    if src.name in excluded_files or src.suffix in {'.zip'}: continue
+    dst=target/rel
+    if dst.exists() and dst.is_file() and dst.read_bytes()==src.read_bytes():
+        skipped += 1; continue
+    if dst.exists() and dst.is_file():
+        b=backup/rel; b.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(dst,b)
+    dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst); changed += 1
+print(json.dumps({'ok':True,'bundleVersion':'1.7.0','changed':changed,'skipped':skipped,'backup':str(backup) if backup.exists() else None},indent=2))
 PY
+
 "$BUNDLE_ROOT/VERIFY_UPGRADE.sh" "$TARGET_ROOT"
+
+echo "Candidate applied to branch '$branch'. Review with: git -C '$TARGET_ROOT' status -sb && git -C '$TARGET_ROOT' diff --check"

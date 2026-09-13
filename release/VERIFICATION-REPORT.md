@@ -1,112 +1,105 @@
-# TestigentAI v1.6.1 Candidate Verification Report
+# TestigentAI v1.7.0 Candidate Verification Report
 
 ## Certified baseline
 
-`v1.6.0` is certified and immutable. Annotated tag `v1.6.0` resolves to commit `4225e151fadcc85fd0a9861b385bda82bd1c96c0`. Release Compatibility run `34760349497` passed Ubuntu Chromium/Firefox/WebKit, macOS WebKit and Windows Chromium.
+`v1.6.1` is the current certified and immutable baseline. The annotated release tag points at commit `5c2c785` (the v1.6.1 AI-canary outcome-normalization hotfix merge). Certification proved:
 
-## v1.6.1 candidate scope
+- main CI PASS;
+- full main rerun PASS;
+- deterministic AI safety PASS;
+- live-provider degradation classified operationally without rewriting release correctness;
+- provider-health history and rerun-safe report provenance PASS;
+- final business bundle validation PASS;
+- Release Compatibility 5/5: Ubuntu Chromium, Ubuntu Firefox, Ubuntu WebKit, macOS WebKit and Windows Chromium.
 
-This candidate changes only AI operational reliability and reporting:
+The previous `v1.6.0` certified tag remains immutable historical evidence.
 
-1. deterministic AI safety is a dedicated blocking job with no external-provider dependency;
-2. live provider/generation/healing checks run as a non-blocking operational canary;
-3. canary outcomes are recorded as HEALTHY, DEGRADED, MISCONFIGURED or SKIPPED;
-4. provider-health history is environment-scoped, lock-protected, atomic and bounded;
-5. the business dashboard remains compact and links one-click to `ai-provider-health.html`;
-6. only HEALTHY live AI canary execution evidence is merged into business facts; degraded provider evidence remains operational only.
+## v1.7.0 candidate scope
 
-## Packaging-environment checks required before handoff
+v1.7.0 introduces Agentic Test Intelligence while preserving the v1.6.1 release truth boundary:
 
-- release static + LF/CRLF portability;
-- offline release inventory;
-- TypeScript/TSX syntax parse;
-- JSON/YAML parse;
-- Markdown local-link integrity;
-- trailing-whitespace/runtime-artifact hygiene;
-- release manifest and SBOM regeneration;
-- exact-ZIP extraction verification.
+1. deterministic agentic trust contracts and explicit operational states;
+2. requirement-to-plan and deterministic change-impact planning;
+3. proposal-only generation with duplicate/project-boundary controls;
+4. deterministic generated-source review with mandatory human-approval boundary;
+5. immutable, run-scoped, sanitized Agent Decision Ledger;
+6. governed read/review-oriented TestigentAI MCP server;
+7. one-click `agentic-intelligence.html` reporting without altering deterministic business facts;
+8. blocking Agentic Deterministic Safety gates in GitHub Actions and Azure Pipelines;
+9. agentic deterministic safety included in the release compatibility matrix;
+10. certified v1.6.1 live-canary runtime-path and GitHub outcome-normalization fixes retained.
 
-## Connected certification still required
+## Packaging-environment evidence
 
-The package must not be described as certified v1.6.1 until Node 22 `npm run validate:final`, PR CI, main CI, main rerun and the 5/5 compatibility matrix are green. Live-provider degradation may remain DEGRADED without invalidating deterministic release correctness, but the canary evidence must be present and truthful.
-
-## Final packaging evidence
-
-Before archive creation, the v1.6.1 candidate passed the dependency-independent release freeze:
+The standalone candidate package was assembled in an offline packaging environment. Dependency-independent checks executed successfully:
 
 | Check | Result |
 | --- | --- |
-| Package version | `1.6.1` |
-| `release:static` | PASS |
-| LF/CRLF portability | PASS |
-| `release:offline` | PASS |
-| TypeScript/TSX syntax | 254 files / 0 errors |
-| JSON | 29 files / 0 errors |
-| YAML | 7 files / 0 errors |
-| Markdown local links | 36 / 0 broken |
-| Trailing whitespace | 0 files |
-| Provider-canary schema/status-coherence/selection probe | PASS |
-| Missing provenance identity / missing expected canary | FAIL-CLOSED / PASS |
-| Provider-health sanitization/truth-boundary probe | PASS |
+| Package version | `1.7.0` |
+| Release static contract | PASS |
+| Offline release inventory / secret scan | PASS |
+| Architecture boundary check | PASS |
+| Reusable export JSDoc audit | 233 declarations / 0 issues |
+| GitHub/Azure YAML parse | PASS |
+| New v1.7 TypeScript syntax parse | PASS |
+| New v1.7 semantic compile diagnostics | 0 candidate-file errors under external-module stubs |
+| Core executable agentic self-check | PASS |
+| Proposal-only generation proof | PASS |
+| Reviewer raw-Playwright / cross-project rejection | PASS |
+| Immutable/redacted decision ledger | PASS |
+| MCP traversal denial | PASS |
 
-The final archive is additionally re-extracted into a clean directory and the release/static/offline/parser/integrity checks are repeated before handoff. Full connected `npm ci`, `npm run validate:final`, PR/main/rerun CI and the five-platform/browser compatibility matrix remain required before v1.6.1 can replace certified v1.6.0.
+`npm ci`, Playwright-backed deterministic contract execution and the full repository `npm run validate:final` require the connected Node 22 environment and are intentionally not claimed by this offline package build.
 
----
+## Connected validation required before merge/certification
 
-# TestigentAI v1.6.1 — Certified Baseline
+Run from the extracted candidate on Node 22:
 
-## Release Focus
+```bash
+npm ci
+npx playwright install --with-deps chromium
+npm run validate:final
+npm run test:agentic:deterministic
+npm run release:sbom
+npm run release:manifest
+npm run release:offline
+npm run security:check
+```
 
-AI Operational Reliability
+Then require:
 
-## Certification Status
+- PR CI PASS and full PR rerun PASS;
+- main CI PASS and full main rerun PASS;
+- Agentic Deterministic Safety PASS;
+- deterministic AI safety PASS;
+- live-provider canary remains operational/non-blocking;
+- report merge/final business bundle PASS;
+- Release Compatibility 5/5 PASS.
 
-TestigentAI v1.6.1 has completed release certification successfully.
+## Certification rule
 
-### CI Validation
+This ZIP is a **v1.7.0 development candidate**, not a certified release. Do not create or move a `v1.7.0` tag until connected validation, PR/main reruns and all five compatibility lanes pass. Never move/recreate the certified `v1.6.1` tag.
 
-- Main CI: PASS
-- Main full rerun: PASS
-- Framework Validation: PASS
-- Execution Plan: PASS
-- Project Tests - Shard 1: PASS
-- Project Tests - Shard 2: PASS
-- AI Deterministic Safety: PASS
-- AI Live Provider Canary: PASS as operational/non-blocking lane
-- Provider Health History: PASS
-- Rerun-safe Report Provenance: PASS
-- Final Business Bundle Validation: PASS
+## Connected feature-branch validation
 
-## AI Operational Reliability Proof
+The final v1.7.0 feature-branch candidate completed connected validation successfully.
 
-The live Gemini provider experienced external availability/rate-limit conditions during certification.
+Evidence:
 
-Observed operational conditions included:
+- `npm run validate:final`: PASS;
+- framework critical suite: **154 passed**;
+- dashboard concurrency stress: **30/30 passed**;
+- Agent Decision Ledger contract: **4/4 passed**;
+- Agent Decision Ledger multi-process stress: **20/20 passed**;
+- SBOM generation: PASS with **149 components**;
+- release manifest generation: PASS;
+- offline release verification: PASS;
+- security policy: PASS with **0 high/critical advisories**;
+- `git diff --check`: PASS.
 
-- HTTP 503 UNAVAILABLE
-- HTTP 429 RESOURCE_EXHAUSTED
+The connected review also closed two concurrency risks:
 
-TestigentAI correctly classified the live provider as DEGRADED without converting external provider instability into a deterministic release failure.
+1. dashboard HTTP-test teardown now releases the Playwright page before shutting down its local server and terminates test-owned keep-alive connections;
+2. Agent Decision Ledger concurrent writers are serialized and its JSONL view is published atomically with real child-process regression coverage.
 
-Deterministic AI safety remained the release correctness gate.
-
-The provider-health artifact remained valid, was persisted in provider-health history, and was consumed successfully by report merging and final business-bundle validation.
-
-## Release Compatibility Matrix
-
-- Ubuntu / Chromium: PASS
-- Ubuntu / Firefox: PASS
-- Ubuntu / WebKit: PASS
-- macOS / WebKit: PASS
-- Windows / Chromium: PASS
-
-## Final Result
-
-TestigentAI v1.6.1 is the current CERTIFIED BASELINE.
-
-The v1.6.1 Git tag is immutable and must not be moved or recreated.
-
-TestigentAI v1.6.0 remains preserved as the previous certified baseline.
-
-Future runtime development must continue on a new version or feature branch rather than modifying the certified v1.6.1 tag.
-
+This evidence does not constitute release certification. PR/main reruns and the full 5/5 Release Compatibility matrix remain mandatory.

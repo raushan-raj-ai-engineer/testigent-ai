@@ -2,69 +2,60 @@
 
 ## Certified baseline
 
-**TestigentAI v1.6.0 is the certified immutable baseline.**
+**TestigentAI v1.6.1 is the current immutable certified baseline.**
 
 | Item | Certified state |
 |---|---|
-| Release | `v1.6.0` |
-| Package version | `1.6.0` |
-| Certified commit | `4225e151fadcc85fd0a9861b385bda82bd1c96c0` |
+| Release | `v1.6.1` |
+| Tagged commit | `5c2c785` |
 | Runtime | Node.js 22.x |
-| Local connected `validate:final` | PASS |
-| Review hardening | 40/40 PASS |
-| Framework regression | 127/127 PASS |
-| Security | 0 high/critical advisories |
-| Failed-job rerun recovery | PASS |
-| Mixed-attempt report provenance | PASS |
-| Evidence/dashboard publication | PASS |
+| Main CI | PASS |
+| Main full rerun | PASS |
+| AI deterministic safety | PASS |
+| Live provider degradation semantics | PASS |
+| Provider-health history | PASS |
+| Rerun-safe provenance | PASS |
+| Final business bundle | PASS |
 | Release Compatibility matrix | PASS 5/5 |
 
-Annotated tag verification:
+Main CI run `34766206400` proved the v1.6.1 operational-reliability contract. The live Gemini provider was allowed to become `DEGRADED` under external availability/rate-limit conditions while deterministic AI safety, provider-health evidence, report provenance and the overall workflow remained valid. The full rerun also passed.
 
-```text
-refs/tags/v1.6.0    80e723eb45af82147ff1e0d4044b8b31bce8e19c
-refs/tags/v1.6.0^{} 4225e151fadcc85fd0a9861b385bda82bd1c96c0
-```
+The `v1.6.1` tag must not be moved or recreated. `v1.6.0` remains preserved as the previous certified baseline.
 
-The tag must not be moved or recreated.
+## Development candidate: v1.7.0
 
-## v1.6.0 certification evidence
+v1.7.0 introduces **Agentic Test Intelligence** on top of the certified v1.6.1 baseline:
 
-Release Compatibility run `34760349497` passed:
+- deterministic agentic trust contracts;
+- requirement-to-plan and change-impact planning;
+- proposal-only generation boundary;
+- deterministic generated-source reviewer;
+- immutable sanitized agent decision ledger;
+- governed TestigentAI MCP server;
+- one-click `agentic-intelligence.html` reporting;
+- blocking Agentic Deterministic Safety gates in GitHub and Azure;
+- carry-forward of the certified v1.6.1 canary outcome/runtime-path hotfix.
 
-| Hosted runner | Browser | Result |
-|---|---|---|
-| Ubuntu | Chromium | PASS |
-| Ubuntu | Firefox | PASS |
-| Ubuntu | WebKit | PASS |
-| macOS | WebKit | PASS |
-| Windows | Chromium | PASS |
+Connected Node 22 validation for the current v1.7.0 feature-branch candidate has passed, including the complete `validate:final` gate and security policy.
 
-Each compatibility job validated locked dependencies, supported Node, browser installation, static/type validation, architect-review/recovery regression, runtime/browser evidence capture and compatibility evidence upload.
+v1.7.0 remains **not certified** until PR/main/rerun CI and the full 5/5 Release Compatibility matrix pass.
 
-Before tagging, v1.6.0 also proved the real failed-job rerun scenario: a transient Gemini outage failed the live AI lane, a later rerun succeeded, and report acquisition/provenance correctly combined same-workflow evidence without using a mutable latest pointer.
+See:
 
-## Development candidate: v1.6.1
-
-v1.6.1 is intentionally small and operational. It keeps all v1.6.0 release/evidence semantics unchanged while separating:
-
-- **AI Deterministic Safety** — blocking, provider-neutral correctness gate;
-- **AI Live Provider Canary (non-blocking)** — real external-provider/generation/healing availability signal.
-
-The candidate adds environment-scoped provider-health history and one-click `ai-provider-health.html` drill-down. A provider `503` can therefore be visible as `DEGRADED` without falsely representing deterministic TestigentAI correctness as failed.
-
-See `48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`. Until v1.6.1 passes connected validation, PR/main/rerun CI and the 5/5 compatibility matrix, **v1.6.0 remains the certified baseline**.
+- `docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md`
+- `docs/51-v1.7.0-IMPLEMENTATION-PLAN.md`
+- `docs/52-v1.7.0-AGENTIC-MCP-GUIDE.md`
+- `docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md`
 
 ## Authoritative release workflow
 
 ```text
 feature branch
  -> npm run validate:final
- -> PR checks
+ -> PR checks + rerun
  -> merge to main
- -> main TestigentAI Multi-Project CI
+ -> main CI + rerun
  -> annotated vX.Y.Z tag
  -> automatic TestigentAI Release Compatibility matrix
+ -> certification record
 ```
-
-Historical v1.4.x-v1.5.x and v1.6.0 pre-tag documents remain audit evidence; they do not override this current-status file.
