@@ -1,6 +1,6 @@
 {
   "name": "testigent-ai",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "private": true,
   "description": "TestigentAI - Intelligent Quality Engineering Platform",
   "author": "Raushan Raj",
@@ -96,7 +96,7 @@
     "test:framework": "npm run test:framework:critical",
     "project:list": "tsx scripts/project-list.ts",
     "security:check": "tsx scripts/security-check.ts",
-    "release:static": "node scripts/release-static-check.mjs",
+    "release:static": "node scripts/release-static-check.mjs && node scripts/release-static-portability-contract.mjs",
     "validate:project": "npm run project:check && npm run test:project -- --project=chromium",
     "test:ai-healing:ollama": "cross-env APP=demo ENV=qa AI_ENABLED=true ALLOW_AI_TESTS=true AI_PROVIDER_MODE=single AI_PROVIDER=ollama HEALING_MODE=runtime HEALING_AI_ENABLED=true AI_HEALING_DEMO=true tsx scripts/test-project.ts --project=chromium --grep @ai",
     "test:ai-healing:gemini": "cross-env APP=demo ENV=qa AI_ENABLED=true ALLOW_AI_TESTS=true AI_PROVIDER_MODE=single AI_PROVIDER=gemini AI_ALLOW_CLOUD_EGRESS=true HEALING_MODE=runtime HEALING_AI_ENABLED=true AI_HEALING_DEMO=true tsx scripts/test-project.ts --project=chromium --grep @ai",
