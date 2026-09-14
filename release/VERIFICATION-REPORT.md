@@ -1,5 +1,8 @@
 # TestigentAI v1.9.2 Independent Re-review Corrective Candidate — Verification Report
 
+> **Historical pre-certification packaging record.** This file preserves the validation boundary of the earlier v1.9.2 corrective candidate. It does not describe the current post-certification corrective archive. The certified v1.9.2 outcome is recorded in `docs/41-CURRENT-RELEASE-STATUS.md`; the later independent post-certification findings and their corrective patch are recorded in `docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`.
+
+
 ## Certified baseline
 
 `v1.9.1` remains the current immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. Main CI `34818484552`, main Release Compatibility `34818923701` 5/5 and tag-triggered Release Compatibility `34819277626` 5/5 all passed for that release. Post-release docs main `bcfa7d8905b51ba66673478e43eab3c5ea4f9fdc` passed CI `34826308673` without moving the tag.
@@ -48,4 +51,4 @@ Those connected gates remain mandatory before any v1.9.2 certification or tag. N
 
 ## Release rule
 
-This full ZIP is a **v1.9.2 corrective review candidate**, not a certified v1.9.2 release. Apply it on a feature branch descended from the v1.9.1-certified line, run `npm ci`, `npm run release:rereview:qualification`, the full CI suite and 5/5 compatibility chain, and only then consider a new immutable tag.
+At the time this historical record was written, that packaging snapshot was a **v1.9.2 corrective review candidate**, not yet a certified release. v1.9.2 later certified at `f061e4ef1fd869888fdae721d4790ce2058070ae`. The current post-certification corrective archive must again be applied on a feature branch and pass `npm ci`, `npm run release:rereview:qualification`, the full CI suite and 5/5 compatibility chain on its exact commit before any subsequent immutable release/tag is considered.

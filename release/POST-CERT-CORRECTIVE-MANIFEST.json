@@ -1,0 +1,110 @@
+{
+  "artifact": "TestigentAI v1.9.2 post-certification corrective candidate",
+  "date": "2026-09-14",
+  "packageVersion": "1.9.2",
+  "baseReviewedArchive": {
+    "name": "TestigentAI-v1.9.2-POST-CERT-REVIEW.zip",
+    "sha256": "ba711591a5ca4ab47bb380ad192bd6e1af75368a4887ae253f34a70d4f320992",
+    "zipSourceComment": "c70aa1a3aa41e30b1ca6af5a759e4e4a1ebf6d3d"
+  },
+  "certifiedV192Baseline": {
+    "commit": "f061e4ef1fd869888fdae721d4790ce2058070ae",
+    "mainCI": "34839795426",
+    "mainCompatibility": "34840215663",
+    "tagCompatibility": "34840673003"
+  },
+  "correctedFindings": [
+    "R01 OpenAPI 3.1 omitted-type/null schema semantics",
+    "R02 effective property-removal compatibility semantics",
+    "R04 dangling-symlink and promotion mutation containment",
+    "P2 certification-document provenance cleanup"
+  ],
+  "validation": {
+    "node": "22.16.0",
+    "targetedProductionTypecheck": "PASS (global TypeScript 5.8.3 with Node type declarations and YAML stub; changed production modules)",
+    "directProductionCounterexamples": "PASS (R01/R02/R04 including real promoteProposal no-outside-write)",
+    "githubActionPinCheck": "PASS",
+    "releaseStatic": "PASS",
+    "releaseStaticPortability": "PASS (LF/CRLF)",
+    "offlineRelease": "PASS",
+    "freshNpmCi": "NOT COMPLETED in packaging runtime",
+    "fullPlaywrightAndCompatibility": "REQUIRED on connected CI before release"
+  },
+  "changedFiles": [
+    {
+      "path": "FINAL-RELEASE-NOTES.md",
+      "sha256": "fe804a8b79c39a9c2435c29e19b57fcd0e1a2dc7a6d5b8a5816b6eeba61abdcc",
+      "bytes": 54734
+    },
+    {
+      "path": "README.md",
+      "sha256": "8fd62a3654a41e411b4fefa85dc52d689662f52080e1d9c3c7d262ce6b6d055d",
+      "bytes": 51090
+    },
+    {
+      "path": "REVIEW-HANDOFF-v1.9.2.md",
+      "sha256": "d1508967175507069a21f00a3ec4bdee827ac58f29f02fd3cf506c26176a1344",
+      "bytes": 2343
+    },
+    {
+      "path": "REVIEW-METADATA.txt",
+      "sha256": "5f3da8bfd9f189693571f96042891f2acf47c6596fa28b23fbe4cf98f1708ca2",
+      "bytes": 1204
+    },
+    {
+      "path": "docs/41-CURRENT-RELEASE-STATUS.md",
+      "sha256": "7a4e06559439e473715a594317298ae2760d2c5ca759d4ce56c2866a149c65b1",
+      "bytes": 4296
+    },
+    {
+      "path": "docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md",
+      "sha256": "d7248415c6ed7233be72fe3066e6696c8c76ca3c7c722438dc4c5617664000b0",
+      "bytes": 4201
+    },
+    {
+      "path": "docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md",
+      "sha256": "d76f6c9cb5308faeb88778f1143953dfac6d47cc05bfc897b87c36cbb6837bd0",
+      "bytes": 4627
+    },
+    {
+      "path": "docs/reviews/TestigentAI-v1.9.2-Independent-Post-Certification-Review.md",
+      "sha256": "6dd3ee697f97e03d061908743d6d30b6d0aa9c5c803bc5cd0d19cebce5ddd9e4",
+      "bytes": 13361
+    },
+    {
+      "path": "release/VERIFICATION-REPORT.md",
+      "sha256": "a68d03e768bef1f9a1dd8b19c48ba46ca2ea44247a90abcf352859415eec57d4",
+      "bytes": 4234
+    },
+    {
+      "path": "scripts/release-static-check.mjs",
+      "sha256": "799767ef21b28921de35794219185459cffbdb9ae87970d05943c5cbe149d950",
+      "bytes": 79029
+    },
+    {
+      "path": "src/framework/agentic/policy/path-policy.ts",
+      "sha256": "090f1cae723ad10baea73dc32c903cfb512f2ac81b4d0a724e30533f26b6cfe1",
+      "bytes": 8832
+    },
+    {
+      "path": "src/framework/api-contract/breaking-change-detector.ts",
+      "sha256": "75ad7136fb12eb3b4e5c572e30fab47c7730539d60f7b29d1105eac14cef8101",
+      "bytes": 26799
+    },
+    {
+      "path": "src/framework/api-contract/schema-validator.ts",
+      "sha256": "f379047b3876def3ea6ff4ed055eb08cb16717d9229cdef364a87fcb3cd56f9a",
+      "bytes": 10605
+    },
+    {
+      "path": "src/framework/intelligence/review/proposal.review.ts",
+      "sha256": "2f117847f9b1b662107d0f7836bf81c15087ba605d11b5bd202c03d9e5bbf7a3",
+      "bytes": 28678
+    },
+    {
+      "path": "tests/framework/v1.9.2-rereview-closure-contract.spec.ts",
+      "sha256": "c76630254a806f88b25964f6d1bf403370b415fac9d421f988e6cf1bb5ab1a0c",
+      "bytes": 29035
+    }
+  ]
+}
