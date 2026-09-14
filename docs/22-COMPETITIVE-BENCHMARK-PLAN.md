@@ -32,3 +32,25 @@ Every benchmark run should store:
 ## Product decision rule
 
 A capability graduates from *roadmap* to *competitive advantage* only when the benchmark is repeatable and the advantage holds across more than one representative application. Vendor marketing numbers may inform priorities but are not substitutes for TestigentAI-owned evidence.
+
+## v1.8.0 executable benchmark mapping
+
+v1.8.0 converts the highest-priority parts of this plan into executable, evidence-gated commands:
+
+```bash
+# Adoption/pilot measurements
+APP=<app> ENV=<env> npm run qa:adoption -- record ...
+APP=<app> ENV=<env> npm run qa:adoption -- report
+
+# Baseline comparison
+npm run benchmark:compare -- --input=<completed-comparative-dataset.json>
+
+# Planner load diagnostics (not certification)
+npm run benchmark:scale:plan:500
+npm run benchmark:scale:plan:2000
+
+# Measured execution evidence
+npm run benchmark:scale:evaluate -- --input=<measured-scale-evidence.json>
+```
+
+The benchmark input is provenance-bound. Competitive differentiation requires multiple applications and non-synthetic raw evidence. The scale planner can exercise 2,000 independent planning items, but a 2,000-test product claim requires a measured 2,000-case execution record. See `docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md` and `docs/57-v1.8.0-SCALE-CERTIFICATION.md`.

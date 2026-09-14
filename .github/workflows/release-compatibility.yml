@@ -62,6 +62,9 @@ jobs:
       - name: Agentic deterministic safety
         run: npm run test:agentic:deterministic
 
+      - name: Product intelligence deterministic safety
+        run: npm run test:product-intelligence
+
       - name: Architect-review and recovery regression
         run: npx playwright test tests/framework/review-hardening-contract.spec.ts tests/framework/browser-free-fixtures.spec.ts tests/framework/healing-generation-contract.spec.ts --project=${{ matrix.browser }}
 

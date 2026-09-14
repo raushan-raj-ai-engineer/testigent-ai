@@ -1,8 +1,33 @@
-# TestigentAI v1.7.0 — Agentic Test Intelligence Candidate
+# TestigentAI v1.8.0 — Evidence-Backed Product Intelligence Candidate
 
 ## Certified baseline
 
-`v1.6.1` is the immutable certified baseline at tagged commit `5c2c785`. Main CI run `34766206400` and its full rerun proved the AI Operational Reliability contract, and the 5/5 Release Compatibility matrix passed.
+`v1.7.0` is the immutable certified baseline at commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Main and tag-triggered Release Compatibility both passed the full 5/5 Ubuntu/macOS/Windows browser matrix.
+
+## Consolidated v1.8.0 scope
+
+- Adoption & Pilot Intelligence across representative applications and opaque engineer aliases;
+- measured authoring, migration, triage, CI/cost and quality metrics with explicit truth boundaries;
+- provenance-bound comparative benchmarks against an explicit baseline such as plain Playwright;
+- seeded false-heal measurement;
+- synthetic 500/2,000 planning diagnostics that cannot masquerade as measured throughput;
+- measured scale evidence evaluation with duplicate/drop/shard-imbalance checks;
+- OpenAPI 3 response contract validation and conservative breaking-change detection;
+- adoption, benchmark and API-contract drill-down pages;
+- blocking Product Intelligence deterministic safety in GitHub Actions, Azure, `validate:final` and Release Compatibility;
+- v1.7.0 agent-ledger concurrency, dashboard teardown and browser-matrix hardening retained.
+
+This package is a **development candidate**, not a certified v1.8.0 release. Real adoption/differentiation/scale claims require measured evidence; example templates and synthetic planner output are non-certifying.
+
+See `docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md` through `docs/59-v1.8.0-CANDIDATE-HANDOFF.md`.
+
+---
+
+# TestigentAI v1.7.0 — Agentic Test Intelligence (Certified Historical Release)
+
+## Certified baseline
+
+`v1.6.1` was the certified baseline at v1.7.0 candidate creation. v1.7.0 subsequently certified at immutable commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4` after main CI/rerun plus main and tag-triggered Release Compatibility 5/5.
 
 ## v1.7.0 candidate scope
 
@@ -16,7 +41,7 @@
 - blocking Agentic Deterministic Safety jobs in GitHub Actions and Azure Pipelines;
 - certified v1.6.1 canary fixes carried forward: GitHub outcome normalization plus runtime canary paths.
 
-TestigentAI **v1.7.0 is certified and released** at immutable tagged commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Connected Node 22 validation, PR/main/rerun CI, main Release Compatibility 5/5 and tag-triggered Release Compatibility 5/5 all passed.
+Historical pre-certification note: those connected validation, PR/main/rerun and 5/5 compatibility gates subsequently passed; `v1.7.0` is now the immutable certified baseline for this v1.8.0 candidate.
 
 See `docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md` through `docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md`.
 
@@ -491,14 +516,3 @@ The current development candidate is **v1.6.1 — AI Operational Reliability**. 
 - matching GitHub Actions and Azure Pipelines policy boundaries.
 
 Connected Node 22 `npm run validate:final` has passed for v1.6.1. It remains a **candidate**, not a certified release, until PR/main/rerun CI and the 5/5 Release Compatibility matrix pass.
-
-## Connected deep-review hardening
-
-- Closed a reproducible dashboard parallel-execution teardown race without increasing timeouts, adding retries, skipping coverage or weakening assertions.
-- Strengthened CSV export validation to confirm the download actually completed.
-- Hardened Agent Decision Ledger concurrent writes using exclusive lock ownership and atomic JSONL publication while preserving immutable decision files.
-- Added real multi-process ledger regression coverage: 4/4 contract tests and 20/20 four-worker stress executions passed.
-- Final connected framework validation passed with 154 tests.
-- Security policy passed with zero high/critical advisories.
-- Release SBOM, manifest and offline verification were regenerated after hardening.
-- v1.7.0 subsequently completed PR/main reruns plus both main and tag-triggered 5/5 Release Compatibility validation and is now the immutable certified release.

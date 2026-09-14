@@ -1,0 +1,17 @@
+{
+  "templateOnly": true,
+  "id": "replace-me-false-heal-run",
+  "application": "replace-me-application",
+  "environment": "qa",
+  "datasetVersion": "replace-me-dataset-v1",
+  "environmentDescription": "replace with runner/browser/SUT description",
+  "methodology": "replace with seeded-defect methodology and acceptance boundary",
+  "scenarios": [
+    {
+      "id": "seeded-business-failure-001",
+      "injectedFault": "replace with injected genuine business failure",
+      "expectedBusinessOutcome": "FAIL",
+      "observedAutomationOutcome": "FAILED"
+    }
+  ]
+}

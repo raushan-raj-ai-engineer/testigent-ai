@@ -25,6 +25,11 @@ function main(): void {
     case 'heal': runNpm(['run', 'healing:maintenance'], selectedEnv()); return;
     case 'migrate': runNpm(['run', 'migration:assess', '--', ...args], selectedEnv()); return;
     case 'impact': runNpm(['run', 'change:impact', '--', ...args], selectedEnv()); return;
+    case 'adoption': runNpm(['run', 'adoption', '--', ...args], selectedEnv()); return;
+    case 'benchmark': runNpm(['run', 'benchmark', '--', ...args], selectedEnv()); return;
+    case 'false-heal': runNpm(['run', 'benchmark:false-heal', '--', ...args], selectedEnv()); return;
+    case 'scale': runNpm(['run', 'benchmark:scale', '--', ...args], selectedEnv()); return;
+    case 'api-contract': runNpm(['run', 'api:contract', '--', ...args], selectedEnv()); return;
     default: throw new Error(`Unknown qa command '${command}'. Run npm run qa -- help.`);
   }
 }
@@ -180,7 +185,12 @@ function printHelp(): void {
     `  npm run qa:agents -- [vscode|codex|claude|opencode]\n` +
     `  npm run qa:heal                              Build source-healing maintenance proposal\n` +
     `  npm run qa:migrate -- [path]                  Assess an existing suite for incremental adoption\n` +
-    `  npm run qa:impact -- [--base REF --head REF]   Explain changed-code test impact (advisory)\n`);
+    `  npm run qa:impact -- [--base REF --head REF]   Explain changed-code test impact (advisory)\n` +
+    `  npm run qa:adoption -- report                 Summarize measured pilot/adoption evidence\n` +
+    `  npm run qa:benchmark -- --input <file>         Compare versioned TestigentAI/plain-Playwright evidence\n` +
+    `  npm run qa:false-heal -- --input <file>        Persist/evaluate seeded false-heal evidence\n` +
+    `  npm run qa:scale -- plan --cases=2000          Exercise deterministic scale planning\n` +
+    `  npm run qa:api-contract -- summary --spec <f>  Inspect OpenAPI contract evidence\n`);
 }
 
 try { main(); }

@@ -1,65 +1,63 @@
-# TestigentAI v1.7.0 Certified Release Verification Report
+# TestigentAI v1.8.0 Candidate Verification Report
 
-## Previous certified baseline: v1.6.1
+## Certified baseline
 
-`v1.6.1` is the previous certified and immutable baseline. The annotated release tag points at commit `5c2c785` (the v1.6.1 AI-canary outcome-normalization hotfix merge). Certification proved:
+`v1.7.0 — Agentic Test Intelligence` is the immutable certified baseline at commit:
 
-- main CI PASS;
-- full main rerun PASS;
-- deterministic AI safety PASS;
-- live-provider degradation classified operationally without rewriting release correctness;
-- provider-health history and rerun-safe report provenance PASS;
-- final business bundle validation PASS;
-- Release Compatibility 5/5: Ubuntu Chromium, Ubuntu Firefox, Ubuntu WebKit, macOS WebKit and Windows Chromium.
+```text
+d9a228bc826e2bfaf4036535b61593ca25dad4b4
+```
 
-The previous `v1.6.0` certified tag remains immutable historical evidence.
+Certification evidence carried into this candidate includes main CI/rerun, deterministic agentic/AI safety, security with zero high/critical advisories at certification, main Release Compatibility 5/5 (`34779238283`) and tag-triggered Release Compatibility 5/5 (`34779586495`). The `v1.7.0` tag must not be moved or recreated.
 
-## v1.7.0 release scope
+## v1.8.0 candidate scope
 
-v1.7.0 introduces Agentic Test Intelligence while preserving the v1.6.1 release truth boundary:
+1. portfolio-level Adoption & Pilot Intelligence while retaining project-owned observation storage;
+2. opaque contributor aliases and PII rejection for pilot evidence;
+3. authoring, first-pass, approval, migration, triage, CI/cost and quality-rate metrics;
+4. immutable comparative benchmark evidence against an explicit baseline such as plain Playwright;
+5. product-version/commit/runtime/platform/methodology/raw-evidence/SHA-256 benchmark provenance;
+6. seeded false-heal benchmark evaluation;
+7. 500/2,000 deterministic planning diagnostics separated from real execution certification;
+8. measured scale evidence validation with duplicate/drop/shard-imbalance checks;
+9. OpenAPI 3 response contract validation with fail-closed status/content-type behavior;
+10. conservative OpenAPI breaking-change detection;
+11. adoption, benchmark/scale and API-contract dashboard drill-downs;
+12. browser-neutral Product Intelligence deterministic safety in `validate:final`, GitHub, Azure and Release Compatibility;
+13. carry-forward of v1.7.0 ledger concurrency, dashboard lifecycle and browser-matrix portability hardening.
 
-1. deterministic agentic trust contracts and explicit operational states;
-2. requirement-to-plan and deterministic change-impact planning;
-3. proposal-only generation with duplicate/project-boundary controls;
-4. deterministic generated-source review with mandatory human-approval boundary;
-5. immutable, run-scoped, sanitized Agent Decision Ledger;
-6. governed read/review-oriented TestigentAI MCP server;
-7. one-click `agentic-intelligence.html` reporting without altering deterministic business facts;
-8. blocking Agentic Deterministic Safety gates in GitHub Actions and Azure Pipelines;
-9. agentic deterministic safety included in the release compatibility matrix;
-10. certified v1.6.1 live-canary runtime-path and GitHub outcome-normalization fixes retained.
+## Claim discipline
 
-## Packaging-environment evidence
+The candidate does **not** claim measured customer adoption, authoring savings, maintenance savings, universal zero false-heal rate, or 2,000-test throughput from implementation alone.
 
-The standalone candidate package was assembled in an offline packaging environment. Dependency-independent checks executed successfully:
+- sparse pilot evidence => `INSUFFICIENT_EVIDENCE`;
+- synthetic comparative data => `INSUFFICIENT_EVIDENCE`;
+- synthetic scale planning => diagnostic only;
+- measured scale evidence with incomplete provenance => `INSUFFICIENT_EVIDENCE`;
+- benchmark template files are rejected by the ingestion CLIs until copied and completed.
 
-| Check | Result |
-| --- | --- |
-| Package version | `1.7.0` |
-| Release static contract | PASS |
-| Offline release inventory / secret scan | PASS |
-| Architecture boundary check | PASS |
-| Reusable export JSDoc audit | 233 declarations / 0 issues |
-| GitHub/Azure YAML parse | PASS |
-| New v1.7 TypeScript syntax parse | PASS |
-| New v1.7 semantic compile diagnostics | 0 candidate-file errors under external-module stubs |
-| Core executable agentic self-check | PASS |
-| Proposal-only generation proof | PASS |
-| Reviewer raw-Playwright / cross-project rejection | PASS |
-| Immutable/redacted decision ledger | PASS |
-| MCP traversal denial | PASS |
+A competitive metric becomes evidence-ready only with repeatable baseline-backed measurements across at least two representative applications. A scale claim applies only to the measured case count supplied.
 
-`npm ci`, Playwright-backed deterministic contract execution and the full repository `npm run validate:final` require the connected Node 22 environment and are intentionally not claimed by this offline package build.
+## Standalone packaging-environment validation
 
-## Historical connected validation requirements
+This ZIP is assembled in an offline packaging environment. The package may execute dependency-independent validation here, but `npm ci` cannot be claimed unless every locked dependency is available in the local npm cache.
 
-Run from the extracted candidate on Node 22:
+The final packaging report at the bottom of this file must record exactly which checks were executed; connected Playwright/type/runtime validation remains mandatory after applying the candidate to the user repository.
+
+## Connected validation required before certification
+
+From a clean feature branch based on certified v1.7.0:
 
 ```bash
 npm ci
 npx playwright install --with-deps chromium
 npm run validate:final
-npm run test:agentic:deterministic
+
+PW_BROWSERS=chromium npm run test:product-intelligence
+PW_BROWSERS=firefox npm run test:product-intelligence
+PW_BROWSERS=webkit npm run test:product-intelligence
+unset PW_BROWSERS
+
 npm run release:sbom
 npm run release:manifest
 npm run release:offline
@@ -70,36 +68,18 @@ Then require:
 
 - PR CI PASS and full PR rerun PASS;
 - main CI PASS and full main rerun PASS;
+- Product Intelligence Deterministic Safety PASS;
 - Agentic Deterministic Safety PASS;
 - deterministic AI safety PASS;
-- live-provider canary remains operational/non-blocking;
-- report merge/final business bundle PASS;
-- Release Compatibility 5/5 PASS.
+- final business bundle/report merge PASS;
+- Release Compatibility 5/5 PASS;
+- immutable `v1.8.0` annotated tag;
+- tag-triggered Release Compatibility 5/5 PASS.
 
-## Historical certification rule
+## Candidate rule
 
-The v1.7.0 candidate subsequently completed connected validation, PR/main validation, rerun proof and all five compatibility lanes. Immutable tag `v1.7.0` identifies certified commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Never move or recreate certified release tags.
+This ZIP is a **v1.8.0 development candidate**, not a certified release. Do not move/recreate `v1.7.0`, and do not create `v1.8.0` until the connected certification boundary above passes.
 
-## Connected feature-branch validation
+## Packaging validation result
 
-The final v1.7.0 feature-branch candidate completed connected validation successfully.
-
-Evidence:
-
-- `npm run validate:final`: PASS;
-- framework critical suite: **154 passed**;
-- dashboard concurrency stress: **30/30 passed**;
-- Agent Decision Ledger contract: **4/4 passed**;
-- Agent Decision Ledger multi-process stress: **20/20 passed**;
-- SBOM generation: PASS with **149 components**;
-- release manifest generation: PASS;
-- offline release verification: PASS;
-- security policy: PASS with **0 high/critical advisories**;
-- `git diff --check`: PASS.
-
-The connected review also closed two concurrency risks:
-
-1. dashboard HTTP-test teardown now releases the Playwright page before shutting down its local server and terminates test-owned keep-alive connections;
-2. Agent Decision Ledger concurrent writers are serialized and its JSONL view is published atomically with real child-process regression coverage.
-
-This feature-branch evidence was not sufficient by itself for certification. Certification was subsequently completed through PR/main reruns, main Release Compatibility 5/5 and tag-triggered Release Compatibility 5/5.
+_To be regenerated by the final packaging pass after all source/document changes are complete._
