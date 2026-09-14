@@ -1,85 +1,85 @@
-# TestigentAI v1.8.0 Candidate Verification Report
+# TestigentAI v1.9.0 Candidate Verification Report
 
-## Certified baseline
+## Certified baseline and target
 
-`v1.7.0 — Agentic Test Intelligence` is the immutable certified baseline at commit:
+`v1.8.0 — Evidence-Backed Product Intelligence` is the immutable certified source baseline at:
 
 ```text
-d9a228bc826e2bfaf4036535b61593ca25dad4b4
+1ad48d67661df02f51e5b6268a3f0d74bf2a182d
 ```
 
-Certification evidence carried into this candidate includes main CI/rerun, deterministic agentic/AI safety, security with zero high/critical advisories at certification, main Release Compatibility 5/5 (`34779238283`) and tag-triggered Release Compatibility 5/5 (`34779586495`). The `v1.7.0` tag must not be moved or recreated.
+The current post-release documentation main used as the upgrade ancestry boundary is:
 
-## v1.8.0 candidate scope
+```text
+6090b702a56078a546cfe6dd0d2bc2cbaba92dd6
+```
 
-1. portfolio-level Adoption & Pilot Intelligence while retaining project-owned observation storage;
-2. opaque contributor aliases and PII rejection for pilot evidence;
-3. authoring, first-pass, approval, migration, triage, CI/cost and quality-rate metrics;
-4. immutable comparative benchmark evidence against an explicit baseline such as plain Playwright;
-5. product-version/commit/runtime/platform/methodology/raw-evidence/SHA-256 benchmark provenance;
-6. seeded false-heal benchmark evaluation;
-7. 500/2,000 deterministic planning diagnostics separated from real execution certification;
-8. measured scale evidence validation with duplicate/drop/shard-imbalance checks;
-9. OpenAPI 3 response contract validation with fail-closed status/content-type behavior;
-10. conservative OpenAPI breaking-change detection;
-11. adoption, benchmark/scale and API-contract dashboard drill-downs;
-12. browser-neutral Product Intelligence deterministic safety in `validate:final`, GitHub, Azure and Release Compatibility;
-13. carry-forward of v1.7.0 ledger concurrency, dashboard lifecycle and browser-matrix portability hardening.
+v1.8 certification evidence already completed PR/main reruns plus main and tag-triggered Release Compatibility 5/5. The v1.8.0 tag must not be moved or recreated.
 
-## Claim discipline
+## v1.9.0 consolidated candidate scope
 
-The candidate does **not** claim measured customer adoption, authoring savings, maintenance savings, universal zero false-heal rate, or 2,000-test throughput from implementation alone.
+1. deterministic evidence-first Failure Intelligence taxonomy;
+2. stable normalized SHA-256-derived failure fingerprints and common-cause clustering;
+3. fail-honest `UNKNOWN` when evidence is insufficient;
+4. bounded, immutable, concurrent-writer-safe live failure history;
+5. secret/PII sanitization before failure signatures are persisted or returned;
+6. governed read-only MCP failure explanation and triage;
+7. 10 realistic isolated customer-showcase scenarios;
+8. one-click populated showcase for Failure, Adoption, Benchmark, Scale, API Contract, Healing and Agentic/MCP behavior;
+9. hard `SHOWCASE` / `synthetic=true` / `claimEligible=false` trust boundary;
+10. synthetic scale showcase remains `measured=false`;
+11. npm Bulk Advisory fail-closed fallback retained after the legacy quick-audit endpoint retirement;
+12. blocking Failure Intelligence deterministic safety in GitHub Actions, Azure Pipelines and Release Compatibility;
+13. reporting-surface feature freeze after v1.9 certification, except governed corrective work.
 
-- sparse pilot evidence => `INSUFFICIENT_EVIDENCE`;
-- synthetic comparative data => `INSUFFICIENT_EVIDENCE`;
-- synthetic scale planning => diagnostic only;
-- measured scale evidence with incomplete provenance => `INSUFFICIENT_EVIDENCE`;
-- benchmark template files are rejected by the ingestion CLIs until copied and completed.
+## Upgrade safety
 
-A competitive metric becomes evidence-ready only with repeatable baseline-backed measurements across at least two representative applications. A scale claim applies only to the measured case count supplied.
+`APPLY_UPGRADE.sh` refuses `main`/`master`, dirty worktrees by default, incorrect versions, a moved/recreated v1.8.0 tag, and branches that do not descend from the v1.8 post-release main boundary.
 
-## Standalone packaging-environment validation
+The overlay preserves authoritative historical/concurrency files from the target repository and verifies their SHA-256 digests are unchanged before and after applying the bundle. This prevents a full candidate ZIP from accidentally regressing previously certified v1.7/v1.8 hardening.
 
-This ZIP is assembled in an offline packaging environment. The package may execute dependency-independent validation here, but `npm ci` cannot be claimed unless every locked dependency is available in the local npm cache.
+## Showcase truth boundary
 
-The final packaging report at the bottom of this file must record exactly which checks were executed; connected Playwright/type/runtime validation remains mandatory after applying the candidate to the user repository.
+The customer showcase exists only to make the product understandable before a customer has accumulated real evidence. It is not customer execution evidence and cannot certify adoption, differentiation, scale, productivity, healing rate, release readiness or product-market claims.
 
-## Connected validation required before certification
+Every bundled scenario is `SHOWCASE`, synthetic and non-claimable. The validator rejects claim-eligible showcase data and rejects synthetic scale data marked as measured.
 
-From a clean feature branch based on certified v1.7.0:
+## Packaging-environment validation executed
+
+The final packaging environment completed these dependency-independent checks after all v1.9 source changes:
+
+- release static contract: PASS;
+- LF/CRLF release portability contract via `release:static`: included in connected gate and statically retained;
+- offline release inventory: PASS;
+- reusable-export comment audit: 266 declarations, 0 issues;
+- bash syntax for `APPLY_UPGRADE.sh` and `VERIFY_UPGRADE.sh`: PASS;
+- semantic TypeScript diagnostics over all v1.9-modified TS files, excluding only diagnostics caused by unavailable external/Node typings in this isolated environment: 0 product-code diagnostics;
+- TypeScript transpilation of the showcase dependency graph: PASS;
+- executable showcase validation: 10 scenarios, 9 unique incidents, 1 intentional `UNKNOWN`, `claimEligible=false`: PASS;
+- one-click showcase HTML/JSON generation: PASS;
+- npm Bulk Advisory payload/normalization and malformed-advisory fail-closed behavior: PASS;
+- v1.9 static CI/Azure/Release Compatibility gate contracts: PASS.
+
+The packaging container could not complete `npm ci` because registry access did not complete and its npm cache lacked all locked packages. Therefore this report does **not** claim connected dependency installation, full Playwright regression, live registry security query or browser execution from the packaging environment.
+
+## Connected validation required after applying to the user's repository
+
+From a clean feature branch created from current `main`:
 
 ```bash
 npm ci
-npx playwright install --with-deps chromium
+npm run typecheck
+npm run showcase:validate
+npm run test:failure-intelligence
 npm run validate:final
-
-PW_BROWSERS=chromium npm run test:product-intelligence
-PW_BROWSERS=firefox npm run test:product-intelligence
-PW_BROWSERS=webkit npm run test:product-intelligence
-unset PW_BROWSERS
-
 npm run release:sbom
 npm run release:manifest
 npm run release:offline
 npm run security:check
 ```
 
-Then require:
-
-- PR CI PASS and full PR rerun PASS;
-- main CI PASS and full main rerun PASS;
-- Product Intelligence Deterministic Safety PASS;
-- Agentic Deterministic Safety PASS;
-- deterministic AI safety PASS;
-- final business bundle/report merge PASS;
-- Release Compatibility 5/5 PASS;
-- immutable `v1.8.0` annotated tag;
-- tag-triggered Release Compatibility 5/5 PASS.
+Then require PR CI + full rerun, merge to main, main CI + full rerun, fresh Release Compatibility 5/5, exact-SHA equality, annotated `v1.9.0` tag, and tag-triggered Release Compatibility 5/5 before publishing a GitHub Release.
 
 ## Candidate rule
 
-This ZIP is a **v1.8.0 development candidate**, not a certified release. Do not move/recreate `v1.7.0`, and do not create `v1.8.0` until the connected certification boundary above passes.
-
-## Packaging validation result
-
-_To be regenerated by the final packaging pass after all source/document changes are complete._
+This ZIP is a **v1.9.0 development candidate**, not a certified v1.9.0 release. It must be applied and connected-certified without weakening existing gates. The reporting surface becomes feature-frozen only after v1.9 certification; later reporting changes are limited to approved bug/security/accessibility/compatibility/performance corrections unless a new architecture review explicitly reopens the surface.

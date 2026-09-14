@@ -1,19 +1,44 @@
-# TestigentAI v1.8.0 — Evidence-Backed Product Intelligence
+# TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase Candidate
+
+## Certified baseline
+
+`v1.8.0` is the immutable certified baseline at commit `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`. PR/main full reruns plus main and tag-triggered Release Compatibility passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Post-release documentation main `6090b702a56078a546cfe6dd0d2bc2cbaba92dd6` also passed CI without moving the v1.8.0 tag.
+
+## Consolidated v1.9.0 scope
+
+- deterministic Failure Intelligence with explicit root-cause taxonomy;
+- stable normalized incident fingerprints and common-cause clustering;
+- fail-honest `UNKNOWN` when evidence is insufficient;
+- live-only immutable failure-history trust boundary;
+- read-only MCP failure explanation and multi-failure triage;
+- 10 realistic customer-showcase scenarios with hard synthetic/non-claimable metadata;
+- one-click showcase of Failure, Adoption, Benchmark, Scale, API Contract, Healing and Agentic/MCP signals;
+- live dashboard links to Failure Intelligence and the separately labeled showcase;
+- npm Bulk Advisory security fallback carried forward for legacy quick-audit endpoint retirement;
+- reporting-surface freeze contract after v1.9 certification.
+
+This package is a **development candidate**, not a certified v1.9.0 release. The showcase exists to explain the product before a customer has accumulated real evidence; its values can never become customer/adoption/differentiation/scale/release claims.
+
+See `docs/60-v1.9.0-FAILURE-INTELLIGENCE.md` through `docs/64-v1.9.0-CANDIDATE-HANDOFF.md`.
+
+---
+
+# TestigentAI v1.8.0 — Evidence-Backed Product Intelligence (Certified Historical Release)
 
 ## Certified release
 
-TestigentAI v1.8.0 is the certified immutable release at commit:
+TestigentAI v1.8.0 is the immutable certified release at commit:
 
 `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`
 
 Certification evidence completed successfully:
 
-- Pull request CI and full rerun passed.
-- Main CI and full rerun passed.
-- Fresh main Release Compatibility passed the full 5/5 browser/OS matrix.
-- Local main, main CI and Release Compatibility resolved to the exact same commit.
-- Annotated tag `v1.8.0` resolves to the certified commit above.
-- Tag-triggered Release Compatibility run `34801403186` passed on the same exact commit.
+- PR CI and full rerun passed (`34784647923`, attempt 2).
+- Main CI and full rerun passed (`34800608332`, attempt 2).
+- Fresh main Release Compatibility passed 5/5 (`34801102017`).
+- Annotated tag `v1.8.0` resolves to the exact certified commit.
+- Tag-triggered Release Compatibility passed 5/5 on the same commit (`34801403186`).
+- Post-release documentation sync passed main CI (`34802423931`) and did not move the release tag.
 
 ## v1.8.0 scope
 
@@ -21,21 +46,13 @@ Certification evidence completed successfully:
 - Measured authoring, migration, triage, CI/cost and quality metrics with explicit truth boundaries.
 - Provenance-bound comparative benchmarks against explicit baselines such as plain Playwright.
 - Seeded false-heal measurement separated from valid recovery.
-- Deterministic 100/500/2,000-case scale planning.
-- Measured scale evidence evaluation with duplicate, drop and shard-imbalance checks.
+- Deterministic 100/500/2,000-case scale planning and measured scale-evidence evaluation.
 - OpenAPI 3 response contract validation and conservative breaking-change detection.
 - Adoption, benchmark and API-contract dashboard drill-down pages.
 - Blocking Product Intelligence deterministic safety in GitHub Actions, Azure Pipelines, `validate:final` and Release Compatibility.
-- v1.7.0 agent-ledger concurrency, dashboard teardown and browser-matrix hardening retained.
-- Security audit hardened against retirement/failure of the legacy npm quick-audit endpoint using a fail-closed Bulk Advisory fallback.
+- Security audit hardened with a fail-closed npm Bulk Advisory fallback after the legacy quick-audit endpoint stopped producing usable evidence.
 
-## Evidence and claim discipline
-
-Real adoption, differentiation, scale and productivity claims remain evidence-bound. Synthetic examples, planning diagnostics and templates do not become product or market claims unless the required measured evidence and provenance are present.
-
-## Previous certified baseline
-
-`v1.7.0` remains an immutable historical certified release at commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Its tag has not been moved or recreated.
+Real adoption, differentiation, scale and productivity claims remain evidence-bound; synthetic examples and planning diagnostics remain non-certifying.
 
 ---
 # TestigentAI v1.7.0 — Agentic Test Intelligence (Certified Historical Release)

@@ -18,7 +18,7 @@
 
 **One reusable core. Many products. Explicit project ownership. Business-readable quality reporting.**
 
-[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md)
+[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) · [v1.9 Failure Intelligence](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Current certified release: `v1.8.0` — Evidence-Backed Product Intelligence.** Immutable tag `v1.8.0` points to certified commit `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`. Pull-request CI/rerun, main CI/rerun, fresh main Release Compatibility and tag-triggered Release Compatibility all passed, including the full 5/5 Ubuntu/macOS/Windows browser matrix. `v1.7.0` remains the previous immutable certified historical release. Adoption, differentiation, scale and productivity claims remain evidence-bound; synthetic or insufficient evidence cannot become product claims.
+**Certified baseline: `v1.8.0` — Evidence-Backed Product Intelligence.** Immutable tag `v1.8.0` points to certified commit `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`; PR/main reruns and both main and tag-triggered 5/5 Release Compatibility matrices passed. **Development candidate: `v1.9.0` — Failure Intelligence & Customer Showcase.** It adds deterministic root-cause triage, stable incident fingerprinting, an isolated 10-scenario synthetic showcase, read-only MCP triage and the final reporting-surface freeze. Showcase data is always synthetic and non-claimable.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -42,6 +42,18 @@ npm run qa:api-contract -- breaking --previous=api/openapi.previous.yaml --curre
 ```
 
 These commands consume measured/versioned evidence. Example templates and synthetic scale planning are deliberately non-certifying; the dashboard reports `INSUFFICIENT_EVIDENCE` until the required provenance and pilot/measurement boundaries are satisfied.
+
+### v1.9 failure intelligence & customer showcase
+
+```bash
+npm run showcase
+npm run showcase:validate
+npm run test:failure-intelligence
+```
+
+`npm run showcase` creates a populated customer-demo dashboard from 10 realistic synthetic scenarios. Every showcase record is explicitly `SHOWCASE`, `synthetic=true` and `claimEligible=false`; it never enters live adoption, benchmark, release or failure-history evidence. Normal business dashboards now link to both live Failure Intelligence and the isolated synthetic showcase.
+
+After v1.9 certification, the reporting surface is feature-frozen as documented in [`docs/63-REPORTING-FREEZE.md`](docs/63-REPORTING-FREEZE.md); post-freeze reporting work is limited to governed corrective changes unless a new architecture review explicitly approves a surface change.
 
 ---
 
@@ -73,6 +85,8 @@ That rule makes the framework reusable across teams without turning it into a si
 | 🚦 **Execution governance** | Profiles, lanes, tags, workers, retries, sharding and zero-selection protection |
 | 🔄 **CI/CD** | GitHub Actions and Azure Pipelines with sequential, sharded and optional AI execution |
 | 📈 **Adoption & benchmark intelligence** | Pilot metrics, baseline-backed comparison, false-heal measurement and provenance-bound scale evidence |
+| 🧯 **Failure Intelligence** | Evidence-first root-cause taxonomy, stable incident fingerprints, blast-radius clustering and fail-honest UNKNOWN outcomes |
+| 🎬 **Customer showcase** | One-click synthetic demonstration of populated reporting with hard isolation from live/claim evidence |
 | 📜 **API contract intelligence** | OpenAPI 3 response validation and conservative breaking-change detection |
 | 🛡️ **Quality gates** | Architecture, scale, reporting, type, framework, documentation and security contracts |
 
@@ -1279,6 +1293,11 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | v1.8 scale certification | [`docs/57-v1.8.0-SCALE-CERTIFICATION.md`](docs/57-v1.8.0-SCALE-CERTIFICATION.md) |
 | v1.8 implementation/review closure | [`docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md`](docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md) |
 | v1.8 candidate handoff | [`docs/59-v1.8.0-CANDIDATE-HANDOFF.md`](docs/59-v1.8.0-CANDIDATE-HANDOFF.md) |
+| v1.9 Failure Intelligence | [`docs/60-v1.9.0-FAILURE-INTELLIGENCE.md`](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md) |
+| v1.9 Customer Showcase | [`docs/61-v1.9.0-CUSTOMER-SHOWCASE.md`](docs/61-v1.9.0-CUSTOMER-SHOWCASE.md) |
+| v1.9 review/release plan | [`docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md`](docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md) |
+| Reporting freeze | [`docs/63-REPORTING-FREEZE.md`](docs/63-REPORTING-FREEZE.md) |
+| v1.9 candidate handoff | [`docs/64-v1.9.0-CANDIDATE-HANDOFF.md`](docs/64-v1.9.0-CANDIDATE-HANDOFF.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |

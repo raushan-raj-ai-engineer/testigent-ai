@@ -199,6 +199,27 @@ for (const required of [
   'docs/57-v1.8.0-SCALE-CERTIFICATION.md',
   'docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md',
   'docs/59-v1.8.0-CANDIDATE-HANDOFF.md',
+  'docs/60-v1.9.0-FAILURE-INTELLIGENCE.md',
+  'docs/61-v1.9.0-CUSTOMER-SHOWCASE.md',
+  'docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md',
+  'docs/63-REPORTING-FREEZE.md',
+  'docs/64-v1.9.0-CANDIDATE-HANDOFF.md',
+  'src/framework/failure-intelligence/failure-intelligence.types.ts',
+  'src/framework/failure-intelligence/failure-normalizer.ts',
+  'src/framework/failure-intelligence/failure-fingerprint.ts',
+  'src/framework/failure-intelligence/deterministic-classifier.ts',
+  'src/framework/failure-intelligence/failure-analyzer.ts',
+  'src/framework/failure-intelligence/failure-history.store.ts',
+  'src/framework/failure-intelligence/report-adapter.ts',
+  'src/framework/failure-intelligence/showcase-policy.ts',
+  'src/framework/reporting/failure-intelligence.renderer.ts',
+  'src/framework/reporting/customer-showcase.renderer.ts',
+  'src/framework/security/npm-bulk-audit.ts',
+  'scripts/showcase.ts',
+  'showcase/customer-demo.json',
+  'tests/framework/failure-intelligence-contract.spec.ts',
+  'tests/framework/showcase-isolation-contract.spec.ts',
+  'tests/framework/reporting-freeze-contract.spec.ts',
   'src/framework/adoption/adoption.types.ts',
   'src/framework/adoption/adoption-store.ts',
   'src/framework/adoption/adoption-analyzer.ts',
@@ -295,6 +316,45 @@ try {
     if (!pkg.scripts?.[cliScript]) issues.push(`missing v1.8.0 CLI contract: ${cliScript}`);
   }
 
+  const failureIntelligenceScript = pkg.scripts?.['test:failure-intelligence'] ?? '';
+  for (const requiredContract of [
+    'failure-intelligence-contract.spec.ts',
+    'showcase-isolation-contract.spec.ts',
+    'reporting-freeze-contract.spec.ts'
+  ]) {
+    if (!failureIntelligenceScript.includes(requiredContract)) issues.push(`missing v1.9.0 failure-intelligence contract: ${requiredContract}`);
+  }
+  if (/--project(?:=|\s+)\S+/.test(failureIntelligenceScript)) issues.push('test:failure-intelligence must remain browser-neutral for release compatibility');
+  if (!finalValidationContract.includes('test:failure-intelligence')) issues.push('validate:final must enforce v1.9.0 failure-intelligence safety');
+  if (!pkg.scripts?.showcase || !pkg.scripts?.['showcase:validate'] || !pkg.scripts?.['qa:showcase']) issues.push('v1.9.0 must retain one-click customer showcase commands');
+
+  const showcasePolicy = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/showcase-policy.ts'), 'utf8');
+  const showcaseDataset = JSON.parse(fs.readFileSync(path.join(root, 'showcase/customer-demo.json'), 'utf8'));
+  const failureAnalyzer = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/failure-analyzer.ts'), 'utf8');
+  const failureHistory = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/failure-history.store.ts'), 'utf8');
+  const failureRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/failure-intelligence.renderer.ts'), 'utf8');
+  const showcaseRenderer = fs.readFileSync(path.join(root, 'src/framework/reporting/customer-showcase.renderer.ts'), 'utf8');
+  const businessDashboardWriter = fs.readFileSync(path.join(root, 'src/framework/reporting/business-dashboard.writer.ts'), 'utf8');
+  const reportingFreeze = fs.readFileSync(path.join(root, 'docs/63-REPORTING-FREEZE.md'), 'utf8');
+  const mcpRegistryV19 = fs.readFileSync(path.join(root, 'src/framework/mcp/tool-registry.ts'), 'utf8');
+  const bulkAudit = fs.readFileSync(path.join(root, 'src/framework/security/npm-bulk-audit.ts'), 'utf8');
+  const securityCheckV19 = fs.readFileSync(path.join(root, 'scripts/security-check.ts'), 'utf8');
+  if (!showcasePolicy.includes("mode !== 'SHOWCASE'") || !showcasePolicy.includes('claimEligible !== false') || !showcasePolicy.includes('value.scale.measured !== false')) issues.push('v1.9.0 showcase policy must fail closed on synthetic/claim/scale truth boundaries');
+  if (showcaseDataset.mode !== 'SHOWCASE' || showcaseDataset.synthetic !== true || showcaseDataset.claimEligible !== false || !Array.isArray(showcaseDataset.scenarios) || showcaseDataset.scenarios.length < 5 || showcaseDataset.scenarios.length > 10) issues.push('v1.9.0 customer showcase must contain 5-10 explicitly synthetic non-claimable scenarios');
+  if (showcaseDataset.scenarios?.some?.(scenario => scenario.evidenceMode !== 'SHOWCASE' || scenario.synthetic !== true || scenario.claimEligible !== false)) issues.push('every v1.9.0 showcase scenario must be SHOWCASE-scoped, synthetic and non-claimable');
+  if (!failureAnalyzer.includes("truthBoundary") || !failureHistory.includes('FAILURE_HISTORY_TRUST_BOUNDARY')) issues.push('v1.9.0 failure intelligence must preserve explicit truth boundary and keep showcase out of production history');
+  if (!failureRenderer.includes('SHOWCASE MODE') || !showcaseRenderer.includes('SHOWCASE MODE · SYNTHETIC DATA') || !showcaseRenderer.includes('claimEligible = false')) issues.push('v1.9.0 showcase rendering must make synthetic/non-claimable state obvious to customers');
+  if (!businessDashboardWriter.includes("'failure-intelligence.html'") || !businessDashboardWriter.includes("'showcase.html'") || businessDashboardWriter.includes('facts.results.push(...dataset.scenarios')) issues.push('v1.9.0 dashboard must expose live failure intelligence and isolated showcase without contaminating execution facts');
+  if (!reportingFreeze.includes('REPORTING SURFACE FREEZE') || !reportingFreeze.includes('bug/security/accessibility/compatibility/performance')) issues.push('v1.9.0 reporting surface freeze policy/exception boundary missing');
+  if (!mcpRegistryV19.includes('testigent_explain_failure') || !mcpRegistryV19.includes('testigent_triage_failures') || !mcpRegistryV19.includes("readOnlyHint: true")) issues.push('v1.9.0 MCP must expose governed read-only failure explain/triage tools');
+  const securityRegressionV18 = fs.readFileSync(path.join(root, 'tests/framework/review-hardening-contract.spec.ts'), 'utf8');
+  if (
+    !bulkAudit.includes('-/npm/v1/security/advisories/bulk') ||
+    !securityCheckV19.includes('SECURITY_AUDIT_SOURCE') ||
+    !securityCheckV19.includes('fetchBulkAdvisoryAudit') ||
+    !securityRegressionV18.includes('A8 npm Bulk Advisory fallback preserves installed versions and advisory identity')
+  ) issues.push('certified v1.8 fail-closed npm Bulk Advisory security contract must remain intact');
+
   const adoptionStore = fs.readFileSync(path.join(root, 'src/framework/adoption/adoption-store.ts'), 'utf8');
   const adoptionAnalyzer = fs.readFileSync(path.join(root, 'src/framework/adoption/adoption-analyzer.ts'), 'utf8');
   if (!adoptionStore.includes('readWorkspace') || !adoptionStore.includes("openSync(lock, 'wx'")) issues.push('v1.8.0 adoption evidence must remain portfolio-readable and lock-protected');
@@ -324,6 +384,7 @@ try {
   if (!compatibilityWorkflow.includes("- 'v*'")) issues.push('release compatibility workflow must run automatically for version tags as well as manual dispatch');
   if (!compatibilityWorkflow.includes('npm run test:agentic:deterministic')) issues.push('release compatibility matrix must exercise deterministic agentic safety on every supported OS/browser lane');
   if (!compatibilityWorkflow.includes('npm run test:product-intelligence')) issues.push('release compatibility matrix must exercise deterministic product intelligence on every supported OS/browser lane');
+  if (!compatibilityWorkflow.includes('npm run test:failure-intelligence')) issues.push('release compatibility matrix must exercise deterministic failure intelligence and showcase isolation on every supported OS/browser lane');
   if (!compatibilityWorkflow.includes('PW_BROWSERS: ${{ matrix.browser }}')) issues.push('release compatibility matrix must select each Playwright browser through PW_BROWSERS');
 } catch (error) {
   issues.push(`unable to validate deep-review scripts: ${error.message}`);
@@ -391,14 +452,18 @@ try {
   if (!githubWorkflow.includes("needs.test.result == 'success'") ||
       !githubWorkflow.includes("needs.ai-contracts.result == 'success'") ||
       !githubWorkflow.includes("needs.agentic-contracts.result == 'success'") ||
-      !githubWorkflow.includes("needs.product-intelligence-contracts.result == 'success'")) {
-    issues.push('Intermediate report cleanup must require successful core execution, deterministic AI safety, deterministic agentic safety, and deterministic product intelligence while live-provider canary remains non-blocking');
+      !githubWorkflow.includes("needs.product-intelligence-contracts.result == 'success'") ||
+      !githubWorkflow.includes("needs.failure-intelligence-contracts.result == 'success'")) {
+    issues.push('Intermediate report cleanup must require successful core execution, deterministic AI safety, deterministic agentic safety, and deterministic product intelligence, and deterministic failure intelligence while live-provider canary remains non-blocking');
   }
   if (!githubWorkflow.includes('Agentic Deterministic Safety') || !githubWorkflow.includes('npm run test:agentic:deterministic')) {
     issues.push('GitHub CI must keep deterministic agentic safety as a blocking release gate');
   }
   if (!githubWorkflow.includes('Product Intelligence Deterministic Safety') || !githubWorkflow.includes('npm run test:product-intelligence') || !githubWorkflow.includes('product-intelligence-contracts')) {
     issues.push('GitHub CI must keep v1.8.0 product-intelligence safety as a blocking release gate');
+  }
+  if (!githubWorkflow.includes('Failure Intelligence Deterministic Safety') || !githubWorkflow.includes('npm run test:failure-intelligence') || !githubWorkflow.includes('failure-intelligence-contracts')) {
+    issues.push('GitHub CI must keep v1.9.0 failure-intelligence/showcase safety as a blocking release gate');
   }
   if (!githubWorkflow.includes('blob-${APP}-${GITHUB_RUN_ID}-') ||
       !githubWorkflow.includes('business-${APP}-${GITHUB_RUN_ID}-') ||
@@ -431,6 +496,7 @@ try {
   if (!azureWorkflow.includes('SHARD_TOTAL > 1')) issues.push('Azure CI must omit Playwright --shard for sequential single-worker execution');
   if (!azureWorkflow.includes('Agentic Deterministic Safety') || !azureWorkflow.includes('npm run test:agentic:deterministic')) issues.push('Azure CI must keep deterministic agentic safety as a blocking release gate');
   if (!azureWorkflow.includes('Product Intelligence Deterministic Safety') || !azureWorkflow.includes('npm run test:product-intelligence')) issues.push('Azure CI must keep v1.8.0 product-intelligence safety as a blocking release gate');
+  if (!azureWorkflow.includes('Failure Intelligence Deterministic Safety') || !azureWorkflow.includes('npm run test:failure-intelligence')) issues.push('Azure CI must keep v1.9.0 failure-intelligence/showcase safety as a blocking release gate');
 } catch (error) {
   issues.push(`unable to validate CI report topology contracts: ${error.message}`);
 }

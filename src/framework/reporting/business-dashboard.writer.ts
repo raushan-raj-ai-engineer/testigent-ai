@@ -13,6 +13,11 @@ import { BenchmarkEvidenceStore } from '../benchmark/benchmark-store.js';
 import { analyzeBenchmarks } from '../benchmark/benchmark-analyzer.js';
 import { renderBenchmarkIntelligenceHtml } from './benchmark-intelligence.renderer.js';
 import { renderApiContractIntelligenceHtml, type ApiContractIntelligenceSummary } from './api-contract-intelligence.renderer.js';
+import { renderFailureIntelligenceHtml } from './failure-intelligence.renderer.js';
+import { renderCustomerShowcaseHtml } from './customer-showcase.renderer.js';
+import { failureSignalsFromExecutionFacts } from '../failure-intelligence/report-adapter.js';
+import { analyzeFailureIntelligence } from '../failure-intelligence/failure-analyzer.js';
+import { validateShowcaseDataset, type ShowcaseDataset } from '../failure-intelligence/showcase-policy.js';
 
 /**
  * Author: Raushan Raj
@@ -44,6 +49,9 @@ export function writeBusinessDashboard(outputDir: string, input: ExecutionFacts,
   const benchmarkSummary = analyzeBenchmarks(benchmarkStore.comparative(), benchmarkStore.scale(), benchmarkStore.falseHeal());
   fs.writeFileSync(path.join(outputDir, 'benchmark-intelligence.html'), renderBenchmarkIntelligenceHtml(benchmarkSummary), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'api-contract-intelligence.html'), renderApiContractIntelligenceHtml(readApiContractSummary(outputDir)), 'utf8');
+  const failureSummary = analyzeFailureIntelligence(failureSignalsFromExecutionFacts(facts));
+  fs.writeFileSync(path.join(outputDir, 'failure-intelligence.html'), renderFailureIntelligenceHtml(failureSummary), 'utf8');
+  writeCustomerShowcase(outputDir);
   fs.writeFileSync(path.join(outputDir, 'index.html'), renderBusinessHtml(facts, { ...options, agenticSummary }), 'utf8');
   return facts;
 }
@@ -124,3 +132,21 @@ function readApiContractSummary(outputDir: string): ApiContractIntelligenceSumma
     return { status: 'VALIDATION_FAILURES', generatedAt: new Date().toISOString(), breakingChanges: [], responseValidations: [] };
   }
 }
+
+function writeCustomerShowcase(outputDir: string): void {
+  const source = path.join(process.cwd(), 'showcase', 'customer-demo.json');
+  if (!fs.existsSync(source)) return;
+  try {
+    const dataset = JSON.parse(fs.readFileSync(source, 'utf8')) as ShowcaseDataset;
+    validateShowcaseDataset(dataset);
+    const summary = analyzeFailureIntelligence(dataset.scenarios);
+    if (summary.claimEligible) throw new Error('showcase unexpectedly became claim eligible');
+    fs.writeFileSync(path.join(outputDir, 'showcase.html'), renderCustomerShowcaseHtml(dataset, summary), 'utf8');
+    fs.writeFileSync(path.join(outputDir, 'showcase-failure-intelligence.html'), renderFailureIntelligenceHtml(summary, { showcase: true, backHref: './showcase.html' }), 'utf8');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fs.writeFileSync(path.join(outputDir, 'showcase.html'), `<!doctype html><html><body><h1>Showcase unavailable</h1><p>${escapeInlineHtml(message)}</p></body></html>`, 'utf8');
+  }
+}
+
+function escapeInlineHtml(value: string): string { return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] ?? char)); }

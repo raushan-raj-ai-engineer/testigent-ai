@@ -115,6 +115,17 @@ stages:
     - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run test:product-intelligence
       displayName: Run adoption, benchmark and API contract safety contracts
 
+  - job: FailureIntelligenceDeterministicSafety
+    displayName: Failure Intelligence Deterministic Safety
+    pool: { vmImage: ubuntu-latest }
+    steps:
+    - task: NodeTool@0
+      inputs: { versionSpec: '$(NODE_VERSION)' }
+    - script: npm ci
+      displayName: Install locked dependencies
+    - script: AI_ENABLED=false HEALING_AI_ENABLED=false npm run test:failure-intelligence
+      displayName: Run failure intelligence, showcase isolation and reporting-freeze contracts
+
   - job: PlaywrightShard
     pool: { vmImage: ubuntu-latest }
     strategy:
