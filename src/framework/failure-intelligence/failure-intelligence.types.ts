@@ -13,6 +13,8 @@ export interface FailureSignal {
   error?: string; endpoint?: string; httpStatus?: number; contractViolation?: string;
   authStatus?: 'VALID' | 'INVALID' | 'EXPIRED' | 'NOT_CONFIGURED'; environmentSignal?: string; dependencySignal?: string;
   testDataSignal?: string; locatorSignal?: string;
+  /** Heuristic-only legacy reporter category. Never treated as structured producer evidence. */
+  legacyCategoryHint?: 'TEST_DEFECT' | 'DATA_DEFECT' | 'ENVIRONMENT' | 'DEPENDENCY' | 'PRODUCT_DEFECT' | 'UNKNOWN';
   healingOutcome?: 'VALIDATED' | 'REJECTED' | 'SUGGESTED' | 'UNVERIFIED' | 'NONE';
   flaky?: boolean; retriesUsed?: number; knownDefectId?: string; consoleError?: string;
   traceRef?: string; screenshotRef?: string; evidenceMode?: FailureEvidenceMode; synthetic?: boolean; claimEligible?: boolean;

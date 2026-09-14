@@ -11,7 +11,7 @@ export class MssqlDatabaseClient implements DatabaseClient {
     this.poolPromise = new sql.ConnectionPool(buildMssqlPoolConfig()).connect();
   }
   async query<T extends Record<string, unknown>>(sqlText: string, params: unknown[] = []): Promise<T[]> {
-    const rewritten = rewriteQuestionMarkParameters(sqlText, index => `@p${index}`);
+    const rewritten = rewriteQuestionMarkParameters(sqlText, index => `@p${index}`, { preserveSqlServerBracketIdentifiers: true });
     if (rewritten.count !== params.length) throw new Error(`SQL_PARAMETER_COUNT: expected ${rewritten.count} value(s), received ${params.length}.`);
     const pool = await this.poolPromise;
     const request = pool.request();

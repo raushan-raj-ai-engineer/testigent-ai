@@ -18,4 +18,6 @@ export interface AgenticMcpContext {
   root: string;
   runId: string;
   environment: string;
+  /** Cooperative cancellation propagated from the active MCP JSON-RPC request. */
+  abortSignal?: AbortSignal;
 }

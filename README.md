@@ -18,7 +18,7 @@
 
 **One reusable core. Many products. Explicit project ownership. Business-readable quality reporting.**
 
-[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) · [v1.9 Failure Intelligence](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md) · [v1.9.1 Review Closure](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md)
+[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) · [v1.9 Failure Intelligence](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md) · [v1.9.1 Review Closure](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md) · [v1.9.2 Re-review Closure](docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Current certified release: `v1.9.1` — Corrective Hardening.** Immutable annotated tag `v1.9.1` resolves to certified commit `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. Main CI `34818484552` passed on the same SHA; fresh main Release Compatibility `34818923701` and tag-triggered Release Compatibility `34819277626` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. All 14 independent architecture-review findings have dedicated regression closure. `v1.9.0` remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
+**Current certified release: `v1.9.1` — Corrective Hardening.** Immutable annotated tag `v1.9.1` resolves to `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. Main CI `34818484552` passed on the same SHA; main Release Compatibility `34818923701` and tag-triggered Release Compatibility `34819277626` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Post-release documentation main `bcfa7d8905b51ba66673478e43eab3c5ea4f9fdc` passed CI `34826308673` without moving the tag. **Current corrective re-review candidate: `v1.9.2`** addresses every remaining code-level issue reproduced by the independent v1.9.1 re-review while keeping the reporting feature freeze active. `v1.9.0` remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -1353,3 +1353,5 @@ Maintained as an intelligent quality-engineering platform for scalable multi-pro
 
 | v1.9.1 independent review closure | [`docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md`](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md) |
 | v1.9.1 review validation | [`docs/66-v1.9.1-REVIEW-VALIDATION.md`](docs/66-v1.9.1-REVIEW-VALIDATION.md) |
+| v1.9.2 independent re-review closure | [`docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md`](docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md) |
+| v1.9.2 validation handoff | [`docs/68-v1.9.2-VALIDATION-HANDOFF.md`](docs/68-v1.9.2-VALIDATION-HANDOFF.md) |

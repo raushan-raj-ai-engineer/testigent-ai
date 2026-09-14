@@ -1,67 +1,51 @@
-# TestigentAI v1.9.1 — Certified Verification Report
-
-## v1.9.1 certified result
-
-TestigentAI v1.9.1 is certified at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
-
-- Main CI `34818484552` — PASS
-- Main Release Compatibility `34818923701` — 5/5 PASS
-- Tag-triggered Release Compatibility `34819277626` — 5/5 PASS
-- Full framework regression — 201/201 PASS
-- Independent review closure — 14/14 PASS
-- Security — 0 high/critical advisories
-- Customer Showcase remains synthetic and non-claimable
-- Reporting feature freeze remains active
-
-The previous `v1.9.0` certified tag remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
-
+# TestigentAI v1.9.2 Independent Re-review Corrective Candidate — Verification Report
 
 ## Certified baseline
 
-`v1.9.0` is the current immutable certified release at `6a32718353022da4e5ce51dace59e29692340913`. Its main Release Compatibility `34809207686` and tag-triggered Release Compatibility `34809446255` passed 5/5. Post-release documentation main is `cc4350319b2f37c0f645744478f715504ecc1264` with CI `34810348016` green.
+`v1.9.1` remains the current immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. Main CI `34818484552`, main Release Compatibility `34818923701` 5/5 and tag-triggered Release Compatibility `34819277626` 5/5 all passed for that release. Post-release docs main `bcfa7d8905b51ba66673478e43eab3c5ea4f9fdc` passed CI `34826308673` without moving the tag.
 
-## v1.9.1 corrective scope
+## Independent re-review input
 
-This candidate closes the 14 findings from the independent v1.9.0 architecture/product review. The detailed finding-to-fix map and acceptance coverage are in `docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md`.
+- Review: `docs/reviews/TestigentAI-v1.9.1-Independent-Re-review.md`
+- Reviewed v1.9.1 input ZIP SHA-256 (reviewer record): `5488d96db20a841aaa4eae6f4a5754498c0260886464965ed9268d40bc53bbcf`
+- Bundled independent re-review document SHA-256: `2918abb5f587f806bf29653c0fe3048d8966dd2d6749892f3e6e36272c354a79`
+- Reviewed certified source commit recorded in the review ZIP comment: `38e2406c73608cabcf42a8ff0ea8e35e745dea23`
 
-Packaging-environment checks in this artifact are dependency-independent unless explicitly stated. A clean connected Node 22 `npm ci && npm run validate:final` is mandatory before certification.
+## v1.9.2 corrective scope
 
-## Upgrade safety
+The candidate addresses the re-review's remaining production-boundary findings without weakening assertions or swallowing conflicts:
 
-`APPLY_UPGRADE.sh` refuses `main`/`master`, dirty worktrees by default, incorrect versions, a moved/recreated v1.8.0 tag, and branches that do not descend from the certified v1.9.0/post-release documentation boundary.
+- R04 selected-project canonical and symlink containment, including future targets and promotion revalidation;
+- R01 OpenAPI boolean schemas, null/enum, `$ref` siblings and fail-closed unsupported semantics;
+- R02 parameter case rules, directional bounds and explicit incomplete-comparison outcomes;
+- R09 stable/idempotent evidence materialization and occurrence history across report regeneration;
+- R07 provenance-safe legacy heuristic handling;
+- R10 dialect-correct parameter preparation for PostgreSQL and SQL Server cases reproduced by the reviewer;
+- R03 strict TLS encryption and SSL-mode validation;
+- R12 explicit MCP lifecycle, in-flight cancellation and pre-newline byte budgets;
+- R11 real LibreOffice spreadsheet viewer qualification.
 
-The overlay preserves authoritative historical/concurrency files from the target repository and verifies their SHA-256 digests are unchanged before and after applying the bundle. This prevents a full candidate ZIP from accidentally regressing previously certified historical hardening while allowing the explicit v1.9.1 corrective files to change.
+## Packaging-environment evidence
 
-## Showcase truth boundary
+Executed on Node.js 22.16.0:
 
-The customer showcase exists only to make the product understandable before a customer has accumulated real evidence. It is not customer execution evidence and cannot certify adoption, differentiation, scale, productivity, healing rate, release readiness or product-market claims.
+- changed TypeScript syntax/transform scan: 25 files, 0 syntax diagnostics;
+- GitHub Action full-SHA policy: PASS;
+- release static check: PASS;
+- LF/CRLF portability contract: PASS;
+- offline release inventory check: PASS;
+- production-module expanded re-review probes: 13/13 PASS;
+- same complete business dashboard bundle generated twice: stable evidence references, one history occurrence, complete index: PASS;
+- real child-process stdio MCP probe: oversized unterminated frame `-32001`, concurrency saturation `-32000`, active cancellation `-32800`: PASS;
+- database adapter probe: PostgreSQL ordinary/native parameters, SQL Server bracket identifier, verified TLS builders: PASS;
+- LibreOffice headless CSV -> XLSX -> reopen/export qualification: 7 dangerous cases, 0 formula nodes, round-trip PASS.
 
-Every bundled scenario is `SHOWCASE`, synthetic and non-claimable. The validator rejects claim-eligible showcase data and rejects synthetic scale data marked as measured.
+## Packaging limitation
 
-## Packaging-environment validation executed
+The packaging environment could not complete a fresh `npm ci` because outbound registry/DNS access was unavailable. Therefore this ZIP deliberately does **not** claim a fresh dependency-backed TypeScript typecheck, Playwright full regression, live database certificate matrix, live registry security audit, or cross-platform browser compatibility run from this environment.
 
-See `docs/66-v1.9.1-REVIEW-VALIDATION.md` for the exact packaging-environment evidence and limitations. The final dependency-independent checks include static/offline release gates, 0 TypeScript syntax diagnostics, 279/279 reusable-export documentation contracts, a 14/14 executable R01–R14 counterexample probe, R13 replay-repair verification, and 0 hardening-scope semantic TypeScript errors after excluding only unavailable external package declarations.
+Those connected gates remain mandatory before any v1.9.2 certification or tag. No test was skipped, weakened or marked successful to hide this limitation.
 
-The packaging environment could not complete `npm ci` because registry/DNS access was unavailable. Therefore this report does **not** claim a fresh full Playwright regression, live database matrix, browser matrix, or live registry security query from the packaging environment. Those connected gates remain mandatory before v1.9.1 certification.
+## Release rule
 
-## Connected validation required after applying to the user's repository
-
-From a clean feature branch created from current `main`:
-
-```bash
-npm ci
-npm run typecheck
-npm run showcase:validate
-npm run test:failure-intelligence
-npm run validate:final
-npm run release:sbom
-npm run release:manifest
-npm run release:offline
-npm run security:check
-```
-
-Then require PR CI + full rerun, merge to main, main CI + full rerun, fresh Release Compatibility 5/5, exact-SHA equality, annotated `v1.9.1` tag, and tag-triggered Release Compatibility 5/5 before publishing a v1.9.1 GitHub Release.
-
-## Candidate rule
-
-This ZIP is a **v1.9.1 corrective hardening candidate**, not a certified replacement for v1.9.0. It must be applied and connected-certified without weakening existing gates. The reporting surface is feature-frozen after v1.9.0 certification; later reporting changes are limited to approved bug/security/accessibility/compatibility/performance corrections unless a new architecture review explicitly reopens the surface.
+This full ZIP is a **v1.9.2 corrective review candidate**, not a certified v1.9.2 release. Apply it on a feature branch descended from the v1.9.1-certified line, run `npm ci`, `npm run release:rereview:qualification`, the full CI suite and 5/5 compatibility chain, and only then consider a new immutable tag.

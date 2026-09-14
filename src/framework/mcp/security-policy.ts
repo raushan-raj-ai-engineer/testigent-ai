@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { assertSafeProjectName, normalizeSafeRelativePath, resolveContainedPath } from '../agentic/policy/path-policy.js';
+import { assertSafeProjectName, normalizeSafeRelativePath, resolveProjectScopedPath } from '../agentic/policy/path-policy.js';
 
 const REQUIREMENT_EXTENSIONS = new Set(['.md', '.json', '.csv', '.xlsx', '.xls']);
 
@@ -11,12 +11,12 @@ export function resolveMcpRequirementPath(root: string, project: string, require
   if (/^[a-z]+:\/\//i.test(normalized) || /^(?:JIRA|AZURE|GITHUB):/i.test(normalized)) {
     throw new Error('Agentic MCP requirement planning is local-only by default; remote connector sources are not exposed through this MCP boundary.');
   }
-  const relative = normalized.startsWith(`projects/${safeProject}/requirements/`)
-    ? normalized
-    : `projects/${safeProject}/requirements/${normalized}`;
+  const projectPrefix = `projects/${safeProject}/requirements/`;
+  const requirementRelative = normalized.startsWith(projectPrefix) ? normalized.slice(projectPrefix.length) : normalized;
+  const relative = `requirements/${requirementRelative}`;
   if (!REQUIREMENT_EXTENSIONS.has(path.extname(relative).toLowerCase())) throw new Error(`Unsupported MCP requirement source: ${path.extname(relative) || '<none>'}.`);
-  const absolute = resolveContainedPath(root, relative, { mustExist: true, mustBeFile: true });
-  const requirementRoot = resolveContainedPath(root, `projects/${safeProject}/requirements`, { mustExist: true });
+  const requirementRoot = resolveProjectScopedPath(root, safeProject, 'requirements', { mustExist: true });
+  const absolute = resolveProjectScopedPath(root, safeProject, relative, { mustExist: true, mustBeFile: true });
   const relation = path.relative(requirementRoot, absolute);
   if (relation === '..' || relation.startsWith(`..${path.sep}`) || path.isAbsolute(relation)) throw new Error('Requirement source escapes the selected project requirement directory.');
   if (!fs.statSync(absolute).isFile()) throw new Error(`Requirement source not found: ${relative}`);

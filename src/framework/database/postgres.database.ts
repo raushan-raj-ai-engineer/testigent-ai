@@ -1,6 +1,6 @@
 import type { DatabaseClient } from './database.client';
 import { resolveDatabaseTlsPolicy } from './database-tls.js';
-import { rewriteQuestionMarkParameters } from './sql-placeholder.js';
+import { preparePostgresSql } from './sql-placeholder.js';
 
 /** PostgreSQL adapter implementing the common database contract with verified TLS by default. */
 export class PostgresDatabaseClient implements DatabaseClient {
@@ -11,8 +11,7 @@ export class PostgresDatabaseClient implements DatabaseClient {
     this.pool = new Pool(buildPostgresPoolConfig());
   }
   async query<T extends Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
-    const rewritten = rewriteQuestionMarkParameters(sql, index => `$${index + 1}`, { preservePostgresJsonOperators: true });
-    if (rewritten.count !== params.length) throw new Error(`SQL_PARAMETER_COUNT: expected ${rewritten.count} value(s), received ${params.length}.`);
+    const rewritten = preparePostgresSql(sql, params.length);
     const result = await this.pool.query(rewritten.sql, params);
     return result.rows as T[];
   }

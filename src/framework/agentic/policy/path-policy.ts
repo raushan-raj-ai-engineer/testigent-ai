@@ -52,6 +52,56 @@ export function resolveWorkspacePath(root: string, relativePath: string): string
   return resolveContainedPath(root, relativePath);
 }
 
+/**
+ * Resolves a path inside one selected project. Project, boundary-directory and existing descendant symlinks/junctions
+ * are rejected so one project can never alias another project's files while still remaining inside the repository.
+ */
+export function resolveProjectScopedPath(
+  root: string,
+  project: string,
+  projectRelativePath: string,
+  options: { mustExist?: boolean; mustBeFile?: boolean } = {},
+): string {
+  const safeProject = assertSafeProjectName(project);
+  const normalized = normalizeSafeRelativePath(projectRelativePath);
+  const workspaceRoot = path.resolve(root);
+  const projectsRoot = path.join(workspaceRoot, 'projects');
+  const projectRoot = path.join(projectsRoot, safeProject);
+
+  assertExistingDirectoryBoundary(workspaceRoot, 'workspace root');
+  assertExistingDirectoryBoundary(projectsRoot, 'projects root');
+  assertExistingDirectoryBoundary(projectRoot, `selected project '${safeProject}'`);
+
+  const canonicalWorkspace = fs.realpathSync.native(workspaceRoot);
+  const canonicalProjects = fs.realpathSync.native(projectsRoot);
+  const canonicalProject = fs.realpathSync.native(projectRoot);
+  assertInside(canonicalWorkspace, canonicalProjects, 'projects');
+  assertInside(canonicalProjects, canonicalProject, `projects/${safeProject}`);
+
+  const absolute = path.resolve(projectRoot, normalized);
+  assertInside(projectRoot, absolute, `projects/${safeProject}/${normalized}`);
+  assertNoSymlinkComponents(projectRoot, absolute, `projects/${safeProject}/${normalized}`);
+
+  if (options.mustExist && !fs.existsSync(absolute)) throw new Error(`Project path does not exist: 'projects/${safeProject}/${normalized}'.`);
+  if (fs.existsSync(absolute)) {
+    const canonical = fs.realpathSync.native(absolute);
+    assertInside(canonicalProject, canonical, `projects/${safeProject}/${normalized}`);
+    if (options.mustBeFile && !fs.statSync(canonical).isFile()) throw new Error(`Project path is not a file: 'projects/${safeProject}/${normalized}'.`);
+    return canonical;
+  }
+
+  let ancestor = path.dirname(absolute);
+  while (!fs.existsSync(ancestor)) {
+    const parent = path.dirname(ancestor);
+    if (parent === ancestor || !isInsideOrEqual(projectRoot, parent)) throw new Error(`Unable to resolve safe project ancestor for 'projects/${safeProject}/${normalized}'.`);
+    ancestor = parent;
+  }
+  assertNoSymlinkComponents(projectRoot, ancestor, `projects/${safeProject}/${normalized}`);
+  const canonicalAncestor = fs.realpathSync.native(ancestor);
+  assertInside(canonicalProject, canonicalAncestor, `projects/${safeProject}/${normalized}`);
+  return absolute;
+}
+
 /** Validates an agent-generated target and returns a canonical-safe project-relative path. */
 export function assertAgenticTargetPath(root: string, project: string, targetPath: string): string {
   const safeProject = assertSafeProjectName(project);
@@ -62,11 +112,43 @@ export function assertAgenticTargetPath(root: string, project: string, targetPat
   const firstSegment = projectRelative.split('/')[0];
   if (!AGENTIC_PROJECT_DIRS.has(firstSegment)) throw new Error(`Agentic target must remain inside ${[...AGENTIC_PROJECT_DIRS].join(', ')} for projects/${safeProject}.`);
   if (!/\.(?:ts|tsx|js|mjs|cjs|json|ya?ml)$/i.test(normalized)) throw new Error(`Unsupported agentic target file type: '${targetPath}'.`);
-  resolveContainedPath(root, normalized);
+  resolveProjectScopedPath(root, safeProject, projectRelative);
   return normalized;
 }
 
-function assertInside(root: string, candidate: string, source: string): void {
+/** Revalidates any projects/<project>/... path at a mutation/promotion boundary. */
+export function resolveProjectMutationPath(root: string, workspaceRelativePath: string): string {
+  const normalized = normalizeSafeRelativePath(workspaceRelativePath);
+  const parts = normalized.split('/');
+  if (parts[0] !== 'projects' || parts.length < 3) return resolveWorkspacePath(root, normalized);
+  const project = assertSafeProjectName(parts[1]!);
+  return resolveProjectScopedPath(root, project, parts.slice(2).join('/'));
+}
+
+function assertExistingDirectoryBoundary(candidate: string, label: string): void {
+  if (!fs.existsSync(candidate)) throw new Error(`Project boundary does not exist: ${label}.`);
+  const stat = fs.lstatSync(candidate);
+  if (stat.isSymbolicLink()) throw new Error(`Project boundary cannot be a symlink/junction: ${label}.`);
+  if (!stat.isDirectory()) throw new Error(`Project boundary is not a directory: ${label}.`);
+}
+
+function assertNoSymlinkComponents(projectRoot: string, candidate: string, source: string): void {
+  const relative = path.relative(projectRoot, candidate);
+  if (relative === '') return;
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error(`Project path escapes selected project boundary: '${source}'.`);
+  let cursor = projectRoot;
+  for (const segment of relative.split(path.sep)) {
+    cursor = path.join(cursor, segment);
+    if (!fs.existsSync(cursor)) break;
+    if (fs.lstatSync(cursor).isSymbolicLink()) throw new Error(`Project path crosses a symlink/junction boundary: '${source}'.`);
+  }
+}
+
+function isInsideOrEqual(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
-  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error(`Workspace path escapes canonical boundary: '${source}'.`);
+  return relative === '' || (!(relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)));
+}
+
+function assertInside(root: string, candidate: string, source: string): void {
+  if (!isInsideOrEqual(root, candidate)) throw new Error(`Workspace path escapes canonical boundary: '${source}'.`);
 }

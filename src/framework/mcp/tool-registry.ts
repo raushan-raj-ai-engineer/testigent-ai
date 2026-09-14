@@ -8,7 +8,7 @@ import { orchestrateGenerationProposal } from '../agentic/orchestration/agentic-
 import { AgentDecisionLedger } from '../agentic/evidence/agent-decision-ledger.js';
 import type { AgenticMcpContext, McpToolDefinition } from './contracts.js';
 import { assertExactObjectKeys, boundedMcpString, boundedMcpStringArray, resolveMcpRequirementPath } from './security-policy.js';
-import { assertSafeProjectName, resolveWorkspacePath } from '../agentic/policy/path-policy.js';
+import { assertSafeProjectName, resolveProjectScopedPath, resolveWorkspacePath } from '../agentic/policy/path-policy.js';
 import type { GeneratedArtifactKind } from '../agentic/contracts/generation.types.js';
 import { analyzeFailureIntelligence } from '../failure-intelligence/failure-analyzer.js';
 import { classifyFailureDeterministically } from '../failure-intelligence/deterministic-classifier.js';
@@ -72,6 +72,7 @@ export function listAgenticMcpTools(): McpToolDefinition[] {
 
 /** Invokes one governed agentic MCP tool and returns structured JSON-safe output. */
 export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, context: AgenticMcpContext): Promise<unknown> {
+  assertMcpNotCancelled(context);
   const args = strictArguments(rawArguments);
   if (name === 'testigent_list_projects') { assertExactObjectKeys(args, [], 'testigent_list_projects arguments'); return listProjects(context.root); }
   if (name === 'testigent_explain_failure') { assertExactObjectKeys(args, ['signal'], 'testigent_explain_failure arguments'); return classifyFailureDeterministically(parseFailureSignal(args.signal)); }
@@ -85,7 +86,9 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const file = resolveMcpRequirementPath(context.root, project, boundedMcpString(args.requirementFile, 'requirementFile', 500));
     const requirement = await loadRequirement(file);
+    assertMcpNotCancelled(context);
     const analysis = await analyzeRequirement(context.root, requirement);
+    assertMcpNotCancelled(context);
     if (analysis.applicationResolution?.app && analysis.applicationResolution.app !== project) throw new Error(`Requirement resolved to '${analysis.applicationResolution.app}' but MCP request selected '${project}'.`);
     const plan = buildAgenticTestPlan({ ...analysis, applicationResolution: { ...(analysis.applicationResolution ?? { source: 'unresolved', reason: 'MCP project scope', candidates: [] }), app: project } });
     const ledger = AgentDecisionLedger.forRun(context.root, project, context.environment, context.runId);
@@ -97,7 +100,9 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const changedPaths = boundedMcpStringArray(args.changedPaths, 'changedPaths', 100, 500);
     for (const changed of changedPaths) resolveWorkspacePath(context.root, changed);
+    assertMcpNotCancelled(context);
     const result = analyzeAgenticImpact(context.root, project, changedPaths);
+    assertMcpNotCancelled(context);
     const ledger = AgentDecisionLedger.forRun(context.root, project, context.environment, context.runId);
     ledger.append({ runId: context.runId, application: project, environment: context.environment, agent: 'planner', operation: 'analyze-impact', state: result.state, rationale: result.rationale, confidence: result.affectedTests[0]?.score ?? null, policyPassed: true, deterministicValidationPassed: true, humanApprovalRequired: result.state !== 'ACCEPTED', humanApproved: false, evidence: result.evidence, affectedArtifacts: result.affectedTests.map(item => item.testPath) });
     return result;
@@ -106,7 +111,7 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     assertExactObjectKeys(args, ['project', 'query'], 'testigent_discover_tests arguments');
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const query = typeof args.query === 'string' ? args.query.trim().toLowerCase().slice(0, 200) : '';
-    return discoverTests(context.root, project, query);
+    return discoverTests(context.root, project, query, context.abortSignal);
   }
   if (name === 'testigent_review_generation') {
     assertExactObjectKeys(args, ['project', 'planId', 'requirementRef', 'kind', 'targetPath', 'content', 'rationale', 'confidence', 'provider', 'model'], 'testigent_review_generation arguments');
@@ -116,6 +121,7 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     const ledger = AgentDecisionLedger.forRun(context.root, project, context.environment, context.runId);
     const confidence = args.confidence === null || args.confidence === undefined ? null : Number(args.confidence);
     if (confidence !== null && (!Number.isFinite(confidence) || confidence < 0 || confidence > 1)) throw new Error('confidence must be null or a number between 0 and 1.');
+    assertMcpNotCancelled(context);
     return orchestrateGenerationProposal(context.root, ledger, { runId: context.runId, application: project, environment: context.environment }, {
       project,
       planId: boundedMcpString(args.planId, 'planId', 160),
@@ -151,11 +157,12 @@ function listProjects(root: string): Array<{ project: string; displayName?: stri
   }).sort((a: { project: string }, b: { project: string }) => a.project.localeCompare(b.project));
 }
 
-function discoverTests(root: string, project: string, query: string): Array<{ path: string; tags: string[] }> {
-  const testsRoot = resolveWorkspacePath(root, `projects/${project}/tests`);
+function discoverTests(root: string, project: string, query: string, abortSignal?: AbortSignal): Array<{ path: string; tags: string[] }> {
+  const testsRoot = resolveProjectScopedPath(root, project, 'tests', { mustExist: true });
   const walk = (directory: string): string[] => fs.existsSync(directory) ? fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry: { name: string; isDirectory(): boolean }) => entry.isDirectory() ? walk(path.join(directory, entry.name)) : [path.join(directory, entry.name)]) : [];
   const output: Array<{ path: string; tags: string[] }> = [];
   for (const file of walk(testsRoot).filter(candidate => /\.spec\.(?:ts|js)$/.test(candidate))) {
+    if (abortSignal?.aborted) throw abortError();
     const text = fs.readFileSync(file, 'utf8');
     const relative = path.relative(root, file).replaceAll('\\', '/');
     if (query && !`${relative}\n${text}`.toLowerCase().includes(query)) continue;
@@ -164,6 +171,10 @@ function discoverTests(root: string, project: string, query: string): Array<{ pa
   }
   return output.sort((a, b) => a.path.localeCompare(b.path));
 }
+
+
+function assertMcpNotCancelled(context: AgenticMcpContext): void { if (context.abortSignal?.aborted) throw abortError(); }
+function abortError(): Error { const error = new Error('MCP request cancelled.'); error.name = 'AbortError'; return error; }
 
 const FAILURE_SIGNAL_FIELDS = ['scenarioId', 'title', 'application', 'project', 'businessStep', 'error', 'endpoint', 'httpStatus', 'contractViolation', 'authStatus', 'environmentSignal', 'dependencySignal', 'testDataSignal', 'locatorSignal', 'healingOutcome', 'flaky', 'retriesUsed', 'knownDefectId', 'consoleError', 'traceRef', 'screenshotRef'] as const;
 

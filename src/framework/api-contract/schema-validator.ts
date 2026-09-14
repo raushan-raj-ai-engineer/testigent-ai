@@ -1,5 +1,5 @@
 import { resolveSchema } from './openapi-loader.js';
-import type { OpenApiDocument, OpenApiSchema, OpenApiSchemaType, SchemaViolation } from './openapi.types.js';
+import type { OpenApiDocument, OpenApiSchema, OpenApiSchemaLike, OpenApiSchemaType, SchemaViolation } from './openapi.types.js';
 
 const SUPPORTED_SCHEMA_KEYS = new Set([
   '$ref', 'type', 'nullable', 'required', 'properties', 'items', 'enum', 'oneOf', 'allOf', 'anyOf',
@@ -9,14 +9,19 @@ const SUPPORTED_SCHEMA_KEYS = new Set([
 ]);
 
 /** Deterministic OpenAPI schema validation that fails closed when a schema uses unsupported keywords. */
-export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSchema, value: unknown, rootPath = '$'): SchemaViolation[] {
-  const resolved = resolveSchema(document, schema);
+export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSchemaLike, value: unknown, rootPath = '$'): SchemaViolation[] {
+  if (typeof schema === 'boolean') {
+    if (/^3\.0\./.test(document.openapi)) return [{ path: rootPath, rule: 'unsupported', message: 'Boolean schemas are only supported by OpenAPI 3.1.' }];
+    return schema ? [] : [{ path: rootPath, rule: 'falseSchema', message: 'Boolean false schema rejects every value.' }];
+  }
+
+  const resolvedLike = resolveSchema(document, schema);
+  if (typeof resolvedLike === 'boolean') return validateSchemaValue(document, resolvedLike, value, rootPath);
+  const resolved = resolvedLike as OpenApiSchema;
   const violations: SchemaViolation[] = [];
 
   for (const key of Object.keys(resolved)) {
-    if (!SUPPORTED_SCHEMA_KEYS.has(key)) {
-      violations.push({ path: rootPath, rule: 'unsupported', message: `Unsupported schema keyword '${key}' cannot be validated safely.` });
-    }
+    if (!SUPPORTED_SCHEMA_KEYS.has(key)) violations.push({ path: rootPath, rule: 'unsupported', message: `Unsupported schema keyword '${key}' cannot be validated safely.` });
   }
 
   const is31 = /^3\.1\./.test(document.openapi);
@@ -27,9 +32,9 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
   if (!is31 && typeof resolved.exclusiveMinimum === 'number') violations.push({ path: rootPath, rule: 'unsupported', message: 'OpenAPI 3.0 exclusiveMinimum is boolean and requires minimum.' });
   if (!is31 && typeof resolved.exclusiveMaximum === 'number') violations.push({ path: rootPath, rule: 'unsupported', message: 'OpenAPI 3.0 exclusiveMaximum is boolean and requires maximum.' });
 
-  if (resolved.allOf?.length) {
-    for (const item of resolved.allOf) violations.push(...validateSchemaValue(document, item, value, rootPath));
-  }
+  // Composition is conjunctive with sibling constraints. Branch validation happens before local keywords,
+  // but never returns early so siblings cannot weaken a referenced/composed schema.
+  if (resolved.allOf?.length) for (const item of resolved.allOf) violations.push(...validateSchemaValue(document, item, value, rootPath));
   if (resolved.oneOf?.length) {
     const passing = resolved.oneOf.map(item => validateSchemaValue(document, item, value, rootPath)).filter(items => items.length === 0).length;
     if (passing !== 1) violations.push({ path: rootPath, rule: 'oneOf', message: `Expected exactly one schema to match; matched ${passing}.` });
@@ -39,14 +44,12 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
     if (!passing) violations.push({ path: rootPath, rule: 'anyOf', message: 'Value did not match any allowed schema.' });
   }
 
-  if (value === null) {
-    if (allowsNull(resolved)) return violations;
-    violations.push({ path: rootPath, rule: 'nullable', message: 'Value is null but schema is not nullable.' });
-    return violations;
-  }
+  // enum applies to every JSON value, including null.
+  if (resolved.enum && !resolved.enum.some(item => deepEqual(item, value))) violations.push({ path: rootPath, rule: 'enum', message: 'Value is not in the allowed enum.' });
 
-  if (resolved.enum && !resolved.enum.some(item => deepEqual(item, value))) {
-    violations.push({ path: rootPath, rule: 'enum', message: 'Value is not in the allowed enum.' });
+  if (value === null) {
+    if (!allowsNull(resolved)) violations.push({ path: rootPath, rule: 'nullable', message: 'Value is null but schema is not nullable.' });
+    return violations;
   }
 
   if (resolved.type && !matchesType(resolved.type, value)) {
@@ -76,12 +79,8 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
     const keys = Object.keys(value);
     if (resolved.minProperties !== undefined && keys.length < resolved.minProperties) violations.push({ path: rootPath, rule: 'minProperties', message: `Object must contain at least ${resolved.minProperties} properties.` });
     if (resolved.maxProperties !== undefined && keys.length > resolved.maxProperties) violations.push({ path: rootPath, rule: 'maxProperties', message: `Object must contain at most ${resolved.maxProperties} properties.` });
-    for (const required of resolved.required ?? []) {
-      if (!(required in value)) violations.push({ path: `${rootPath}.${required}`, rule: 'required', message: 'Required property is missing.' });
-    }
-    for (const [key, child] of Object.entries(resolved.properties ?? {})) {
-      if (key in value) violations.push(...validateSchemaValue(document, child, value[key], `${rootPath}.${key}`));
-    }
+    for (const required of resolved.required ?? []) if (!(required in value)) violations.push({ path: `${rootPath}.${required}`, rule: 'required', message: 'Required property is missing.' });
+    for (const [key, child] of Object.entries(resolved.properties ?? {})) if (key in value) violations.push(...validateSchemaValue(document, child, value[key], `${rootPath}.${key}`));
     if (resolved.additionalProperties === false) {
       for (const key of keys) if (!(key in (resolved.properties ?? {}))) violations.push({ path: `${rootPath}.${key}`, rule: 'additionalProperties', message: 'Additional property is not allowed.' });
     } else if (resolved.additionalProperties && typeof resolved.additionalProperties === 'object') {
@@ -89,10 +88,10 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
     }
   }
 
-  if (Array.isArray(value) && (hasType(resolved, 'array') || resolved.items)) {
+  if (Array.isArray(value) && (hasType(resolved, 'array') || resolved.items !== undefined)) {
     if (resolved.minItems !== undefined && value.length < resolved.minItems) violations.push({ path: rootPath, rule: 'minItems', message: `Array must contain at least ${resolved.minItems} items.` });
     if (resolved.maxItems !== undefined && value.length > resolved.maxItems) violations.push({ path: rootPath, rule: 'maxItems', message: `Array must contain at most ${resolved.maxItems} items.` });
-    if (resolved.items) value.forEach((item, index) => violations.push(...validateSchemaValue(document, resolved.items!, item, `${rootPath}[${index}]`)));
+    if (resolved.items !== undefined) value.forEach((item, index) => violations.push(...validateSchemaValue(document, resolved.items!, item, `${rootPath}[${index}]`)));
   }
 
   return violations;
@@ -100,10 +99,7 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
 
 function allowsNull(schema: OpenApiSchema): boolean { return schema.nullable === true || hasType(schema, 'null'); }
 function hasType(schema: OpenApiSchema, type: OpenApiSchemaType): boolean { return Array.isArray(schema.type) ? schema.type.includes(type) : schema.type === type; }
-function matchesType(type: OpenApiSchema['type'], value: unknown): boolean {
-  const types = Array.isArray(type) ? type : [type];
-  return types.some(item => item !== undefined && matchesSingleType(item, value));
-}
+function matchesType(type: OpenApiSchema['type'], value: unknown): boolean { const types = Array.isArray(type) ? type : [type]; return types.some(item => item !== undefined && matchesSingleType(item, value)); }
 function matchesSingleType(type: OpenApiSchemaType, value: unknown): boolean {
   switch (type) {
     case 'object': return isObject(value);
