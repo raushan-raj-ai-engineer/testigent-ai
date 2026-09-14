@@ -14,9 +14,16 @@ TestigentAI v1.9.2 is certified at immutable commit `f061e4ef1fd869888fdae721d47
 
 The historical `v1.9.1` tag remains immutable at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
 
+
+## Post-certification corrective review note
+
+An independent post-certification review of `TestigentAI-v1.9.2-POST-CERT-REVIEW.zip` reproduced three residual code findings in the reviewed archive: **R01 schema semantics, R02 property-removal compatibility, and R04 dangling-symlink mutation containment**. The immutable `v1.9.2` tag and its recorded certification evidence remain unchanged; this ZIP contains a later corrective candidate for those findings. See `docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`.
+
+Do not describe the new R01/R02/R04 corrections as part of the immutable `v1.9.2` tagged snapshot unless a new release is certified from the corrective commit.
+
 ## Previous certified release: v1.9.1
 
-**TestigentAI v1.9.1 — Corrective Hardening is the current immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.**
+**TestigentAI v1.9.1 — Corrective Hardening is the previous immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.**
 
 | Item | Certified state |
 | --- | --- |
@@ -38,7 +45,7 @@ The `v1.9.1` tag is immutable and must not be moved or recreated. Post-release d
 
 v1.9.2 is the certified hardening-only release based on the immutable v1.9.1 source snapshot. It responds to the independent v1.9.1 re-review without reopening the reporting feature surface.
 
-The certified release closes the re-review's remaining production-contract cases across:
+The v1.9.2 certification scope covered the following production-contract areas. The post-certification note above records the later residual R01/R02/R04 counterexamples and corrective candidate:
 
 - selected-project canonical/symlink containment and promotion revalidation;
 - OpenAPI 3.1 boolean schemas, null/enum handling and conjunctive `$ref` sibling semantics;

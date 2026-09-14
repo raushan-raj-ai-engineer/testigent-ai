@@ -139,8 +139,15 @@ function assertNoSymlinkComponents(projectRoot: string, candidate: string, sourc
   let cursor = projectRoot;
   for (const segment of relative.split(path.sep)) {
     cursor = path.join(cursor, segment);
-    if (!fs.existsSync(cursor)) break;
-    if (fs.lstatSync(cursor).isSymbolicLink()) throw new Error(`Project path crosses a symlink/junction boundary: '${source}'.`);
+    // existsSync follows links and returns false for dangling symlinks. lstat must be attempted first so a
+    // dangling leaf/ancestor link is still treated as an existing unsafe directory entry rather than a future path.
+    try {
+      const stat = fs.lstatSync(cursor);
+      if (stat.isSymbolicLink()) throw new Error(`Project path crosses a symlink/junction boundary: '${source}'.`);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') break;
+      throw error;
+    }
   }
 }
 

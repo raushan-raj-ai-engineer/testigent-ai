@@ -1,5 +1,8 @@
 # TestigentAI v1.9.2 — Independent Re-review Corrective Handoff
 
+> **Historical certification handoff.** This records the immutable v1.9.2 certification event. A later independent post-certification review reproduced residual R01/R02/R04 cases against a post-certification archive; the corrective candidate in this ZIP is documented in `docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md` and is not part of the immutable v1.9.2 tag.
+
+
 This document is the **full corrective review handoff that was used to certify v1.9.2**.
 
 v1.9.2 is now the immutable certified release at `f061e4ef1fd869888fdae721d4790ce2058070ae`. Main CI `34839795426`, fresh main Release Compatibility `34840215663` and tag-triggered Release Compatibility `34840673003` all passed on that exact commit.

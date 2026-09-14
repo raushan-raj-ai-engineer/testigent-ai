@@ -4,11 +4,13 @@
  */
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { constants as fsConstants } from 'node:fs';
 import {
   access,
   appendFile,
   copyFile,
   mkdir,
+  open,
   readFile,
   readdir,
   unlink,
@@ -101,6 +103,24 @@ function safeProjectPath(root: string, projectRelativePath: string): string {
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
+}
+
+/** Writes a project file through an already validated project path without following a leaf symlink. */
+async function writeProjectFileNoFollow(root: string, workspaceRelativePath: string, content: string, exclusiveCreate: boolean): Promise<void> {
+  const target = safeProjectPath(root, workspaceRelativePath);
+  const noFollow = typeof fsConstants.O_NOFOLLOW === 'number' ? fsConstants.O_NOFOLLOW : 0;
+  const flags = fsConstants.O_WRONLY
+    | (exclusiveCreate ? fsConstants.O_CREAT | fsConstants.O_EXCL : fsConstants.O_TRUNC)
+    | noFollow;
+  const handle = await open(target, flags, 0o600);
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new Error(`Promotion target is not a regular file: ${workspaceRelativePath}`);
+    await handle.writeFile(content, 'utf8');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
 }
 
 function sha256(text: string): string {
@@ -535,7 +555,10 @@ export async function promoteProposal(root: string, requirementId: string, optio
       const target = safeProjectPath(root, mapping.to);
       const transformed = approvedContent(await readFile(source, 'utf8'), requirementId);
       await mkdir(join(target, '..'), { recursive: true });
-      await writeFile(target, transformed, 'utf8');
+      // Re-resolve after mkdir, then create new promotion targets exclusively. O_EXCL rejects existing
+      // entries including dangling symlinks; O_NOFOLLOW (where supported) prevents leaf-link following.
+      // Existing in-place proposal files are opened with no-follow semantics rather than path-based writeFile.
+      await writeProjectFileNoFollow(root, mapping.to, transformed, mapping.to !== mapping.from);
       if (mapping.to !== mapping.from) await unlink(source);
     }
     runTypecheck(root, options);

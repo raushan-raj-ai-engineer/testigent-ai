@@ -48,7 +48,15 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
   if (resolved.enum && !resolved.enum.some(item => deepEqual(item, value))) violations.push({ path: rootPath, rule: 'enum', message: 'Value is not in the allowed enum.' });
 
   if (value === null) {
-    if (!allowsNull(resolved)) violations.push({ path: rootPath, rule: 'nullable', message: 'Value is null but schema is not nullable.' });
+    // OpenAPI 3.1 follows JSON Schema: an omitted local `type` does not reject null.
+    // OpenAPI 3.0 keeps its nullable extension semantics.
+    if (is31) {
+      if (resolved.type && !matchesType(resolved.type, value)) {
+        violations.push({ path: rootPath, rule: 'type', message: `Expected ${formatType(resolved.type)}; received null.` });
+      }
+    } else if (!allowsNull(resolved)) {
+      violations.push({ path: rootPath, rule: 'nullable', message: 'Value is null but schema is not nullable.' });
+    }
     return violations;
   }
 
@@ -75,7 +83,8 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
     }
   }
 
-  if (isObject(value) && (hasType(resolved, 'object') || resolved.properties || resolved.required || resolved.additionalProperties !== undefined)) {
+  // JSON Schema object constraints apply according to the runtime instance type even when `type` is omitted.
+  if (isObject(value)) {
     const keys = Object.keys(value);
     if (resolved.minProperties !== undefined && keys.length < resolved.minProperties) violations.push({ path: rootPath, rule: 'minProperties', message: `Object must contain at least ${resolved.minProperties} properties.` });
     if (resolved.maxProperties !== undefined && keys.length > resolved.maxProperties) violations.push({ path: rootPath, rule: 'maxProperties', message: `Object must contain at most ${resolved.maxProperties} properties.` });
@@ -88,7 +97,8 @@ export function validateSchemaValue(document: OpenApiDocument, schema: OpenApiSc
     }
   }
 
-  if (Array.isArray(value) && (hasType(resolved, 'array') || resolved.items !== undefined)) {
+  // JSON Schema array constraints apply according to the runtime instance type even when `type` is omitted.
+  if (Array.isArray(value)) {
     if (resolved.minItems !== undefined && value.length < resolved.minItems) violations.push({ path: rootPath, rule: 'minItems', message: `Array must contain at least ${resolved.minItems} items.` });
     if (resolved.maxItems !== undefined && value.length > resolved.maxItems) violations.push({ path: rootPath, rule: 'maxItems', message: `Array must contain at most ${resolved.maxItems} items.` });
     if (resolved.items !== undefined) value.forEach((item, index) => violations.push(...validateSchemaValue(document, resolved.items!, item, `${rootPath}[${index}]`)));

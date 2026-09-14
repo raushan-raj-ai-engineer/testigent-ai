@@ -1,9 +1,13 @@
-TestigentAI v1.9.2 — Independent Re-review Corrective Full Candidate
+TestigentAI v1.9.2 — Post-Certification Corrective Full Candidate
 
 Candidate version:
 1.9.2
 
-Certified immutable baseline:
+Current certified release baseline:
+v1.9.2
+f061e4ef1fd869888fdae721d4790ce2058070ae
+
+Certified immutable baseline retained for the original re-review chain:
 v1.9.1
 38e2406c73608cabcf42a8ff0ea8e35e745dea23
 
@@ -11,17 +15,18 @@ Historical immutable release:
 v1.9.0
 6a32718353022da4e5ce51dace59e29692340913
 
-Reviewed v1.9.1 input ZIP SHA-256 (as recorded by reviewer):
-5488d96db20a841aaa4eae6f4a5754498c0260886464965ed9268d40bc53bbcf
+Independent post-certification reviewed archive:
+TestigentAI-v1.9.2-POST-CERT-REVIEW.zip
+ba711591a5ca4ab47bb380ad192bd6e1af75368a4887ae253f34a70d4f320992
 
-Bundled independent re-review document SHA-256:
-2918abb5f587f806bf29653c0fe3048d8966dd2d6749892f3e6e36272c354a79
+Reviewed archive ZIP source comment:
+c70aa1a3aa41e30b1ca6af5a759e4e4a1ebf6d3d
 
 Purpose:
-Address every remaining reproduced code-level issue from the independent v1.9.1 re-review with production-boundary fixes and broader regression coverage.
+Close the three remaining post-certification code findings R01, R02 and R04 without reopening the reporting feature surface or weakening existing controls.
 
 Important:
-- This ZIP is a review candidate, not a certified v1.9.2 release.
-- Do not move or recreate v1.9.1 or v1.9.0 tags.
-- Packaging validation and limitations are recorded in docs/68-v1.9.2-VALIDATION-HANDOFF.md.
-- Connected Node 22 dependency/typecheck/full-regression/security/compatibility gates remain mandatory before certification.
+- This modified ZIP is a post-certification corrective candidate; it is not the immutable v1.9.2 tagged source snapshot.
+- The v1.9.2 tag remains immutable at f061e4ef1fd869888fdae721d4790ce2058070ae.
+- Run connected Node 22 dependency/typecheck/Playwright/security/compatibility gates on the exact corrective commit before publishing any subsequent release.
+- See docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md.

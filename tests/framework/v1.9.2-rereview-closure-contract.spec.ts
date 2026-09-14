@@ -21,6 +21,8 @@ import { MssqlDatabaseClient, buildMssqlPoolConfig } from '../../src/framework/d
 import { buildMysqlPoolConfig } from '../../src/framework/database/mysql.database.js';
 import { resolveDatabaseTlsPolicy } from '../../src/framework/database/database-tls.js';
 import { createAgenticMcpSession, handleAgenticMcpMessage, TESTIGENT_MCP_PROTOCOL_VERSION } from '../../src/framework/mcp/server.js';
+import { approveProposal, initializeProposalReview, promoteProposal } from '../../src/framework/intelligence/review/proposal.review.js';
+import type { GenerationManifest } from '../../src/framework/intelligence/core/models.js';
 
 const emptyHealing: HealingSummary = { count: 0, fallback: 0, cache: 0, ai: 0, affectedTests: 0, records: [], attempts: [], attemptCount: 0, rejected: 0, suggested: 0, unverified: 0 };
 
@@ -37,6 +39,31 @@ test.describe('v1.9.2 independent re-review closure', () => {
     expect(validateResponseContract({ document: base, method: 'GET', path: '/value', status: 200, body: 'anything', contentType: 'application/json' })).toMatchObject({ ok: false });
     (base.paths['/value']!.get as any).responses['200'].content['application/json'].schema = true;
     expect(validateResponseContract({ document: base, method: 'GET', path: '/value', status: 200, body: 'anything', contentType: 'application/json' })).toMatchObject({ ok: true });
+
+    // Post-certification reviewer counterexamples: omitted local type must not disable applicable constraints,
+    // and OpenAPI 3.1 does not reject null merely because a local `type` keyword is absent.
+    for (const [schema, body, expectedOk] of [
+      [{ maxItems: 0 }, [1], false],
+      [{ maxProperties: 0 }, { x: 1 }, false],
+      [{}, null, true],
+      [{ anyOf: [{ type: 'string' }, { type: 'null' }] }, null, true],
+    ] as const) {
+      (base.paths['/value']!.get as any).responses['200'].content['application/json'].schema = schema;
+      expect(validateResponseContract({ document: base, method: 'GET', path: '/value', status: 200, body, contentType: 'application/json' }).ok).toBe(expectedOk);
+    }
+
+    (base.paths['/value']!.get as any).responses['200'].content['application/json'].schema = { allOf: [{ maxItems: 0 }] };
+    expect(validateResponseContract({ document: base, method: 'GET', path: '/value', status: 200, body: [1], contentType: 'application/json' }).ok).toBe(false);
+
+    base.components!.schemas!.Nullable = { anyOf: [{ type: 'string' }, { type: 'null' }] };
+    (base.paths['/value']!.get as any).responses['200'].content['application/json'].schema = { $ref: '#/components/schemas/Nullable', description: 'nullable ref sibling' };
+    expect(validateResponseContract({ document: base, method: 'GET', path: '/value', status: 200, body: null, contentType: 'application/json' }).ok).toBe(true);
+
+    const openApi30 = structuredClone(base); openApi30.openapi = '3.0.3';
+    (openApi30.paths['/value']!.get as any).responses['200'].content['application/json'].schema = { type: 'string' };
+    expect(validateResponseContract({ document: openApi30, method: 'GET', path: '/value', status: 200, body: null, contentType: 'application/json' }).ok).toBe(false);
+    (openApi30.paths['/value']!.get as any).responses['200'].content['application/json'].schema = { type: 'string', nullable: true };
+    expect(validateResponseContract({ document: openApi30, method: 'GET', path: '/value', status: 200, body: null, contentType: 'application/json' }).ok).toBe(true);
   });
 
   test('R02 query names remain case-sensitive, headers case-insensitive and request bounds are directional', () => {
@@ -51,6 +78,70 @@ test.describe('v1.9.2 independent re-review closure', () => {
     expect(detectBreakingChanges(oldHeader, newHeader).filter(x => /parameter/.test(x.location))).toEqual([]);
     const unsupported = structuredClone(previous); ((unsupported.paths['/x']!.post as any).requestBody.content['application/json'].schema as any).not = { type: 'null' };
     expect(detectBreakingChanges(previous, unsupported).some(x => x.kind === 'INCOMPLETE_COMPARISON')).toBe(true);
+
+    const requestOld = apiDoc({ name: 'tenant', in: 'query', required: false, schema: { type: 'string' } }, { type: 'object', additionalProperties: false, properties: { id: { type: 'string' } } });
+    const requestNew = apiDoc({ name: 'tenant', in: 'query', required: false, schema: { type: 'string' } }, { type: 'object', additionalProperties: false });
+    expect(detectBreakingChanges(requestOld, requestNew).some(x => x.kind === 'REQUEST_CONSTRAINT_TIGHTENED' && x.location.endsWith('.id'))).toBe(true);
+
+    const responseOld = structuredClone(requestOld);
+    const responseNew = structuredClone(requestOld);
+    const oldResponseSchema = { type: 'object', properties: { id: { type: 'string' } } };
+    const newResponseSchema = { type: 'object' };
+    ((responseOld.paths['/x']!.post as any).responses['200'].content['application/json']).schema = oldResponseSchema;
+    ((responseNew.paths['/x']!.post as any).responses['200'].content['application/json']).schema = newResponseSchema;
+    expect(detectBreakingChanges(responseOld, responseNew).some(x => x.kind === 'RESPONSE_GUARANTEE_WEAKENED' && x.location.endsWith('.id'))).toBe(true);
+
+    const nestedOld = apiDoc({ name: 'tenant', in: 'query', required: false, schema: { type: 'string' } }, { type: 'object', properties: { wrapper: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' } } } } });
+    const nestedNew = apiDoc({ name: 'tenant', in: 'query', required: false, schema: { type: 'string' } }, { type: 'object', properties: { wrapper: { type: 'object', additionalProperties: false } } });
+    expect(detectBreakingChanges(nestedOld, nestedNew).some(x => x.kind === 'REQUEST_CONSTRAINT_TIGHTENED' && x.location.endsWith('.wrapper.id'))).toBe(true);
+  });
+
+  test('R02 property-removal compatibility uses effective additionalProperties semantics in request and response directions', () => {
+    const requestBreaks = (oldSchema: any, newSchema: any): boolean => detectBreakingChanges(
+      apiDoc({ name: 'q', in: 'query', required: false, schema: { type: 'string' } }, oldSchema),
+      apiDoc({ name: 'q', in: 'query', required: false, schema: { type: 'string' } }, newSchema),
+    ).some(x => x.location.endsWith('.id') && (x.kind === 'REQUEST_CONSTRAINT_TIGHTENED' || x.kind === 'SCHEMA_TYPE_CHANGED'));
+
+    expect(requestBreaks(
+      { type: 'object', properties: { id: { type: 'string' } } },
+      { type: 'object' },
+    )).toBe(false); // absent additionalProperties => unconstrained widening
+    expect(requestBreaks(
+      { type: 'object', properties: { id: { type: 'string' } } },
+      { type: 'object', additionalProperties: false },
+    )).toBe(true); // previously accepted id is now prohibited
+    expect(requestBreaks(
+      { type: 'object', properties: { id: { type: 'string' } } },
+      { type: 'object', additionalProperties: { type: 'string' } },
+    )).toBe(false); // declaration removed but effective constraint is unchanged
+    expect(requestBreaks(
+      { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      { type: 'object', additionalProperties: false },
+    )).toBe(true); // required-property declaration removal still rejects old valid requests
+
+    const responseChanges = (oldSchema: any, newSchema: any) => {
+      const oldDoc = apiDoc({ name: 'q', in: 'query', required: false, schema: { type: 'string' } }, { type: 'object' });
+      const newDoc = structuredClone(oldDoc);
+      ((oldDoc.paths['/x']!.post as any).responses['200'].content['application/json']).schema = oldSchema;
+      ((newDoc.paths['/x']!.post as any).responses['200'].content['application/json']).schema = newSchema;
+      return detectBreakingChanges(oldDoc, newDoc);
+    };
+    expect(responseChanges(
+      { type: 'object', properties: { id: { type: 'string' } } },
+      { type: 'object', additionalProperties: false },
+    ).some(x => x.location.endsWith('.id') && x.kind === 'RESPONSE_GUARANTEE_WEAKENED')).toBe(false); // response narrowing
+    expect(responseChanges(
+      { type: 'object', properties: { id: { type: 'string' } } },
+      { type: 'object' },
+    ).some(x => x.location.endsWith('.id') && x.kind === 'RESPONSE_GUARANTEE_WEAKENED')).toBe(true); // unconstrained value can now be emitted
+    expect(responseChanges(
+      { type: 'object', properties: { id: { type: 'string' } } },
+      { type: 'object', additionalProperties: { type: 'integer' } },
+    ).some(x => x.location.endsWith('.id') && (x.kind === 'RESPONSE_GUARANTEE_WEAKENED' || x.kind === 'SCHEMA_TYPE_CHANGED'))).toBe(true);
+    expect(responseChanges(
+      { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+      { type: 'object', additionalProperties: { type: 'string' } },
+    ).some(x => x.kind === 'RESPONSE_REQUIRED_REMOVED' && x.location.endsWith('.id'))).toBe(true);
   });
 
   test('R04 selected-project boundary rejects project, requirements, source and leaf symlink escapes including future targets', () => {
@@ -72,6 +163,13 @@ test.describe('v1.9.2 independent re-review closure', () => {
       expect(() => assertAgenticTargetPath(root, 'demo', 'projects/demo/src/leaf.ts')).toThrow(/symlink|junction|boundary/i);
       fs.rmSync(path.join(root, 'projects/demo/src/leaf.ts'), { force: true });
 
+      const escapedFuture = path.join(root, 'projects/other/src/not-created.ts');
+      fs.symlinkSync(escapedFuture, path.join(root, 'projects/demo/src/dangling.ts'), 'file');
+      expect(() => assertAgenticTargetPath(root, 'demo', 'projects/demo/src/dangling.ts')).toThrow(/symlink|junction|boundary/i);
+      expect(() => resolveProjectMutationPath(root, 'projects/demo/src/dangling.ts')).toThrow(/symlink|junction|boundary/i);
+      expect(fs.existsSync(escapedFuture)).toBe(false);
+      fs.rmSync(path.join(root, 'projects/demo/src/dangling.ts'), { force: true });
+
       fs.rmSync(path.join(root, 'projects/demo/requirements'), { recursive: true, force: true });
       makeDirLink(path.join(root, 'projects/other/requirements'), path.join(root, 'projects/demo/requirements'));
       expect(() => resolveMcpRequirementPath(root, 'demo', 'secret.md')).toThrow(/symlink|junction|boundary/i);
@@ -79,6 +177,32 @@ test.describe('v1.9.2 independent re-review closure', () => {
       makeDirLink(path.join(root, 'projects/other'), path.join(root, 'projects/alias'));
       expect(() => resolveMcpRequirementPath(root, 'alias', 'requirements/secret.md')).toThrow(/symlink|junction|boundary/i);
       expect(() => assertAgenticTargetPath(root, 'demo', 'projects\\demo\\..\\other\\src\\new.ts')).toThrow();
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  test('R04 promotion workflow refuses a dangling active-target symlink and creates nothing outside the selected project', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'testigent-r04-promotion-'));
+    const requirementId = 'R04-PROMOTION';
+    const generatedTest = 'projects/billing/tests/e2e/payment.generated.spec.ts';
+    const activeTest = 'projects/billing/tests/e2e/payment.spec.ts';
+    const escapedTarget = path.join(root, 'projects/other/tests/e2e/not-created.spec.ts');
+    const header = `/**\n * GENERATED PROPOSAL - REVIEW_REQUIRED\n * Requirement: ${requirementId}\n * Do not merge before human review.\n * Author: Raushan Raj\n */\n`;
+    try {
+      fs.mkdirSync(path.join(root, 'projects/billing/tests/e2e'), { recursive: true });
+      fs.mkdirSync(path.join(root, 'projects/other/tests/e2e'), { recursive: true });
+      fs.writeFileSync(path.join(root, generatedTest), header + `import { test, expect } from '@playwright/test';\ntest('payment', async () => { expect(true).toBeTruthy(); });\n`);
+      const manifest: GenerationManifest = {
+        requirementId, createdAt: new Date().toISOString(), reviewRequired: true, targetApplication: 'billing', reused: [],
+        created: [{ kind: 'test', path: generatedTest, reason: 'R04 mutation-boundary regression fixture.' }], warnings: [],
+      };
+      const manifestDir = path.join(root, 'generated/requirements', requirementId);
+      fs.mkdirSync(manifestDir, { recursive: true });
+      fs.writeFileSync(path.join(manifestDir, 'generation-manifest.json'), JSON.stringify(manifest, null, 2));
+      await initializeProposalReview(root, manifest, [generatedTest]);
+      await approveProposal(root, requirementId, 'Security Reviewer', 'Approved for mutation-boundary regression.', { runTypecheck: false });
+      fs.symlinkSync(escapedTarget, path.join(root, activeTest), 'file');
+      await expect(promoteProposal(root, requirementId, { runTypecheck: false })).rejects.toThrow(/symlink|junction|boundary|exist/i);
+      expect(fs.existsSync(escapedTarget)).toBe(false);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
 

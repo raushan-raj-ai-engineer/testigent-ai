@@ -120,14 +120,18 @@ function compareSchema(previous: OpenApiDocument, current: OpenApiDocument, oldI
   comparePattern(oldSchema.pattern, newSchema.pattern, location, direction, changes);
   compareAdditionalProperties(oldSchema.additionalProperties, newSchema.additionalProperties, location, direction, changes);
 
-  for (const [key, oldChild] of Object.entries(oldSchema.properties ?? {})) {
-    const newChild = newSchema.properties?.[key];
-    if (newChild !== undefined) compareSchema(previous, current, oldChild, newChild, `${location}.${key}`, direction, changes, seen);
+  // Compare the effective schema for every property named on either side. When a declaration disappears,
+  // JSON Schema falls back to additionalProperties (false => prohibited, schema => constrained, true/absent => unconstrained).
+  // This prevents optional property removals from being silently skipped and keeps request/response directionality intact.
+  const propertyKeys = new Set([
+    ...Object.keys(oldSchema.properties ?? {}),
+    ...Object.keys(newSchema.properties ?? {}),
+  ]);
+  for (const key of propertyKeys) {
+    const oldChild = effectivePropertySchema(oldSchema, key);
+    const newChild = effectivePropertySchema(newSchema, key);
+    compareSchema(previous, current, oldChild, newChild, `${location}.${key}`, direction, changes, seen);
   }
-  // If the old object accepted undeclared properties, a newly declared request-property schema can restrict
-  // values clients were previously allowed to send. If additionalProperties was already false, adding an
-  // optional declared property is a widening change and is not breaking.
-  if (direction === 'request' && oldSchema.additionalProperties !== false) for (const [key, newChild] of Object.entries(newSchema.properties ?? {})) if (!(key in (oldSchema.properties ?? {}))) compareSchema(previous, current, true, newChild, `${location}.${key}`, direction, changes, seen);
   if (oldSchema.items !== undefined && newSchema.items !== undefined) compareSchema(previous, current, oldSchema.items, newSchema.items, `${location}[]`, direction, changes, seen);
   else if (direction === 'request' && oldSchema.items === undefined && newSchema.items !== undefined) compareSchema(previous, current, true, newSchema.items, `${location}[]`, direction, changes, seen);
   else if (direction === 'response' && oldSchema.items !== undefined && newSchema.items === undefined) changes.push({ kind: 'RESPONSE_GUARANTEE_WEAKENED', location: `${location}[]`, message: 'Response item schema guarantee was removed.' });
@@ -137,17 +141,40 @@ function compareSchema(previous: OpenApiDocument, current: OpenApiDocument, oldI
   compareComposition(previous, current, 'anyOf', oldSchema.anyOf, newSchema.anyOf, location, direction, changes, seen);
 }
 
+
+function effectivePropertySchema(schema: OpenApiSchema, key: string): OpenApiSchemaLike {
+  const declared = schema.properties?.[key];
+  if (declared !== undefined) return declared;
+  if (schema.additionalProperties === false) return false;
+  if (schema.additionalProperties && typeof schema.additionalProperties === 'object') return schema.additionalProperties;
+  return true;
+}
+
 function compareBooleanSchema(oldSchema: OpenApiSchemaLike, newSchema: OpenApiSchemaLike, location: string, direction: 'request' | 'response', changes: BreakingChange[]): void {
   if (oldSchema === newSchema) return;
+
+  // Compatibility can be decided exactly for boolean-schema transitions because true is the universal
+  // set and false is the empty set. Requests break when the accepted-input set narrows; responses break
+  // when the possible-output set widens.
   if (direction === 'request') {
-    if (oldSchema === true && newSchema === false) changes.push({ kind: 'REQUEST_CONSTRAINT_TIGHTENED', location, message: 'Request schema changed from accepting every value to accepting none.' });
-    else if (oldSchema === true && typeof newSchema === 'object') changes.push({ kind: 'REQUEST_CONSTRAINT_TIGHTENED', location, message: 'Request schema introduced constraints where values were previously unconstrained.' });
-    else if (typeof oldSchema === 'object' && newSchema === false) changes.push({ kind: 'REQUEST_CONSTRAINT_TIGHTENED', location, message: 'Request schema now rejects every value.' });
-    else if (typeof oldSchema === 'boolean' || typeof newSchema === 'boolean') changes.push({ kind: 'INCOMPLETE_COMPARISON', location, message: 'Boolean/object request schema transition cannot be proven compatible.' });
-  } else {
-    if (oldSchema === false && newSchema !== false) changes.push({ kind: 'RESPONSE_GUARANTEE_WEAKENED', location, message: 'Response schema can now emit values where none were previously permitted.' });
-    else if (typeof oldSchema === 'object' && newSchema === true) changes.push({ kind: 'RESPONSE_GUARANTEE_WEAKENED', location, message: 'Response schema removed all previous value constraints.' });
-    else if (typeof oldSchema === 'boolean' || typeof newSchema === 'boolean') changes.push({ kind: 'INCOMPLETE_COMPARISON', location, message: 'Boolean/object response schema transition cannot be proven compatible.' });
+    if (oldSchema === false || newSchema === true) return;
+    if (newSchema === false) {
+      changes.push({ kind: 'REQUEST_CONSTRAINT_TIGHTENED', location, message: 'Request schema now rejects values that were previously accepted.' });
+      return;
+    }
+    if (oldSchema === true && typeof newSchema === 'object') {
+      changes.push({ kind: 'REQUEST_CONSTRAINT_TIGHTENED', location, message: 'Request schema introduced constraints where values were previously unconstrained.' });
+    }
+    return;
+  }
+
+  if (newSchema === false || oldSchema === true) return;
+  if (oldSchema === false) {
+    changes.push({ kind: 'RESPONSE_GUARANTEE_WEAKENED', location, message: 'Response schema can now emit values where none were previously permitted.' });
+    return;
+  }
+  if (newSchema === true && typeof oldSchema === 'object') {
+    changes.push({ kind: 'RESPONSE_GUARANTEE_WEAKENED', location, message: 'Response schema removed previous value constraints.' });
   }
 }
 

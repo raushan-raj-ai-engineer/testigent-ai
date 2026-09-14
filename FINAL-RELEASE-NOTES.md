@@ -1,5 +1,8 @@
 # TestigentAI v1.9.2 — Independent Re-review Corrective Hardening (Certified Release)
 
+> **Historical v1.9.2 release notes.** The immutable v1.9.2 certification evidence below remains unchanged. A later independent post-certification review identified residual R01/R02/R04 cases; this archive contains a new corrective candidate documented in `docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`.
+
+
 ## Purpose
 
 v1.9.2 is the certified corrective hardening release responding to the independent re-review of v1.9.1. It keeps the shared-core architecture and reporting feature freeze while addressing the broader production-contract cases reproduced by the reviewer.
