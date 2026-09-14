@@ -357,19 +357,31 @@ try {
   const handoffV192 = fs.readFileSync(path.join(root, 'REVIEW-HANDOFF-v1.9.2.md'), 'utf8');
   const metadataV192 = fs.readFileSync(path.join(root, 'REVIEW-METADATA.txt'), 'utf8');
   const verificationV192 = fs.readFileSync(path.join(root, 'release/VERIFICATION-REPORT.md'), 'utf8');
-  if (
-    !readmeV192.includes('Current certified release: `v1.9.2`') ||
-    !readmeV192.includes('Previous certified release: `v1.9.1`')
-  ) issues.push('README must identify certified v1.9.2 and historical v1.9.1 release status');
+
+  const certificationV193 = fs.readFileSync(
+    path.join(root, 'docs/70-v1.9.3-CERTIFICATION.md'),
+    'utf8'
+  );
 
   if (
-    !statusV192.includes('Current certified release: v1.9.2') ||
-    !statusV192.includes('f061e4ef1fd869888fdae721d4790ce2058070ae') ||
-    !statusV192.includes('34839795426') ||
-    !statusV192.includes('34840215663') ||
-    !statusV192.includes('34840673003') ||
-    !statusV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')
-  ) issues.push('v1.9.2 current-release status must identify immutable certification evidence');
+    !certificationV193.includes('v1.9.3') ||
+    !certificationV193.includes('b9e3fc1e09fbb39850cc8cc068758ed07d52f942') ||
+    !certificationV193.includes('34866842175') ||
+    !certificationV193.includes('213 PASS')
+  ) issues.push('v1.9.3 certification document must retain immutable release evidence');
+  if (
+    !readmeV192.includes('Current certified release: `v1.9.3`') ||
+    !readmeV192.includes('b9e3fc1e09fbb39850cc8cc068758ed07d52f942') ||
+    !readmeV192.includes('v1.9.2')
+  ) issues.push('README must identify certified v1.9.3 and historical v1.9.2 release status');
+
+  if (
+    !statusV192.includes('Current certified release: v1.9.3') ||
+    !statusV192.includes('b9e3fc1e09fbb39850cc8cc068758ed07d52f942') ||
+    !statusV192.includes('34866842175') ||
+    !statusV192.includes('Previous certified release: v1.9.2') ||
+    !statusV192.includes('f061e4ef1fd869888fdae721d4790ce2058070ae')
+  ) issues.push('v1.9.3 current-release status must identify immutable certification evidence');
 
   if (
     !handoffV192.includes('used to certify v1.9.2') ||

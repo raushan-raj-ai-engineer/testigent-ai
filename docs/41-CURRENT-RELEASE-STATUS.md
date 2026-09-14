@@ -1,25 +1,39 @@
 # Current Certified Release Status
 
-## Current certified release: v1.9.2
+## Current certified release: v1.9.3
 
-TestigentAI v1.9.2 is certified at immutable commit `f061e4ef1fd869888fdae721d4790ce2058070ae`.
+TestigentAI v1.9.3 is certified at immutable commit `b9e3fc1e09fbb39850cc8cc068758ed07d52f942`.
 
-| Certification evidence | Result |
-| --- | --- |
-| Main CI | PASS — run `34839795426` |
-| Fresh main Release Compatibility | PASS — 5/5, run `34840215663` |
-| Tag-triggered Release Compatibility | PASS — 5/5, run `34840673003` |
-| Certified tag | `v1.9.2` -> `f061e4ef1fd869888fdae721d4790ce2058070ae` |
-| GitHub Release | Published |
+| Evidence | Result |
+|---|---|
+| Certified tag | `v1.9.3` -> `b9e3fc1e09fbb39850cc8cc068758ed07d52f942` |
+| Package version | `1.9.3` |
+| Main CI | PASS |
+| Tag Release Compatibility | `34866842175` — PASS 5/5 |
+| Local final regression | 213 PASS |
+| Security gate | PASS — 0 high/critical advisories |
 
-The historical `v1.9.1` tag remains immutable at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
+The v1.9.3 compatibility matrix passed on:
 
+- Windows / Chromium
+- Ubuntu / Chromium
+- Ubuntu / Firefox
+- Ubuntu / WebKit
+- macOS / WebKit
 
-## Post-certification corrective review note
+v1.9.3 closes the residual post-certification findings reproduced after v1.9.2:
 
-An independent post-certification review of `TestigentAI-v1.9.2-POST-CERT-REVIEW.zip` reproduced three residual code findings in the reviewed archive: **R01 schema semantics, R02 property-removal compatibility, and R04 dangling-symlink mutation containment**. The immutable `v1.9.2` tag and its recorded certification evidence remain unchanged; this ZIP contains a later corrective candidate for those findings. See `docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`.
+- **R01** — OpenAPI 3.1 schema validation semantics.
+- **R02** — directional API/property-removal breaking-change detection.
+- **R04** — project filesystem and dangling-symlink containment.
 
-Do not describe the new R01/R02/R04 corrections as part of the immutable `v1.9.2` tagged snapshot unless a new release is certified from the corrective commit.
+The v1.9.3 tag is immutable and must not be moved, deleted or recreated. Future production changes require a new release.
+
+## Previous certified release: v1.9.2
+
+TestigentAI v1.9.2 remains immutable at `f061e4ef1fd869888fdae721d4790ce2058070ae`.
+
+Its historical certification, re-review, validation and post-certification evidence remain preserved in the repository. The residual R01/R02/R04 findings discovered after its certification were subsequently corrected and released as v1.9.3.
 
 ## Previous certified release: v1.9.1
 
@@ -75,3 +89,4 @@ feature branch
  -> GitHub Release
  -> post-release docs sync without moving the tag
 ```
+

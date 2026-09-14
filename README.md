@@ -26,12 +26,11 @@
 
 ## Current Release State
 
-**Current certified release: `v1.9.2` — Corrective Hardening.** The immutable annotated tag `v1.9.2` resolves to certified commit `f061e4ef1fd869888fdae721d4790ce2058070ae`; main CI `34839795426`, fresh main Release Compatibility `34840215663` (5/5), and tag-triggered Release Compatibility `34840673003` (5/5) are the recorded certification evidence. The historical `v1.9.1` tag remains immutable at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. **Previous certified release: `v1.9.1`.**
+**Current certified release: `v1.9.3` — Post-Certification Corrective Closure.** The immutable annotated tag `v1.9.3` resolves to commit `b9e3fc1e09fbb39850cc8cc068758ed07d52f942`. Main CI passed on the same release line, and tag-triggered Release Compatibility run `34866842175` passed 5/5 across Windows Chromium, Ubuntu Chromium, Ubuntu Firefox, Ubuntu WebKit and macOS WebKit.
 
-**This archive is a post-certification corrective review candidate derived from v1.9.2, not a replacement certification claim.** It closes the three code findings reproduced by the independent post-certification review (R01 schema semantics, R02 property-removal compatibility, and R04 dangling-symlink mutation containment). Run the connected Node 22 validation and CI/compatibility chain on the exact commit before publishing any subsequent immutable release/tag.
+v1.9.3 closes the residual findings identified after the v1.9.2 certification: **R01 OpenAPI 3.1 schema semantics, R02 directional/property-removal compatibility detection, and R04 dangling-symlink filesystem containment**. The previous certified `v1.9.2` tag remains immutable at `f061e4ef1fd869888fdae721d4790ce2058070ae`; its historical certification and review evidence remain preserved.
 
-For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For this post-certification corrective patch, see [`docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`](docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
-
+For exact release evidence and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For v1.9.3 certification evidence, see [`docs/70-v1.9.3-CERTIFICATION.md`](docs/70-v1.9.3-CERTIFICATION.md). The originating post-certification corrective work remains documented in [`docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`](docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md).
 
 ### v1.8 product-intelligence workflows
 
@@ -1357,3 +1356,5 @@ Maintained as an intelligent quality-engineering platform for scalable multi-pro
 | v1.9.1 review validation | [`docs/66-v1.9.1-REVIEW-VALIDATION.md`](docs/66-v1.9.1-REVIEW-VALIDATION.md) |
 | v1.9.2 independent re-review closure | [`docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md`](docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md) |
 | v1.9.2 validation handoff | [`docs/68-v1.9.2-VALIDATION-HANDOFF.md`](docs/68-v1.9.2-VALIDATION-HANDOFF.md) |
+| v1.9.2 post-cert corrective closure | [`docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`](docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md) |
+| v1.9.3 certification | [`docs/70-v1.9.3-CERTIFICATION.md`](docs/70-v1.9.3-CERTIFICATION.md) |
