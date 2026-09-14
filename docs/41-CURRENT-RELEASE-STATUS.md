@@ -50,7 +50,7 @@ The certified release closes the re-review's remaining production-contract cases
 - MCP lifecycle, active cancellation and pre-newline frame budgeting;
 - spreadsheet-viewer CSV qualification.
 
-Packaging-environment validation is recorded in `docs/68-v1.9.2-VALIDATION-HANDOFF.md`. This archive is **not a certified v1.9.2 release**. Connected Node 22 dependency installation, full typecheck/regression/security gates and the normal PR/main/5-of-5 compatibility chain remain mandatory before any v1.9.2 tag is created.
+Packaging-environment validation is recorded in `docs/68-v1.9.2-VALIDATION-HANDOFF.md`. Those packaging observations remain historical pre-certification evidence. v1.9.2 subsequently completed connected Node 22 validation, main CI, fresh 5/5 Release Compatibility, tag-triggered 5/5 Release Compatibility, and certification at immutable commit `f061e4ef1fd869888fdae721d4790ce2058070ae`.
 
 ## Authoritative release workflow
 
