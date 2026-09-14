@@ -1,4 +1,6 @@
-# TestigentAI v1.9.1 — Corrective Hardening Review Handoff
+# TestigentAI v1.9.1 — Corrective Hardening Review Handoff (Historical)
+
+> Historical record: this document captures the pre-certification v1.9.1 review handoff. v1.9.1 subsequently certified at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`; tag-triggered Release Compatibility `34819277626` passed 5/5.
 
 This is a **review candidate**, not a certified replacement for v1.9.0.
 

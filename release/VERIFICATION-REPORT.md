@@ -1,4 +1,20 @@
-# TestigentAI v1.9.1 Corrective Hardening Candidate Verification Report
+# TestigentAI v1.9.1 — Certified Verification Report
+
+## v1.9.1 certified result
+
+TestigentAI v1.9.1 is certified at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
+
+- Main CI `34818484552` — PASS
+- Main Release Compatibility `34818923701` — 5/5 PASS
+- Tag-triggered Release Compatibility `34819277626` — 5/5 PASS
+- Full framework regression — 201/201 PASS
+- Independent review closure — 14/14 PASS
+- Security — 0 high/critical advisories
+- Customer Showcase remains synthetic and non-claimable
+- Reporting feature freeze remains active
+
+The previous `v1.9.0` certified tag remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
+
 
 ## Certified baseline
 

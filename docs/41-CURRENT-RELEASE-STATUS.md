@@ -1,8 +1,8 @@
 # Current Certified Release Status
 
-## Current certified release: v1.9.0
+## Current certified release: v1.9.1
 
-**TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase is the current immutable certified release at `6a32718353022da4e5ce51dace59e29692340913`.**
+**TestigentAI v1.9.1 — Corrective Hardening is the current immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.**
 
 | Item | Certified state |
 | --- | --- |
@@ -43,3 +43,19 @@ feature branch
  -> GitHub Release
  -> post-release docs sync without moving the tag
 ```
+
+## v1.9.1 certification evidence
+
+v1.9.1 certification is complete.
+
+- Certified SHA: `38e2406c73608cabcf42a8ff0ea8e35e745dea23`
+- Main CI: `34818484552` — PASS
+- Main Release Compatibility: `34818923701` — 5/5 PASS
+- Tag-triggered Release Compatibility: `34819277626` — 5/5 PASS
+- Framework regression: 201/201 PASS
+- Independent review closure: 14/14 PASS
+- Security: 0 high/critical advisories
+- GitHub Release: published
+
+Historical certified release `v1.9.0` remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
+
