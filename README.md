@@ -18,7 +18,7 @@
 
 **One reusable core. Many products. Explicit project ownership. Business-readable quality reporting.**
 
-[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) · [v1.9 Failure Intelligence](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md)
+[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) · [v1.9 Failure Intelligence](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md) · [v1.9.1 Review Closure](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Current certified release: `v1.9.0` — Failure Intelligence & Customer Showcase.** Immutable annotated tag `v1.9.0` resolves to certified commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI and rerun passed on the same SHA; fresh main Release Compatibility `34809207686` and tag-triggered Release Compatibility `34809446255` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Showcase data remains explicitly synthetic and non-claimable.
+**Current certified release: `v1.9.0` — Failure Intelligence & Customer Showcase.** Immutable annotated tag `v1.9.0` resolves to certified commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI and rerun passed on the same SHA; fresh main Release Compatibility `34809207686` and tag-triggered Release Compatibility `34809446255` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Post-release documentation sync is at `cc4350319b2f37c0f645744478f715504ecc1264` with CI `34810348016` green. **Corrective review candidate: `v1.9.1`** closes the independent architecture/product review findings R01–R14 without moving the v1.9.0 tag or reopening the reporting feature surface.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -1297,7 +1297,7 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | v1.9 Customer Showcase | [`docs/61-v1.9.0-CUSTOMER-SHOWCASE.md`](docs/61-v1.9.0-CUSTOMER-SHOWCASE.md) |
 | v1.9 review/release plan | [`docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md`](docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md) |
 | Reporting freeze | [`docs/63-REPORTING-FREEZE.md`](docs/63-REPORTING-FREEZE.md) |
-| v1.9 historical candidate handoff | [`docs/64-v1.9.0-CANDIDATE-HANDOFF.md`](docs/64-v1.9.0-CANDIDATE-HANDOFF.md) |
+| v1.9 candidate handoff | [`docs/64-v1.9.0-CANDIDATE-HANDOFF.md`](docs/64-v1.9.0-CANDIDATE-HANDOFF.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |
@@ -1349,3 +1349,7 @@ Maintained as an intelligent quality-engineering platform for scalable multi-pro
 **Author: Raushan Raj**
 
 </div>
+
+
+| v1.9.1 independent review closure | [`docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md`](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md) |
+| v1.9.1 review validation | [`docs/66-v1.9.1-REVIEW-VALIDATION.md`](docs/66-v1.9.1-REVIEW-VALIDATION.md) |

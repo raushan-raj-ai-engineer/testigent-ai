@@ -8,7 +8,7 @@ import { FailureHistoryStore } from '../../src/framework/failure-intelligence/fa
 import type { FailureSignal } from '../../src/framework/failure-intelligence/failure-intelligence.types.js';
 import { invokeAgenticMcpTool, listAgenticMcpTools } from '../../src/framework/mcp/tool-registry.js';
 
-const base: FailureSignal = { scenarioId: 'S1', title: 'Create order', application: 'orders', businessStep: 'Submit order', error: 'server returned internal error', endpoint: '/orders/48192', httpStatus: 500, authStatus: 'VALID', evidenceMode: 'LIVE', synthetic: false, claimEligible: true };
+const base: FailureSignal = { scenarioId: 'S1', title: 'Create order', application: 'orders', businessStep: 'Submit order', error: 'server returned internal error', endpoint: '/orders/48192', httpStatus: 500, authStatus: 'VALID', traceRef: 'evidence/order-trace.zip', evidenceMode: 'LIVE', synthetic: false, claimEligible: true };
 
 test.describe('Failure Intelligence deterministic contract', () => {
   test('classifies evidence-backed root causes without requiring AI', () => {
@@ -46,28 +46,9 @@ test.describe('Failure Intelligence deterministic contract', () => {
     expect(result.aiEscalationAllowed).toBe(true);
     expect(result.claimEligible).toBe(false);
     expect(result.humanConfirmationRecommended).toBe(true);
-
-    const genericReceived = classifyFailureDeterministically({
-      scenarioId: 'U2',
-      title: 'Ambiguous receipt',
-      application: 'demo',
-      error: 'request was received unexpectedly',
-      evidenceMode: 'LIVE',
-      synthetic: false,
-      claimEligible: false
-    });
+    const genericReceived = classifyFailureDeterministically({ scenarioId: 'U2', title: 'Ambiguous receipt', application: 'demo', error: 'request was received unexpectedly', evidenceMode: 'LIVE', synthetic: false, claimEligible: false });
     expect(genericReceived.category).toBe('UNKNOWN');
-
-    const assertion = classifyFailureDeterministically({
-      scenarioId: 'U3',
-      title: 'Incorrect order total',
-      application: 'demo',
-      businessStep: 'Verify order total',
-      error: 'Expected 42.00 but Received 41.00',
-      evidenceMode: 'LIVE',
-      synthetic: false,
-      claimEligible: true
-    });
+    const assertion = classifyFailureDeterministically({ scenarioId: 'U3', title: 'Incorrect order total', application: 'demo', businessStep: 'Verify order total', error: 'Expected 42.00 but Received 41.00', evidenceMode: 'LIVE', synthetic: false, claimEligible: true });
     expect(assertion.category).toBe('PRODUCT_DEFECT');
     expect(assertion.reasonCodes).toContain('BUSINESS_ASSERTION_FAILED');
   });
@@ -81,14 +62,16 @@ test.describe('Failure Intelligence deterministic contract', () => {
       expect(tool?.annotations?.destructiveHint).toBe(false);
     }
     const context = { root: process.cwd(), runId: 'failure-contract', environment: 'qa' };
-    const explained = await invokeAgenticMcpTool('testigent_explain_failure', { signal: { scenarioId: 'M1', title: 'Create order', application: 'orders', businessStep: 'Submit order', error: 'server internal error', endpoint: '/orders/41', httpStatus: 500, authStatus: 'VALID' } }, context) as { category: string };
-    expect(explained.category).toBe('PRODUCT_DEFECT');
+    const explained = await invokeAgenticMcpTool('testigent_explain_failure', { signal: { scenarioId: 'M1', title: 'Create order', application: 'orders', businessStep: 'Submit order', error: 'server internal error', endpoint: '/orders/41', httpStatus: 500, authStatus: 'VALID' } }, context) as { category: string; evidenceMode: string; claimEligible: boolean };
+    expect(explained.category).toBe('UNKNOWN');
+    expect(explained.evidenceMode).toBe('UNVERIFIED');
+    expect(explained.claimEligible).toBe(false);
     const triage = await invokeAgenticMcpTool('testigent_triage_failures', { signals: [
       { scenarioId: 'M1', title: 'Create order', application: 'orders', error: 'server internal error', endpoint: '/orders/41', httpStatus: 500, authStatus: 'VALID' },
       { scenarioId: 'M2', title: 'Retry order', application: 'orders', error: 'server internal error', endpoint: '/orders/99', httpStatus: 500, authStatus: 'VALID' }
     ] }, context) as { uniqueIncidents: number; claimEligible: boolean };
     expect(triage.uniqueIncidents).toBe(1);
-    expect(triage.claimEligible).toBe(true);
+    expect(triage.claimEligible).toBe(false);
   });
 
   test('production history rejects showcase evidence and keeps live records immutable', () => {
@@ -96,11 +79,11 @@ test.describe('Failure Intelligence deterministic contract', () => {
     try {
       const store = new FailureHistoryStore(dir);
       const live = classifyFailureDeterministically(base);
-      expect(() => store.append({ ...live, evidenceMode: 'SHOWCASE', synthetic: true, claimEligible: false })).toThrow(/FAILURE_HISTORY_TRUST_BOUNDARY/);
-      const target = store.append(live);
+      expect(() => store.append({ ...live, evidenceMode: 'SHOWCASE', synthetic: true, claimEligible: false }, { runId: 'run-1' })).toThrow(/FAILURE_HISTORY_TRUST_BOUNDARY/);
+      const target = store.append(live, { runId: 'run-1', recordedAt: '2026-09-14T00:00:00.000Z' });
       expect(fs.existsSync(target)).toBe(true);
       expect(store.similar(live.fingerprint)).toHaveLength(1);
-      expect(() => store.append({ ...live, rationale: 'changed immutable evidence' })).toThrow(/FAILURE_HISTORY_CONFLICT/);
+      expect(() => store.append({ ...live, rationale: 'changed immutable evidence' }, { runId: 'run-1', recordedAt: '2026-09-14T00:00:00.000Z' })).toThrow(/FAILURE_HISTORY_CONFLICT/);
     } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });

@@ -7,7 +7,7 @@ import { analyzeAgenticImpact } from '../agentic/planner/impact-planner.js';
 import { orchestrateGenerationProposal } from '../agentic/orchestration/agentic-orchestrator.js';
 import { AgentDecisionLedger } from '../agentic/evidence/agent-decision-ledger.js';
 import type { AgenticMcpContext, McpToolDefinition } from './contracts.js';
-import { boundedMcpString, boundedMcpStringArray, resolveMcpRequirementPath } from './security-policy.js';
+import { assertExactObjectKeys, boundedMcpString, boundedMcpStringArray, resolveMcpRequirementPath } from './security-policy.js';
 import { assertSafeProjectName, resolveWorkspacePath } from '../agentic/policy/path-policy.js';
 import type { GeneratedArtifactKind } from '../agentic/contracts/generation.types.js';
 import { analyzeFailureIntelligence } from '../failure-intelligence/failure-analyzer.js';
@@ -72,14 +72,16 @@ export function listAgenticMcpTools(): McpToolDefinition[] {
 
 /** Invokes one governed agentic MCP tool and returns structured JSON-safe output. */
 export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, context: AgenticMcpContext): Promise<unknown> {
-  const args = rawArguments && typeof rawArguments === 'object' && !Array.isArray(rawArguments) ? rawArguments as Record<string, unknown> : {};
-  if (name === 'testigent_list_projects') return listProjects(context.root);
-  if (name === 'testigent_explain_failure') return classifyFailureDeterministically(parseFailureSignal(args.signal));
+  const args = strictArguments(rawArguments);
+  if (name === 'testigent_list_projects') { assertExactObjectKeys(args, [], 'testigent_list_projects arguments'); return listProjects(context.root); }
+  if (name === 'testigent_explain_failure') { assertExactObjectKeys(args, ['signal'], 'testigent_explain_failure arguments'); return classifyFailureDeterministically(parseFailureSignal(args.signal)); }
   if (name === 'testigent_triage_failures') {
+    assertExactObjectKeys(args, ['signals'], 'testigent_triage_failures arguments');
     if (!Array.isArray(args.signals) || args.signals.length < 1 || args.signals.length > 100) throw new Error('signals must contain between 1 and 100 failure evidence objects.');
     return analyzeFailureIntelligence(args.signals.map(parseFailureSignal));
   }
   if (name === 'testigent_plan_requirement') {
+    assertExactObjectKeys(args, ['project', 'requirementFile'], 'testigent_plan_requirement arguments');
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const file = resolveMcpRequirementPath(context.root, project, boundedMcpString(args.requirementFile, 'requirementFile', 500));
     const requirement = await loadRequirement(file);
@@ -91,6 +93,7 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     return plan;
   }
   if (name === 'testigent_analyze_impact') {
+    assertExactObjectKeys(args, ['project', 'changedPaths'], 'testigent_analyze_impact arguments');
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const changedPaths = boundedMcpStringArray(args.changedPaths, 'changedPaths', 100, 500);
     for (const changed of changedPaths) resolveWorkspacePath(context.root, changed);
@@ -100,11 +103,13 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     return result;
   }
   if (name === 'testigent_discover_tests') {
+    assertExactObjectKeys(args, ['project', 'query'], 'testigent_discover_tests arguments');
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const query = typeof args.query === 'string' ? args.query.trim().toLowerCase().slice(0, 200) : '';
     return discoverTests(context.root, project, query);
   }
   if (name === 'testigent_review_generation') {
+    assertExactObjectKeys(args, ['project', 'planId', 'requirementRef', 'kind', 'targetPath', 'content', 'rationale', 'confidence', 'provider', 'model'], 'testigent_review_generation arguments');
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const kind = boundedMcpString(args.kind, 'kind', 40) as GeneratedArtifactKind;
     if (!GENERATION_KINDS.has(kind)) throw new Error(`Unsupported generation kind '${kind}'.`);
@@ -125,6 +130,7 @@ export async function invokeAgenticMcpTool(name: string, rawArguments: unknown, 
     });
   }
   if (name === 'testigent_get_agentic_evidence') {
+    assertExactObjectKeys(args, ['project', 'environment', 'runId'], 'testigent_get_agentic_evidence arguments');
     const project = assertSafeProjectName(boundedMcpString(args.project, 'project', 80));
     const environment = typeof args.environment === 'string' && args.environment.trim() ? boundedMcpString(args.environment, 'environment', 80) : context.environment;
     const runId = typeof args.runId === 'string' && args.runId.trim() ? boundedMcpString(args.runId, 'runId', 160) : context.runId;
@@ -159,32 +165,41 @@ function discoverTests(root: string, project: string, query: string): Array<{ pa
   return output.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+const FAILURE_SIGNAL_FIELDS = ['scenarioId', 'title', 'application', 'project', 'businessStep', 'error', 'endpoint', 'httpStatus', 'contractViolation', 'authStatus', 'environmentSignal', 'dependencySignal', 'testDataSignal', 'locatorSignal', 'healingOutcome', 'flaky', 'retriesUsed', 'knownDefectId', 'consoleError', 'traceRef', 'screenshotRef'] as const;
+
+function strictArguments(raw: unknown): Record<string, unknown> {
+  if (raw === undefined) return {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('MCP tool arguments must be an object.');
+  return raw as Record<string, unknown>;
+}
+
 function failureSignalSchema(): Record<string, unknown> {
   return { type: 'object', properties: {
-    scenarioId: { type: 'string', maxLength: 160 }, title: { type: 'string', maxLength: 500 }, application: { type: 'string', maxLength: 100 }, project: { type: 'string', maxLength: 100 }, businessStep: { type: 'string', maxLength: 500 }, error: { type: 'string', maxLength: 4000 }, endpoint: { type: 'string', maxLength: 500 }, httpStatus: { type: 'number', minimum: 100, maximum: 599 }, contractViolation: { type: 'string', maxLength: 2000 }, authStatus: { type: 'string', enum: ['VALID', 'INVALID', 'EXPIRED', 'NOT_CONFIGURED'] }, environmentSignal: { type: 'string', maxLength: 2000 }, testDataSignal: { type: 'string', maxLength: 2000 }, locatorSignal: { type: 'string', maxLength: 2000 }, healingOutcome: { type: 'string', enum: ['VALIDATED', 'REJECTED', 'SUGGESTED', 'UNVERIFIED', 'NONE'] }, flaky: { type: 'boolean' }, retriesUsed: { type: 'number', minimum: 0, maximum: 50 }, knownDefectId: { type: 'string', maxLength: 160 }, consoleError: { type: 'string', maxLength: 4000 }, traceRef: { type: 'string', maxLength: 500 }, screenshotRef: { type: 'string', maxLength: 500 },
+    scenarioId: { type: 'string', maxLength: 160 }, title: { type: 'string', maxLength: 500 }, application: { type: 'string', maxLength: 100 }, project: { type: 'string', maxLength: 100 }, businessStep: { type: 'string', maxLength: 500 }, error: { type: 'string', maxLength: 4000 }, endpoint: { type: 'string', maxLength: 500 }, httpStatus: { type: 'number', minimum: 100, maximum: 599 }, contractViolation: { type: 'string', maxLength: 2000 }, authStatus: { type: 'string', enum: ['VALID', 'INVALID', 'EXPIRED', 'NOT_CONFIGURED'] }, environmentSignal: { type: 'string', maxLength: 2000 }, dependencySignal: { type: 'string', maxLength: 2000 }, testDataSignal: { type: 'string', maxLength: 2000 }, locatorSignal: { type: 'string', maxLength: 2000 }, healingOutcome: { type: 'string', enum: ['VALIDATED', 'REJECTED', 'SUGGESTED', 'UNVERIFIED', 'NONE'] }, flaky: { type: 'boolean' }, retriesUsed: { type: 'number', minimum: 0, maximum: 50 }, knownDefectId: { type: 'string', maxLength: 160 }, consoleError: { type: 'string', maxLength: 4000 }, traceRef: { type: 'string', maxLength: 500 }, screenshotRef: { type: 'string', maxLength: 500 },
   }, required: ['scenarioId', 'title', 'application'], additionalProperties: false };
 }
 
 function parseFailureSignal(raw: unknown): FailureSignal {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('signal must be an object.');
   const value = raw as Record<string, unknown>;
+  assertExactObjectKeys(value, FAILURE_SIGNAL_FIELDS, 'failure signal');
   const signal: FailureSignal = {
     scenarioId: boundedMcpString(value.scenarioId, 'scenarioId', 160),
     title: boundedMcpString(value.title, 'title', 500),
     application: boundedMcpString(value.application, 'application', 100),
-    evidenceMode: 'LIVE', synthetic: false, claimEligible: true,
+    evidenceMode: 'UNVERIFIED', synthetic: false, claimEligible: false,
   };
-  for (const [field, limit] of Object.entries({ project: 100, businessStep: 500, error: 4000, endpoint: 500, contractViolation: 2000, environmentSignal: 2000, testDataSignal: 2000, locatorSignal: 2000, knownDefectId: 160, consoleError: 4000, traceRef: 500, screenshotRef: 500 })) {
+  for (const [field, limit] of Object.entries({ project: 100, businessStep: 500, error: 4000, endpoint: 500, contractViolation: 2000, environmentSignal: 2000, dependencySignal: 2000, testDataSignal: 2000, locatorSignal: 2000, knownDefectId: 160, consoleError: 4000, traceRef: 500, screenshotRef: 500 })) {
     if (value[field] !== undefined) (signal as unknown as Record<string, unknown>)[field] = boundedMcpString(value[field], field, limit);
   }
   if (value.httpStatus !== undefined) {
-    const status = Number(value.httpStatus); if (!Number.isInteger(status) || status < 100 || status > 599) throw new Error('httpStatus must be an HTTP status integer.'); signal.httpStatus = status;
+    if (typeof value.httpStatus !== 'number') throw new Error('httpStatus must be a number.'); const status = value.httpStatus; if (!Number.isInteger(status) || status < 100 || status > 599) throw new Error('httpStatus must be an HTTP status integer.'); signal.httpStatus = status;
   }
   if (value.retriesUsed !== undefined) {
-    const retries = Number(value.retriesUsed); if (!Number.isInteger(retries) || retries < 0 || retries > 50) throw new Error('retriesUsed must be an integer from 0 to 50.'); signal.retriesUsed = retries;
+    if (typeof value.retriesUsed !== 'number') throw new Error('retriesUsed must be a number.'); const retries = value.retriesUsed; if (!Number.isInteger(retries) || retries < 0 || retries > 50) throw new Error('retriesUsed must be an integer from 0 to 50.'); signal.retriesUsed = retries;
   }
-  if (typeof value.flaky === 'boolean') signal.flaky = value.flaky;
-  if (typeof value.authStatus === 'string' && ['VALID', 'INVALID', 'EXPIRED', 'NOT_CONFIGURED'].includes(value.authStatus)) signal.authStatus = value.authStatus as FailureSignal['authStatus'];
-  if (typeof value.healingOutcome === 'string' && ['VALIDATED', 'REJECTED', 'SUGGESTED', 'UNVERIFIED', 'NONE'].includes(value.healingOutcome)) signal.healingOutcome = value.healingOutcome as FailureSignal['healingOutcome'];
+  if (value.flaky !== undefined) { if (typeof value.flaky !== 'boolean') throw new Error('flaky must be a boolean.'); signal.flaky = value.flaky; }
+  if (value.authStatus !== undefined) { if (typeof value.authStatus !== 'string' || !['VALID', 'INVALID', 'EXPIRED', 'NOT_CONFIGURED'].includes(value.authStatus)) throw new Error('authStatus is invalid.'); signal.authStatus = value.authStatus as FailureSignal['authStatus']; }
+  if (value.healingOutcome !== undefined) { if (typeof value.healingOutcome !== 'string' || !['VALIDATED', 'REJECTED', 'SUGGESTED', 'UNVERIFIED', 'NONE'].includes(value.healingOutcome)) throw new Error('healingOutcome is invalid.'); signal.healingOutcome = value.healingOutcome as FailureSignal['healingOutcome']; }
   return signal;
 }

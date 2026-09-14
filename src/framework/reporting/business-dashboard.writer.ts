@@ -18,6 +18,7 @@ import { renderCustomerShowcaseHtml } from './customer-showcase.renderer.js';
 import { failureSignalsFromExecutionFacts } from '../failure-intelligence/report-adapter.js';
 import { analyzeFailureIntelligence } from '../failure-intelligence/failure-analyzer.js';
 import { validateShowcaseDataset, type ShowcaseDataset } from '../failure-intelligence/showcase-policy.js';
+import { FailureHistoryStore } from '../failure-intelligence/failure-history.store.js';
 
 /**
  * Author: Raushan Raj
@@ -49,7 +50,9 @@ export function writeBusinessDashboard(outputDir: string, input: ExecutionFacts,
   const benchmarkSummary = analyzeBenchmarks(benchmarkStore.comparative(), benchmarkStore.scale(), benchmarkStore.falseHeal());
   fs.writeFileSync(path.join(outputDir, 'benchmark-intelligence.html'), renderBenchmarkIntelligenceHtml(benchmarkSummary), 'utf8');
   fs.writeFileSync(path.join(outputDir, 'api-contract-intelligence.html'), renderApiContractIntelligenceHtml(readApiContractSummary(outputDir)), 'utf8');
-  const failureSummary = analyzeFailureIntelligence(failureSignalsFromExecutionFacts(facts));
+  const failureSignals = failureSignalsFromExecutionFacts(facts);
+  const failureSummary = analyzeFailureIntelligence(failureSignals);
+  persistLiveFailureOccurrences(facts, failureSignals, failureSummary);
   fs.writeFileSync(path.join(outputDir, 'failure-intelligence.html'), renderFailureIntelligenceHtml(failureSummary), 'utf8');
   writeCustomerShowcase(outputDir);
   fs.writeFileSync(path.join(outputDir, 'index.html'), renderBusinessHtml(facts, { ...options, agenticSummary }), 'utf8');
@@ -117,9 +120,26 @@ function toCsv(facts: ExecutionFacts): string {
   return rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
 }
 
-function csvCell(value: unknown): string { return `"${String(value ?? '').replaceAll('"', '""')}"`; }
+function csvCell(value: unknown): string { return spreadsheetSafeCsvCell(value); }
+
+/** Spreadsheet-safe CSV cell. JSON retains exact source values; human CSV neutralizes formula prefixes. */
+export function spreadsheetSafeCsvCell(value: unknown): string {
+  let text = String(value ?? '');
+  if (/^[\t\r]/.test(text) || /^\s*[=+\-@]/.test(text)) text = `\'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
 function safeFile(value: string): string { return value.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 140); }
 function cloneFacts(value: ExecutionFacts): ExecutionFacts { return JSON.parse(JSON.stringify(value)) as ExecutionFacts; }
+
+
+function persistLiveFailureOccurrences(facts: ExecutionFacts, signals: ReturnType<typeof failureSignalsFromExecutionFacts>, summary: ReturnType<typeof analyzeFailureIntelligence>): void {
+  const store = FailureHistoryStore.forScope(process.cwd(), facts.application, facts.environment);
+  for (const classification of summary.classifications) {
+    if (!classification.claimEligible || classification.evidenceMode !== 'LIVE' || classification.synthetic) continue;
+    const signal = signals.find(item => item.scenarioId === classification.scenarioId);
+    store.append(classification, { runId: facts.runId, attempt: signal?.retriesUsed ?? 0, environment: facts.environment, project: signal?.project });
+  }
+}
 
 function readApiContractSummary(outputDir: string): ApiContractIntelligenceSummary {
   const source = path.join(path.dirname(outputDir), 'api-contract', 'api-contract-summary.json');

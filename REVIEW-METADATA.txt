@@ -1,0 +1,22 @@
+TestigentAI v1.9.1 — Corrective Hardening Review Candidate
+
+Purpose:
+Close the 14 findings (R01-R14) from the independent TestigentAI v1.9.0 architecture/product review.
+
+Reviewed v1.9.0 archive SHA-256:
+228fe5a7544a116621a3e679a8b411d1a35e3761c780b5765798a6d62865ccac
+
+Certified immutable baseline:
+v1.9.0
+6a32718353022da4e5ce51dace59e29692340913
+
+Post-release documentation main used as upgrade ancestry boundary:
+cc4350319b2f37c0f645744478f715504ecc1264
+
+Candidate version:
+1.9.1
+
+Important:
+- This ZIP is a review candidate, not a certified v1.9.1 release.
+- Do not move or recreate the v1.9.0 tag.
+- Run the connected Node 22 certification commands in docs/66-v1.9.1-REVIEW-VALIDATION.md before release.

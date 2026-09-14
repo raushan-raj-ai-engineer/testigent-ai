@@ -220,6 +220,10 @@ for (const required of [
   'tests/framework/failure-intelligence-contract.spec.ts',
   'tests/framework/showcase-isolation-contract.spec.ts',
   'tests/framework/reporting-freeze-contract.spec.ts',
+  'tests/framework/v1.9.1-review-closure-contract.spec.ts',
+  'scripts/github-action-pin-check.mjs',
+  'docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md',
+  'docs/66-v1.9.1-REVIEW-VALIDATION.md',
   'src/framework/adoption/adoption.types.ts',
   'src/framework/adoption/adoption-store.ts',
   'src/framework/adoption/adoption-analyzer.ts',
@@ -327,6 +331,9 @@ try {
   if (/--project(?:=|\s+)\S+/.test(failureIntelligenceScript)) issues.push('test:failure-intelligence must remain browser-neutral for release compatibility');
   if (!finalValidationContract.includes('test:failure-intelligence')) issues.push('validate:final must enforce v1.9.0 failure-intelligence safety');
   if (!pkg.scripts?.showcase || !pkg.scripts?.['showcase:validate'] || !pkg.scripts?.['qa:showcase']) issues.push('v1.9.0 must retain one-click customer showcase commands');
+  if (!pkg.scripts?.['test:review:closure']?.includes('v1.9.1-review-closure-contract.spec.ts')) issues.push('v1.9.1 must retain the independent-review closure regression suite');
+  if (!finalValidationContract.includes('test:review:closure')) issues.push('validate:final must enforce v1.9.1 independent-review closure');
+  if (!pkg.scripts?.['release:static']?.includes('github-action-pin-check.mjs')) issues.push('release:static must enforce full-SHA GitHub Action pinning');
 
   const showcasePolicy = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/showcase-policy.ts'), 'utf8');
   const showcaseDataset = JSON.parse(fs.readFileSync(path.join(root, 'showcase/customer-demo.json'), 'utf8'));
@@ -348,12 +355,7 @@ try {
   if (!reportingFreeze.includes('REPORTING SURFACE FREEZE') || !reportingFreeze.includes('bug/security/accessibility/compatibility/performance')) issues.push('v1.9.0 reporting surface freeze policy/exception boundary missing');
   if (!mcpRegistryV19.includes('testigent_explain_failure') || !mcpRegistryV19.includes('testigent_triage_failures') || !mcpRegistryV19.includes("readOnlyHint: true")) issues.push('v1.9.0 MCP must expose governed read-only failure explain/triage tools');
   const securityRegressionV18 = fs.readFileSync(path.join(root, 'tests/framework/review-hardening-contract.spec.ts'), 'utf8');
-  if (
-    !bulkAudit.includes('-/npm/v1/security/advisories/bulk') ||
-    !securityCheckV19.includes('SECURITY_AUDIT_SOURCE') ||
-    !securityCheckV19.includes('fetchBulkAdvisoryAudit') ||
-    !securityRegressionV18.includes('A8 npm Bulk Advisory fallback preserves installed versions and advisory identity')
-  ) issues.push('certified v1.8 fail-closed npm Bulk Advisory security contract must remain intact');
+  if (!bulkAudit.includes('-/npm/v1/security/advisories/bulk') || !securityCheckV19.includes('SECURITY_AUDIT_SOURCE') || !securityCheckV19.includes('fetchBulkAdvisoryAudit') || !securityRegressionV18.includes('A8 npm Bulk Advisory fallback preserves installed versions and advisory identity')) issues.push('certified v1.8 fail-closed npm Bulk Advisory security contract must remain intact');
 
   const adoptionStore = fs.readFileSync(path.join(root, 'src/framework/adoption/adoption-store.ts'), 'utf8');
   const adoptionAnalyzer = fs.readFileSync(path.join(root, 'src/framework/adoption/adoption-analyzer.ts'), 'utf8');
@@ -488,8 +490,8 @@ try {
   if (!githubWorkflow.includes("steps.merge-business.outcome == 'success'") || !githubWorkflow.includes("steps.validate-final-business.outcome == 'success'")) {
     issues.push('GitHub CI must preserve intermediate artifacts when report merge/final validation fails');
   }
-  if (githubWorkflow.includes('actions/cache@v4')) issues.push('GitHub CI must not use the deprecated Node 20 actions/cache@v4 runtime');
-  if (!githubWorkflow.includes('actions/cache@v6')) issues.push('GitHub report-history cache must use the supported Node 24 actions/cache@v6 runtime');
+  if (/actions\/cache@v4(?:\s|$)/.test(githubWorkflow)) issues.push('GitHub CI must not use the deprecated Node 20 actions/cache@v4 runtime');
+  if (!/uses:\s*actions\/cache@[0-9a-f]{40}\s*#\s*v6(?:\.|\s|$)/i.test(githubWorkflow)) issues.push('GitHub report-history cache must pin the supported Node 24 actions/cache v6 runtime to a full commit SHA');
   if (githubWorkflow.includes("EXPECTED_BUSINESS_REPORTS: '2'")) issues.push('GitHub merge must not hardcode two business reports');
   const azureWorkflow = normalizeContractText(fs.readFileSync(path.join(root, 'azure-pipelines.yml'), 'utf8'));
   if (!azureWorkflow.includes('EXPECTED_CORE_WORKERS=') || !azureWorkflow.includes('EXPECT_AI_LANE=')) issues.push('Azure merge must independently validate core workers and AI lane');

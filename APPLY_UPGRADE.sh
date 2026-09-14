@@ -3,8 +3,8 @@ set -euo pipefail
 
 BUNDLE_ROOT="$(cd "$(dirname "$0")" && pwd)"
 TARGET_ROOT="${1:-$HOME/testigent-ai}"
-CERTIFIED_V180_SHA="1ad48d67661df02f51e5b6268a3f0d74bf2a182d"
-POST_RELEASE_V180_MAIN_SHA="6090b702a56078a546cfe6dd0d2bc2cbaba92dd6"
+CERTIFIED_V190_SHA="6a32718353022da4e5ce51dace59e29692340913"
+POST_RELEASE_V190_MAIN_SHA="cc4350319b2f37c0f645744478f715504ecc1264"
 
 if [[ ! -d "$TARGET_ROOT/.git" ]]; then
   echo "Target must be an existing TestigentAI Git worktree: $TARGET_ROOT" >&2
@@ -13,7 +13,7 @@ fi
 
 branch="$(git -C "$TARGET_ROOT" branch --show-current)"
 if [[ -z "$branch" || "$branch" == "main" || "$branch" == "master" ]]; then
-  echo "Refusing to apply v1.9.0 candidate on '$branch'. Create a feature branch from current main first." >&2
+  echo "Refusing to apply v1.9.1 corrective candidate on '$branch'. Create a feature branch from current main first." >&2
   exit 3
 fi
 
@@ -23,35 +23,35 @@ if [[ "${TESTIGENT_ALLOW_DIRTY_UPGRADE:-false}" != "true" ]] && [[ -n "$(git -C 
 fi
 
 bundle_version="$(node -p "require('$BUNDLE_ROOT/package.json').version")"
-if [[ "$bundle_version" != "1.9.0" ]]; then
+if [[ "$bundle_version" != "1.9.1" ]]; then
   echo "Unexpected bundle version: $bundle_version" >&2
   exit 5
 fi
 
 target_version="$(node -p "require('$TARGET_ROOT/package.json').version" 2>/dev/null || true)"
-if [[ "$target_version" != "1.8.0" && "$target_version" != "1.9.0" ]]; then
-  echo "Expected target version 1.8.0 (or 1.9.0 for deliberate re-application), found '${target_version:-unknown}'." >&2
+if [[ "$target_version" != "1.9.0" && "$target_version" != "1.9.1" ]]; then
+  echo "Expected target version 1.9.0 (or 1.9.1 for deliberate re-application), found '${target_version:-unknown}'." >&2
   exit 6
 fi
 
-if ! git -C "$TARGET_ROOT" rev-parse -q --verify refs/tags/v1.8.0 >/dev/null; then
-  echo "Missing required certified v1.8.0 tag in target repository." >&2
+if ! git -C "$TARGET_ROOT" rev-parse -q --verify refs/tags/v1.9.0 >/dev/null; then
+  echo "Missing required certified v1.9.0 tag in target repository." >&2
   exit 7
 fi
 
-actual_v180_sha="$(git -C "$TARGET_ROOT" rev-list -n 1 v1.8.0)"
-if [[ "$actual_v180_sha" != "$CERTIFIED_V180_SHA" ]]; then
-  echo "Refusing upgrade: v1.8.0 tag resolves to $actual_v180_sha, expected immutable certified SHA $CERTIFIED_V180_SHA." >&2
+actual_v190_sha="$(git -C "$TARGET_ROOT" rev-list -n 1 v1.9.0)"
+if [[ "$actual_v190_sha" != "$CERTIFIED_V190_SHA" ]]; then
+  echo "Refusing upgrade: v1.9.0 tag resolves to $actual_v190_sha, expected immutable certified SHA $CERTIFIED_V190_SHA." >&2
   exit 8
 fi
 
-if ! git -C "$TARGET_ROOT" cat-file -e "$POST_RELEASE_V180_MAIN_SHA^{commit}" 2>/dev/null; then
-  echo "Target repository does not contain the v1.8.0 post-release documentation baseline $POST_RELEASE_V180_MAIN_SHA." >&2
+if ! git -C "$TARGET_ROOT" cat-file -e "$POST_RELEASE_V190_MAIN_SHA^{commit}" 2>/dev/null; then
+  echo "Target repository does not contain the v1.9.0 post-release documentation baseline $POST_RELEASE_V190_MAIN_SHA." >&2
   exit 9
 fi
 
-if ! git -C "$TARGET_ROOT" merge-base --is-ancestor "$POST_RELEASE_V180_MAIN_SHA" HEAD; then
-  echo "Refusing upgrade: feature branch must descend from current v1.8.0 post-release main $POST_RELEASE_V180_MAIN_SHA." >&2
+if ! git -C "$TARGET_ROOT" merge-base --is-ancestor "$POST_RELEASE_V190_MAIN_SHA" HEAD; then
+  echo "Refusing upgrade: feature branch must descend from current v1.9.0 post-release main $POST_RELEASE_V190_MAIN_SHA." >&2
   exit 10
 fi
 
@@ -69,13 +69,13 @@ excluded_roots = {
     '.runtime', '.auth', '.healing', '.report-history', 'coverage', 'dist', 'upgrade'
 }
 excluded_files = {'.env', '.DS_Store'}
+# Historical artifacts remain immutable. v1.9.1 intentionally changes the ledger itself for R13,
+# so agent-ledger source/contracts are not protected from this corrective overlay.
 protected = {
     'docs/49-v1.6.1-DEEP-REVIEW-VALIDATION.md',
     'docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md',
     'docs/53-v1.7.0-DEEP-REVIEW-VALIDATION.md',
     'docs/54-v1.7.0-CANDIDATE-HANDOFF.md',
-    'src/framework/agentic/evidence/agent-decision-ledger.ts',
-    'tests/framework/agentic-ledger-contract.spec.ts',
     'tests/helpers/agent-ledger-writer.ts',
     'tests/framework/dashboard-interactive.spec.ts',
 }
@@ -88,16 +88,16 @@ def digest(path: Path) -> str | None:
 before = {rel: digest(target / rel) for rel in sorted(protected)}
 missing = [rel for rel, value in before.items() if value is None]
 if missing:
-    raise SystemExit('Protected certified target files are missing: ' + ', '.join(missing))
+    raise SystemExit('Protected historical target files are missing: ' + ', '.join(missing))
 
-backup = Path.home() / 'testigent-ai-upgrade-backups' / f"v1.9.0-{time.strftime('%Y%m%d-%H%M%S')}"
+backup = Path.home() / 'testigent-ai-upgrade-backups' / f"v1.9.1-{time.strftime('%Y%m%d-%H%M%S')}"
 changed = skipped = protected_skipped = 0
 for src in sorted(p for p in bundle.rglob('*') if p.is_file()):
     rel_path = src.relative_to(bundle)
     rel = rel_path.as_posix()
     if rel_path.parts and rel_path.parts[0] in excluded_roots:
         continue
-    if src.name in excluded_files or src.suffix in {'.zip'} or src.name.endswith('.zip.sha256'):
+    if src.name in excluded_files or src.suffix == '.zip' or src.name.endswith('.zip.sha256'):
         continue
     if rel in protected:
         protected_skipped += 1
@@ -117,11 +117,11 @@ for src in sorted(p for p in bundle.rglob('*') if p.is_file()):
 after = {rel: digest(target / rel) for rel in sorted(protected)}
 modified = [rel for rel in protected if before[rel] != after[rel]]
 if modified:
-    raise SystemExit('Protected certified files changed during upgrade: ' + ', '.join(sorted(modified)))
+    raise SystemExit('Protected historical files changed during upgrade: ' + ', '.join(sorted(modified)))
 
 print(json.dumps({
     'ok': True,
-    'bundleVersion': '1.9.0',
+    'bundleVersion': '1.9.1',
     'changed': changed,
     'skipped': skipped,
     'protectedSkipped': protected_skipped,
@@ -132,6 +132,6 @@ PY
 
 "$BUNDLE_ROOT/VERIFY_UPGRADE.sh" "$TARGET_ROOT"
 
-echo "v1.9.0 candidate applied to branch '$branch'."
-echo "Protected certified/historical files were preserved from the target repository."
+echo "v1.9.1 corrective hardening candidate applied to branch '$branch'."
+echo "The immutable v1.9.0 tag remains untouched."
 echo "Review with: git -C '$TARGET_ROOT' status -sb && git -C '$TARGET_ROOT' diff --check"

@@ -1,25 +1,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { assertSafeProjectName, resolveWorkspacePath } from '../agentic/policy/path-policy.js';
+import { assertSafeProjectName, normalizeSafeRelativePath, resolveContainedPath } from '../agentic/policy/path-policy.js';
 
 const REQUIREMENT_EXTENSIONS = new Set(['.md', '.json', '.csv', '.xlsx', '.xls']);
 
-/** Resolves a local requirement source while denying traversal, remote URLs and cross-project reads. */
+/** Resolves a local requirement source using canonical containment; symlink traversal across projects is denied. */
 export function resolveMcpRequirementPath(root: string, project: string, requirementFile: string): string {
   const safeProject = assertSafeProjectName(project);
-  const normalized = requirementFile.replaceAll('\\', '/').replace(/^\.\//, '');
+  const normalized = normalizeSafeRelativePath(requirementFile);
   if (/^[a-z]+:\/\//i.test(normalized) || /^(?:JIRA|AZURE|GITHUB):/i.test(normalized)) {
     throw new Error('Agentic MCP requirement planning is local-only by default; remote connector sources are not exposed through this MCP boundary.');
   }
   const relative = normalized.startsWith(`projects/${safeProject}/requirements/`)
     ? normalized
     : `projects/${safeProject}/requirements/${normalized}`;
-  const absolute = resolveWorkspacePath(root, relative);
-  const requirementRoot = path.resolve(root, 'projects', safeProject, 'requirements');
+  if (!REQUIREMENT_EXTENSIONS.has(path.extname(relative).toLowerCase())) throw new Error(`Unsupported MCP requirement source: ${path.extname(relative) || '<none>'}.`);
+  const absolute = resolveContainedPath(root, relative, { mustExist: true, mustBeFile: true });
+  const requirementRoot = resolveContainedPath(root, `projects/${safeProject}/requirements`, { mustExist: true });
   const relation = path.relative(requirementRoot, absolute);
-  if (relation.startsWith('..') || path.isAbsolute(relation)) throw new Error('Requirement source escapes the selected project requirement directory.');
-  if (!REQUIREMENT_EXTENSIONS.has(path.extname(absolute).toLowerCase())) throw new Error(`Unsupported MCP requirement source: ${path.extname(absolute) || '<none>'}.`);
-  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) throw new Error(`Requirement source not found: ${relative}`);
+  if (relation === '..' || relation.startsWith(`..${path.sep}`) || path.isAbsolute(relation)) throw new Error('Requirement source escapes the selected project requirement directory.');
+  if (!fs.statSync(absolute).isFile()) throw new Error(`Requirement source not found: ${relative}`);
   return absolute;
 }
 
@@ -35,4 +35,11 @@ export function boundedMcpStringArray(value: unknown, field: string, maxItems = 
   if (!Array.isArray(value)) throw new Error(`MCP argument '${field}' must be an array.`);
   if (value.length > maxItems) throw new Error(`MCP argument '${field}' exceeds ${maxItems} items.`);
   return value.map((item, index) => boundedMcpString(item, `${field}[${index}]`, maxChars));
+}
+
+/** Enforces additionalProperties:false at runtime instead of relying on advertised MCP JSON schema alone. */
+export function assertExactObjectKeys(value: Record<string, unknown>, allowed: readonly string[], label: string): void {
+  const allowedSet = new Set(allowed);
+  const extras = Object.keys(value).filter(key => !allowedSet.has(key));
+  if (extras.length) throw new Error(`${label} contains unsupported field(s): ${extras.sort().join(', ')}.`);
 }
