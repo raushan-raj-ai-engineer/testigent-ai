@@ -1,28 +1,43 @@
-# TestigentAI v1.8.0 — Evidence-Backed Product Intelligence Candidate
+# TestigentAI v1.8.0 — Evidence-Backed Product Intelligence
 
-## Certified baseline
+## Certified release
 
-`v1.7.0` is the immutable certified baseline at commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Main and tag-triggered Release Compatibility both passed the full 5/5 Ubuntu/macOS/Windows browser matrix.
+TestigentAI v1.8.0 is the certified immutable release at commit:
 
-## Consolidated v1.8.0 scope
+`1ad48d67661df02f51e5b6268a3f0d74bf2a182d`
 
-- Adoption & Pilot Intelligence across representative applications and opaque engineer aliases;
-- measured authoring, migration, triage, CI/cost and quality metrics with explicit truth boundaries;
-- provenance-bound comparative benchmarks against an explicit baseline such as plain Playwright;
-- seeded false-heal measurement;
-- synthetic 500/2,000 planning diagnostics that cannot masquerade as measured throughput;
-- measured scale evidence evaluation with duplicate/drop/shard-imbalance checks;
-- OpenAPI 3 response contract validation and conservative breaking-change detection;
-- adoption, benchmark and API-contract drill-down pages;
-- blocking Product Intelligence deterministic safety in GitHub Actions, Azure, `validate:final` and Release Compatibility;
+Certification evidence completed successfully:
+
+- Pull request CI and full rerun passed.
+- Main CI and full rerun passed.
+- Fresh main Release Compatibility passed the full 5/5 browser/OS matrix.
+- Local main, main CI and Release Compatibility resolved to the exact same commit.
+- Annotated tag `v1.8.0` resolves to the certified commit above.
+- Tag-triggered Release Compatibility run `34801403186` passed on the same exact commit.
+
+## v1.8.0 scope
+
+- Adoption & Pilot Intelligence across representative applications and opaque engineer aliases.
+- Measured authoring, migration, triage, CI/cost and quality metrics with explicit truth boundaries.
+- Provenance-bound comparative benchmarks against explicit baselines such as plain Playwright.
+- Seeded false-heal measurement separated from valid recovery.
+- Deterministic 100/500/2,000-case scale planning.
+- Measured scale evidence evaluation with duplicate, drop and shard-imbalance checks.
+- OpenAPI 3 response contract validation and conservative breaking-change detection.
+- Adoption, benchmark and API-contract dashboard drill-down pages.
+- Blocking Product Intelligence deterministic safety in GitHub Actions, Azure Pipelines, `validate:final` and Release Compatibility.
 - v1.7.0 agent-ledger concurrency, dashboard teardown and browser-matrix hardening retained.
+- Security audit hardened against retirement/failure of the legacy npm quick-audit endpoint using a fail-closed Bulk Advisory fallback.
 
-This package is a **development candidate**, not a certified v1.8.0 release. Real adoption/differentiation/scale claims require measured evidence; example templates and synthetic planner output are non-certifying.
+## Evidence and claim discipline
 
-See `docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md` through `docs/59-v1.8.0-CANDIDATE-HANDOFF.md`.
+Real adoption, differentiation, scale and productivity claims remain evidence-bound. Synthetic examples, planning diagnostics and templates do not become product or market claims unless the required measured evidence and provenance are present.
+
+## Previous certified baseline
+
+`v1.7.0` remains an immutable historical certified release at commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`. Its tag has not been moved or recreated.
 
 ---
-
 # TestigentAI v1.7.0 — Agentic Test Intelligence (Certified Historical Release)
 
 ## Certified baseline

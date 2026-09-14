@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Certified baseline: `v1.7.0` — Agentic Test Intelligence.** Immutable tag `v1.7.0` points to certified commit `d9a228bc826e2bfaf4036535b61593ca25dad4b4`; main CI/rerun and both main and tag-triggered 5/5 Release Compatibility matrices passed. **Development candidate: `v1.8.0`** — consolidates the remaining priority architect-review work into Adoption & Benchmark Intelligence, evidence-backed plain-baseline comparison, false-heal measurement, measured scale certification, OpenAPI contract intelligence, one-click reporting and blocking deterministic CI/release gates.
+**Current certified release: `v1.8.0` — Evidence-Backed Product Intelligence.** Immutable tag `v1.8.0` points to certified commit `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`. Pull-request CI/rerun, main CI/rerun, fresh main Release Compatibility and tag-triggered Release Compatibility all passed, including the full 5/5 Ubuntu/macOS/Windows browser matrix. `v1.7.0` remains the previous immutable certified historical release. Adoption, differentiation, scale and productivity claims remain evidence-bound; synthetic or insufficient evidence cannot become product claims.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
