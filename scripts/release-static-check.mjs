@@ -357,9 +357,28 @@ try {
   const handoffV192 = fs.readFileSync(path.join(root, 'REVIEW-HANDOFF-v1.9.2.md'), 'utf8');
   const metadataV192 = fs.readFileSync(path.join(root, 'REVIEW-METADATA.txt'), 'utf8');
   const verificationV192 = fs.readFileSync(path.join(root, 'release/VERIFICATION-REPORT.md'), 'utf8');
-  if (!readmeV192.includes('Current certified release: `v1.9.1`') || !readmeV192.includes('Current corrective re-review candidate: `v1.9.2`')) issues.push('v1.9.2 artifact README must distinguish certified v1.9.1 from candidate v1.9.2');
-  if (!statusV192.includes('Current certified release: v1.9.1') || !statusV192.includes('Corrective re-review candidate: v1.9.2') || !statusV192.includes('not a certified v1.9.2 release')) issues.push('v1.9.2 current-release status must fail closed against certification ambiguity');
-  if (!handoffV192.includes('not a certified release') || !handoffV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')) issues.push('v1.9.2 review handoff must identify candidate status and immutable v1.9.1 baseline');
+  if (
+    !readmeV192.includes('Current certified release: `v1.9.2`') ||
+    !readmeV192.includes('Previous certified release: `v1.9.1`')
+  ) issues.push('README must identify certified v1.9.2 and historical v1.9.1 release status');
+
+  if (
+    !statusV192.includes('Current certified release: v1.9.2') ||
+    !statusV192.includes('f061e4ef1fd869888fdae721d4790ce2058070ae') ||
+    !statusV192.includes('34839795426') ||
+    !statusV192.includes('34840215663') ||
+    !statusV192.includes('34840673003') ||
+    !statusV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')
+  ) issues.push('v1.9.2 current-release status must identify immutable certification evidence');
+
+  if (
+    !handoffV192.includes('used to certify v1.9.2') ||
+    !handoffV192.includes('f061e4ef1fd869888fdae721d4790ce2058070ae') ||
+    !handoffV192.includes('34839795426') ||
+    !handoffV192.includes('34840215663') ||
+    !handoffV192.includes('34840673003') ||
+    !handoffV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')
+  ) issues.push('v1.9.2 review handoff must identify certified status and immutable v1.9.1 baseline');
   if (!hasReviewMetadataContract(metadataV192)) issues.push('v1.9.2 review metadata must identify version and certified baseline');
   if (!verificationV192.includes('does **not** claim') || !verificationV192.includes('outbound registry/DNS access was unavailable')) issues.push('v1.9.2 verification report must preserve packaging-environment limitations');
 
