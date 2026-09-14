@@ -1,6 +1,8 @@
 # TestigentAI v1.9.2 — Independent Re-review Corrective Handoff
 
-This is a **full corrective review candidate**, not a certified release.
+This document is the **full corrective review handoff that was used to certify v1.9.2**.
+
+v1.9.2 is now the immutable certified release at `f061e4ef1fd869888fdae721d4790ce2058070ae`. Main CI `34839795426`, fresh main Release Compatibility `34840215663` and tag-triggered Release Compatibility `34840673003` all passed on that exact commit.
 
 ## Immutable certified baseline
 

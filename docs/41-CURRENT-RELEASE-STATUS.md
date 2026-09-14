@@ -1,6 +1,20 @@
 # Current Certified Release Status
 
-## Current certified release: v1.9.1
+## Current certified release: v1.9.2
+
+TestigentAI v1.9.2 is certified at immutable commit `f061e4ef1fd869888fdae721d4790ce2058070ae`.
+
+| Certification evidence | Result |
+| --- | --- |
+| Main CI | PASS — run `34839795426` |
+| Fresh main Release Compatibility | PASS — 5/5, run `34840215663` |
+| Tag-triggered Release Compatibility | PASS — 5/5, run `34840673003` |
+| Certified tag | `v1.9.2` -> `f061e4ef1fd869888fdae721d4790ce2058070ae` |
+| GitHub Release | Published |
+
+The historical `v1.9.1` tag remains immutable at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
+
+## Previous certified release: v1.9.1
 
 **TestigentAI v1.9.1 — Corrective Hardening is the current immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.**
 
@@ -20,11 +34,11 @@
 
 The `v1.9.1` tag is immutable and must not be moved or recreated. Post-release documentation commits on `main` do not change the certified v1.9.1 source snapshot. Historical `v1.9.0` remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
 
-## Corrective re-review candidate: v1.9.2
+## v1.9.2 corrective re-review scope
 
-v1.9.2 is a hardening-only candidate based on the immutable v1.9.1 source snapshot. It responds to the independent v1.9.1 re-review without reopening the reporting feature surface.
+v1.9.2 is the certified hardening-only release based on the immutable v1.9.1 source snapshot. It responds to the independent v1.9.1 re-review without reopening the reporting feature surface.
 
-The candidate closes the re-review's remaining production-contract cases across:
+The certified release closes the re-review's remaining production-contract cases across:
 
 - selected-project canonical/symlink containment and promotion revalidation;
 - OpenAPI 3.1 boolean schemas, null/enum handling and conjunctive `$ref` sibling semantics;

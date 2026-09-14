@@ -1,12 +1,12 @@
-# TestigentAI v1.9.2 — Independent Re-review Corrective Candidate
+# TestigentAI v1.9.2 — Independent Re-review Corrective Hardening (Certified Release)
 
 ## Purpose
 
-v1.9.2 is a corrective hardening candidate responding to the independent re-review of certified v1.9.1. It keeps the shared-core architecture and reporting feature freeze while addressing the broader production-contract cases reproduced by the reviewer.
+v1.9.2 is the certified corrective hardening release responding to the independent re-review of v1.9.1. It keeps the shared-core architecture and reporting feature freeze while addressing the broader production-contract cases reproduced by the reviewer.
 
-Known re-review code reproductions addressed in this candidate include project-scoped symlink containment, OpenAPI 3.1 schema semantics, directional compatibility analysis, idempotent report regeneration/history persistence, failure-signal provenance, SQL dialect placeholders, strict TLS policy, MCP lifecycle/cancellation/frame limits and spreadsheet-viewer CSV qualification.
+Known re-review code reproductions addressed in this certified release include project-scoped symlink containment, OpenAPI 3.1 schema semantics, directional compatibility analysis, idempotent report regeneration/history persistence, failure-signal provenance, SQL dialect placeholders, strict TLS policy, MCP lifecycle/cancellation/frame limits and spreadsheet-viewer CSV qualification.
 
-`v1.9.1` remains the current immutable certified release at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. This candidate does not move or recreate that tag.
+v1.9.2 is the current immutable certified release at `f061e4ef1fd869888fdae721d4790ce2058070ae`. Main CI run `34839795426` passed on the same SHA; fresh main Release Compatibility run `34840215663` passed 5/5; tag-triggered Release Compatibility run `34840673003` also passed 5/5. The historical v1.9.1 tag remains immutable at `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
 
 See `docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md` and `docs/68-v1.9.2-VALIDATION-HANDOFF.md`.
 
