@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "id": "testigentai-v1.9-customer-showcase",
+  "title": "Enterprise Commerce Release — Customer Showcase",
+  "mode": "SHOWCASE",
+  "synthetic": true,
+  "claimEligible": false,
+  "generatedFor": "CUSTOMER_DEMO",
+  "scenarios": [
+    {
+      "scenarioId": "SHOW-AUTH-001",
+      "title": "Checkout requires a valid authenticated session",
+      "application": "commerce-web",
+      "project": "checkout",
+      "businessStep": "Authenticate user session",
+      "error": "JWT expired before checkout session could be established; request id 6d831be9-9a20-4b4e-8f39-58b52ab12631",
+      "endpoint": "/auth/session",
+      "httpStatus": 401,
+      "authStatus": "EXPIRED",
+      "traceRef": "evidence/auth-checkout-trace.zip",
+      "screenshotRef": "evidence/auth-expired.png",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-AUTH-002",
+      "title": "Account page requires a valid authenticated session",
+      "application": "commerce-web",
+      "project": "account",
+      "businessStep": "Authenticate user session",
+      "error": "JWT expired before checkout session could be established; request id b61bf242-a12d-45c6-8ed7-d842b1e5d32e",
+      "endpoint": "/auth/session",
+      "httpStatus": 401,
+      "authStatus": "EXPIRED",
+      "traceRef": "evidence/auth-account-trace.zip",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-API-003",
+      "title": "Customer profile response keeps the documented phone field",
+      "application": "customer-service",
+      "project": "customer-api",
+      "businessStep": "Validate customer response contract",
+      "error": "OpenAPI response validation failed",
+      "endpoint": "/users/48291",
+      "httpStatus": 200,
+      "authStatus": "VALID",
+      "contractViolation": "response property 'phone' required by baseline is missing",
+      "traceRef": "evidence/customer-response.json",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-PROD-004",
+      "title": "Submitting a valid order creates the order",
+      "application": "order-service",
+      "project": "checkout",
+      "businessStep": "Submit order",
+      "error": "Expected order creation but server returned internal error",
+      "endpoint": "/orders",
+      "httpStatus": 500,
+      "authStatus": "VALID",
+      "traceRef": "evidence/order-500-trace.zip",
+      "screenshotRef": "evidence/order-error.png",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-AUTO-005",
+      "title": "Administrator opens Create User dialog",
+      "application": "admin-web",
+      "project": "user-management",
+      "businessStep": "Open Create User dialog",
+      "error": "locator resolved to no visible element after semantic fallback validation",
+      "locatorSignal": "role=button name=Create User no longer matches the reviewed UI contract",
+      "healingOutcome": "REJECTED",
+      "traceRef": "evidence/create-user-trace.zip",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-DATA-006",
+      "title": "Parallel signup scenarios receive isolated customer data",
+      "application": "identity-service",
+      "project": "signup",
+      "businessStep": "Provision isolated customer fixture",
+      "error": "duplicate key violates unique constraint customers_email_key",
+      "testDataSignal": "two workers were assigned the same fixture email",
+      "endpoint": "/customers",
+      "httpStatus": 409,
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-ENV-007",
+      "title": "Release suite runs within the configured worker memory budget",
+      "application": "commerce-web",
+      "project": "regression",
+      "businessStep": "Execute browser shard",
+      "error": "worker process terminated before scenario completion",
+      "environmentSignal": "browser worker terminated after out of memory signal on CI runner",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-DEP-008",
+      "title": "Payment authorization completes through the upstream gateway",
+      "application": "payments-service",
+      "project": "payments",
+      "businessStep": "Authorize payment",
+      "error": "503 Service Unavailable from upstream payment gateway",
+      "endpoint": "/payments/authorize",
+      "httpStatus": 503,
+      "authStatus": "VALID",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-FLAKY-009",
+      "title": "Search results stabilize without intermittent timing variance",
+      "application": "catalog-web",
+      "project": "search",
+      "businessStep": "Wait for indexed search results",
+      "error": "intermittent timeout waiting for search results after 4.8 seconds",
+      "flaky": true,
+      "retriesUsed": 1,
+      "traceRef": "evidence/search-retry-trace.zip",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    },
+    {
+      "scenarioId": "SHOW-UNKNOWN-010",
+      "title": "Pricing refresh completes with complete diagnostic evidence",
+      "application": "pricing-web",
+      "project": "pricing",
+      "businessStep": "Refresh displayed price",
+      "error": "Scenario ended before a trustworthy failure signal was captured",
+      "evidenceMode": "SHOWCASE",
+      "synthetic": true,
+      "claimEligible": false
+    }
+  ],
+  "adoption": {
+    "applications": 3,
+    "contributors": 4,
+    "observations": 18,
+    "timeToFirstPassingTestMinutes": 24,
+    "requirementToApprovedTestMinutes": 41,
+    "triageMedianMinutes": 7
+  },
+  "benchmark": {
+    "baseline": "plain-playwright-showcase-baseline",
+    "authoringTimeImprovementPercent": 31,
+    "triageTimeImprovementPercent": 46,
+    "reportCompletenessPercent": 96
+  },
+  "scale": {
+    "plannedCases": 2000,
+    "shards": 8,
+    "workers": 24,
+    "measured": false
+  },
+  "apiContract": {
+    "operationsChecked": 42,
+    "breakingChanges": 2,
+    "validationFailures": 1
+  },
+  "healing": {
+    "validatedRecoveries": 7,
+    "rejectedUnsafeCandidates": 3,
+    "falseHeals": 0
+  },
+  "agentic": {
+    "plannerDecisions": 14,
+    "generationProposals": 8,
+    "reviewerRejections": 2,
+    "mcpReadOnlyCalls": 23
+  }
+}

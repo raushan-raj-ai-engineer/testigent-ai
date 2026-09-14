@@ -1,6 +1,6 @@
 {
   "name": "testigent-ai",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "description": "TestigentAI - Intelligent Quality Engineering Platform",
   "author": "Raushan Raj",
@@ -148,7 +148,7 @@
     "reporting:contract": "tsx scripts/reporting-contract.ts && tsx scripts/ci-rerun-artifact-contract.ts && tsx scripts/reporting-merge-contract.ts",
     "reporting:merge-contract": "tsx scripts/reporting-merge-contract.ts",
     "framework:health:release": "cross-env APP=demo ENV=qa tsx scripts/framework-health.ts",
-    "validate:final:steps": "npm run release:static && npm run architecture:check && npm run framework:health && npm run scale:audit && npm run scenario:doctor && npm run docs:comment-audit && npm run reporting:contract && npm run typecheck && npm run test:review:hardening && npm run test:agentic:deterministic && npm run test:product-intelligence && npm run test:framework:critical && npm run security:check",
+    "validate:final:steps": "npm run release:static && npm run architecture:check && npm run framework:health && npm run scale:audit && npm run scenario:doctor && npm run docs:comment-audit && npm run reporting:contract && npm run typecheck && npm run test:review:hardening && npm run test:agentic:deterministic && npm run test:product-intelligence && npm run test:failure-intelligence && npm run test:framework:critical && npm run security:check",
     "ci:business:summary": "tsx scripts/ci-business-step-summary.ts",
     "ci:report:bundle": "tsx scripts/ci-report-bundle.ts",
     "test:projects": "tsx scripts/test-projects.ts",
@@ -156,7 +156,7 @@
     "migration:assess": "tsx scripts/migration-assess.ts",
     "qa:migrate": "tsx scripts/qa.ts migrate",
     "test:review:browser-free": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa PLAYWRIGHT_BROWSERS_PATH=.runtime/browser-free-proof playwright test tests/framework/browser-free-fixtures.spec.ts --project=chromium --workers=1",
-    "test:review:hardening": "cross-env APP=demo ENV=qa playwright test tests/framework/review-hardening-contract.spec.ts tests/framework/browser-free-fixtures.spec.ts tests/framework/healing-generation-contract.spec.ts tests/framework/false-heal-safety.spec.ts tests/framework/evidence-intelligence-contract.spec.ts tests/framework/ai-retry-budget-contract.spec.ts tests/framework/ai-provider-health-contract.spec.ts --project=chromium",
+    "test:review:hardening": "cross-env APP=demo ENV=qa playwright test tests/framework/review-hardening-contract.spec.ts tests/framework/browser-free-fixtures.spec.ts tests/framework/healing-generation-contract.spec.ts tests/framework/false-heal-safety.spec.ts tests/framework/evidence-intelligence-contract.spec.ts tests/framework/ai-retry-budget-contract.spec.ts tests/framework/ai-provider-health-contract.spec.ts tests/framework/security-bulk-audit-contract.spec.ts --project=chromium",
     "release:compat:probe": "node scripts/release-compatibility-probe.mjs",
     "ci:report:download:validate": "tsx scripts/ci-validate-downloaded-bundles.ts",
     "change:impact": "tsx scripts/change-impact.ts",
@@ -197,7 +197,12 @@
     "qa:scale": "tsx scripts/qa.ts scale",
     "qa:api-contract": "tsx scripts/qa.ts api-contract",
     "benchmark:false-heal": "tsx scripts/benchmark-false-heal.ts",
-    "qa:false-heal": "tsx scripts/qa.ts false-heal"
+    "qa:false-heal": "tsx scripts/qa.ts false-heal",
+    "showcase": "tsx scripts/showcase.ts",
+    "showcase:validate": "tsx scripts/showcase.ts validate",
+    "test:failure-intelligence": "cross-env RUN_FRAMEWORK_TESTS=true APP=demo ENV=qa AI_ENABLED=false HEALING_AI_ENABLED=false playwright test tests/framework/failure-intelligence-contract.spec.ts tests/framework/showcase-isolation-contract.spec.ts tests/framework/reporting-freeze-contract.spec.ts",
+    "qa:showcase": "tsx scripts/qa.ts showcase",
+    "qa:showcase:validate": "npm run showcase:validate"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

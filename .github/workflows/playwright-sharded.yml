@@ -234,6 +234,27 @@ jobs:
       - name: Run adoption, benchmark and API contract safety contracts
         run: npm run test:product-intelligence
 
+  failure-intelligence-contracts:
+    name: Failure Intelligence Deterministic Safety
+    needs: [validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AI_ENABLED: 'false'
+      HEALING_AI_ENABLED: 'false'
+    steps:
+      - name: Checkout TestigentAI
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run failure intelligence, showcase isolation and reporting-freeze contracts
+        run: npm run test:failure-intelligence
+
   ai-canary:
     name: AI Live Provider Canary (non-blocking)
     needs: [validate]
@@ -465,7 +486,7 @@ jobs:
 
   merge:
     name: Merge TestigentAI Reports
-    needs: [plan, test, ai-contracts, agentic-contracts, product-intelligence-contracts, ai-canary]
+    needs: [plan, test, ai-contracts, agentic-contracts, product-intelligence-contracts, failure-intelligence-contracts, ai-canary]
     if: >-
       ${{
         always() &&
@@ -645,6 +666,7 @@ jobs:
             needs.ai-contracts.result == 'success' &&
             needs.agentic-contracts.result == 'success' &&
             needs.product-intelligence-contracts.result == 'success' &&
+            needs.failure-intelligence-contracts.result == 'success' &&
             github.event_name != 'pull_request'
           }}
         continue-on-error: true

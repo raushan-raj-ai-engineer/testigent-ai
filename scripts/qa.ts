@@ -30,6 +30,7 @@ function main(): void {
     case 'false-heal': runNpm(['run', 'benchmark:false-heal', '--', ...args], selectedEnv()); return;
     case 'scale': runNpm(['run', 'benchmark:scale', '--', ...args], selectedEnv()); return;
     case 'api-contract': runNpm(['run', 'api:contract', '--', ...args], selectedEnv()); return;
+    case 'showcase': runNpm(['run', 'showcase', '--', ...args], selectedEnv()); return;
     default: throw new Error(`Unknown qa command '${command}'. Run npm run qa -- help.`);
   }
 }
@@ -190,7 +191,8 @@ function printHelp(): void {
     `  npm run qa:benchmark -- --input <file>         Compare versioned TestigentAI/plain-Playwright evidence\n` +
     `  npm run qa:false-heal -- --input <file>        Persist/evaluate seeded false-heal evidence\n` +
     `  npm run qa:scale -- plan --cases=2000          Exercise deterministic scale planning\n` +
-    `  npm run qa:api-contract -- summary --spec <f>  Inspect OpenAPI contract evidence\n`);
+    `  npm run qa:api-contract -- summary --spec <f>  Inspect OpenAPI contract evidence\n` +
+    `  npm run qa:showcase                           Generate isolated synthetic customer showcase\n`);
 }
 
 try { main(); }
