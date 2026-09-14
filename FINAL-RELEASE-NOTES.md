@@ -1,3 +1,27 @@
+# TestigentAI v1.9.3 — Post-Certification Corrective Closure
+
+v1.9.3 is the immutable corrective release closing residual findings discovered after the v1.9.2 certification.
+
+Certified commit:
+
+`b9e3fc1e09fbb39850cc8cc068758ed07d52f942`
+
+Tag-triggered Release Compatibility run `34866842175` passed 5/5 across Windows Chromium, Ubuntu Chromium, Ubuntu Firefox, Ubuntu WebKit and macOS WebKit.
+
+The release closes:
+
+- R01 — OpenAPI 3.1 schema validation semantics
+- R02 — directional API/property-removal compatibility detection
+- R04 — dangling-symlink filesystem containment
+
+Local final validation completed with 213 passing tests and zero high/critical security advisories.
+
+The previous `v1.9.2` release remains immutable and its historical evidence below is intentionally retained.
+
+See `docs/70-v1.9.3-CERTIFICATION.md`.
+
+---
+
 # TestigentAI v1.9.2 — Independent Re-review Corrective Hardening (Certified Release)
 
 > **Historical v1.9.2 release notes.** The immutable v1.9.2 certification evidence below remains unchanged. A later independent post-certification review identified residual R01/R02/R04 cases; this archive contains a new corrective candidate documented in `docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`.
