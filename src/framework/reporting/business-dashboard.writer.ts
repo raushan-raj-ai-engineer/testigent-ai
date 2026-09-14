@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import type { BusinessAttachment, ExecutionFacts } from '../analytics/report.types';
 import { renderBusinessHtml, type BusinessDashboardOptions } from './business-html.renderer';
 import { buildEvidenceGraph, renderEvidenceLedgerHtml } from '../analytics/evidence-graph';
@@ -19,6 +20,8 @@ import { failureSignalsFromExecutionFacts } from '../failure-intelligence/report
 import { analyzeFailureIntelligence } from '../failure-intelligence/failure-analyzer.js';
 import { validateShowcaseDataset, type ShowcaseDataset } from '../failure-intelligence/showcase-policy.js';
 import { FailureHistoryStore } from '../failure-intelligence/failure-history.store.js';
+import { spreadsheetSafeCsvCell } from './csv-security.js';
+export { spreadsheetSafeCsvCell } from './csv-security.js';
 
 /**
  * Author: Raushan Raj
@@ -52,25 +55,34 @@ export function writeBusinessDashboard(outputDir: string, input: ExecutionFacts,
   fs.writeFileSync(path.join(outputDir, 'api-contract-intelligence.html'), renderApiContractIntelligenceHtml(readApiContractSummary(outputDir)), 'utf8');
   const failureSignals = failureSignalsFromExecutionFacts(facts);
   const failureSummary = analyzeFailureIntelligence(failureSignals);
-  persistLiveFailureOccurrences(facts, failureSignals, failureSummary);
   fs.writeFileSync(path.join(outputDir, 'failure-intelligence.html'), renderFailureIntelligenceHtml(failureSummary), 'utf8');
   writeCustomerShowcase(outputDir);
   fs.writeFileSync(path.join(outputDir, 'index.html'), renderBusinessHtml(facts, { ...options, agenticSummary }), 'utf8');
+  // Persist immutable history only after the complete presentation bundle is durable. A history conflict
+  // must never leave a half-refreshed dashboard, and idempotent regeneration must preserve evidence refs.
+  persistLiveFailureOccurrences(facts, failureSignals, failureSummary);
   return facts;
 }
 
-function materializeEvidence(outputDir: string, facts: ExecutionFacts): void {
+/**
+ * Materializes execution evidence into deterministic report-relative locations.
+ * Repeated report generation preserves stable artifact identities so immutable failure-history
+ * occurrences do not change merely because the presentation bundle is regenerated.
+ */
+export function materializeEvidence(outputDir: string, facts: ExecutionFacts): void {
   const includeVideo = process.env.BUSINESS_REPORT_INCLUDE_VIDEO === 'true';
   const evidenceRoot = path.join(outputDir, 'evidence');
   for (const result of facts.results) {
     for (const attachment of result.attachments ?? []) {
       if (!attachment.sourcePath || !fs.existsSync(attachment.sourcePath) || !shouldCopy(attachment, includeVideo, result.status === 'failed')) continue;
+      const source = fs.realpathSync.native(attachment.sourcePath);
+      if (!fs.statSync(source).isFile()) continue;
       const testDir = path.join(evidenceRoot, safeFile(`${result.project}-${result.testId}`));
       fs.mkdirSync(testDir, { recursive: true });
-      const ext = path.extname(attachment.sourcePath);
+      const ext = path.extname(source);
       const targetName = safeFile(`${attachment.name}${ext && !attachment.name.endsWith(ext) ? ext : ''}`);
-      const targetPath = uniquePath(path.join(testDir, targetName));
-      fs.copyFileSync(attachment.sourcePath, targetPath);
+      const targetPath = stableEvidencePath(path.join(testDir, targetName), source);
+      copyEvidenceIdempotently(source, targetPath);
       attachment.reportPath = path.relative(outputDir, targetPath).split(path.sep).join('/');
     }
   }
@@ -84,13 +96,43 @@ function shouldCopy(attachment: BusinessAttachment, includeVideo: boolean, faile
   return false;
 }
 
-function uniquePath(candidate: string): string {
-  if (!fs.existsSync(candidate)) return candidate;
+function stableEvidencePath(candidate: string, source: string): string {
+  if (!fs.existsSync(candidate) || sameFileContent(candidate, source)) return candidate;
   const ext = path.extname(candidate);
   const base = candidate.slice(0, candidate.length - ext.length);
-  let index = 2;
-  while (fs.existsSync(`${base}-${index}${ext}`)) index += 1;
-  return `${base}-${index}${ext}`;
+  const digest = fileSha256(source);
+  const hashed = `${base}-${digest.slice(0, 16)}${ext}`;
+  if (!fs.existsSync(hashed) || sameFileContent(hashed, source)) return hashed;
+  // A truncated-hash collision must not silently replace immutable evidence.
+  const full = `${base}-${digest}${ext}`;
+  if (!fs.existsSync(full) || sameFileContent(full, source)) return full;
+  throw new Error(`REPORT_EVIDENCE_CONFLICT: deterministic artifact path already contains different bytes: ${full}`);
+}
+
+function copyEvidenceIdempotently(source: string, target: string): void {
+  if (fs.existsSync(target)) {
+    if (!sameFileContent(target, source)) throw new Error(`REPORT_EVIDENCE_CONFLICT: refusing to overwrite immutable evidence: ${target}`);
+    return;
+  }
+  const temp = `${target}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+  fs.copyFileSync(source, temp, fs.constants.COPYFILE_EXCL);
+  try {
+    // Publish atomically without POSIX rename-overwrite semantics. A hard link exposes only the complete temp file
+    // and fails with EEXIST if another renderer won the race. Temp and target are in the same directory/filesystem.
+    fs.linkSync(temp, target);
+  } catch (error) {
+    if (fs.existsSync(target) && sameFileContent(target, source)) return;
+    throw error;
+  } finally {
+    fs.rmSync(temp, { force: true });
+  }
+}
+function sameFileContent(left: string, right: string): boolean {
+  const leftStat = fs.statSync(left); const rightStat = fs.statSync(right);
+  return leftStat.size === rightStat.size && fileSha256(left) === fileSha256(right);
+}
+function fileSha256(file: string): string {
+  const hash = createHash('sha256'); hash.update(fs.readFileSync(file)); return hash.digest('hex');
 }
 
 function toCsv(facts: ExecutionFacts): string {
@@ -122,12 +164,6 @@ function toCsv(facts: ExecutionFacts): string {
 
 function csvCell(value: unknown): string { return spreadsheetSafeCsvCell(value); }
 
-/** Spreadsheet-safe CSV cell. JSON retains exact source values; human CSV neutralizes formula prefixes. */
-export function spreadsheetSafeCsvCell(value: unknown): string {
-  let text = String(value ?? '');
-  if (/^[\t\r]/.test(text) || /^\s*[=+\-@]/.test(text)) text = `\'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
 function safeFile(value: string): string { return value.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 140); }
 function cloneFacts(value: ExecutionFacts): ExecutionFacts { return JSON.parse(JSON.stringify(value)) as ExecutionFacts; }
 

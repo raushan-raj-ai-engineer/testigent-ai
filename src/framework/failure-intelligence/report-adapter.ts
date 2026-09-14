@@ -17,10 +17,11 @@ export function failureSignalsFromExecutionFacts(facts: ExecutionFacts): Failure
       ...(trace?.reportPath || trace?.sourcePath ? { traceRef: trace.reportPath ?? trace.sourcePath } : {}),
       ...(screenshot?.reportPath || screenshot?.sourcePath ? { screenshotRef: screenshot.reportPath ?? screenshot.sourcePath } : {}),
     };
-    if (category === 'TEST_DEFECT') signal.locatorSignal = error || 'automation failure category';
-    if (category === 'DATA_DEFECT') signal.testDataSignal = error || 'test data failure category';
-    if (category === 'ENVIRONMENT') signal.environmentSignal = error || 'environment failure category';
-    // Authentication and API contract truth require structured producer-owned evidence. Never infer them from words like "contract" or "token".
+    // Legacy reporter categories are text-heuristic outputs. Preserve them only as provenance-labelled hints;
+    // never promote them into structured signals that the evidence-first classifier treats as authoritative.
+    if (category) signal.legacyCategoryHint = category;
+    // Authentication, environment, test-data and API-contract truth require typed producer-owned evidence.
+    // Never infer them from a legacy keyword category or words like "contract", "schema" or "token".
     return signal;
   });
 }

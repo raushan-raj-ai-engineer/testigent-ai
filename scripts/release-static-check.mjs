@@ -224,6 +224,15 @@ for (const required of [
   'scripts/github-action-pin-check.mjs',
   'docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md',
   'docs/66-v1.9.1-REVIEW-VALIDATION.md',
+  'docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md',
+  'docs/68-v1.9.2-VALIDATION-HANDOFF.md',
+  'docs/reviews/TestigentAI-v1.9.1-Independent-Re-review.md',
+  'REVIEW-HANDOFF-v1.9.2.md',
+  'REVIEW-METADATA.txt',
+  'scripts/csv-viewer-qualification.ts',
+  'src/framework/reporting/csv-security.ts',
+  'tests/framework/v1.9.2-rereview-closure-contract.spec.ts',
+  'tests/helpers/mcp-stdio-harness.ts',
   'src/framework/adoption/adoption.types.ts',
   'src/framework/adoption/adoption-store.ts',
   'src/framework/adoption/adoption-analyzer.ts',
@@ -331,9 +340,24 @@ try {
   if (/--project(?:=|\s+)\S+/.test(failureIntelligenceScript)) issues.push('test:failure-intelligence must remain browser-neutral for release compatibility');
   if (!finalValidationContract.includes('test:failure-intelligence')) issues.push('validate:final must enforce v1.9.0 failure-intelligence safety');
   if (!pkg.scripts?.showcase || !pkg.scripts?.['showcase:validate'] || !pkg.scripts?.['qa:showcase']) issues.push('v1.9.0 must retain one-click customer showcase commands');
-  if (!pkg.scripts?.['test:review:closure']?.includes('v1.9.1-review-closure-contract.spec.ts')) issues.push('v1.9.1 must retain the independent-review closure regression suite');
-  if (!finalValidationContract.includes('test:review:closure')) issues.push('validate:final must enforce v1.9.1 independent-review closure');
+  const reviewClosureScript = pkg.scripts?.['test:review:closure'] ?? '';
+  if (!reviewClosureScript.includes('v1.9.1-review-closure-contract.spec.ts')) issues.push('v1.9.1 must retain the independent-review closure regression suite');
+  if (!reviewClosureScript.includes('v1.9.2-rereview-closure-contract.spec.ts')) issues.push('v1.9.2 must enforce expanded production-boundary re-review regressions');
+  if (!finalValidationContract.includes('test:review:closure')) issues.push('validate:final must enforce independent-review closure');
+  if (!pkg.scripts?.['release:csv-viewer']?.includes('csv-viewer-qualification.ts')) issues.push('v1.9.2 must expose real spreadsheet-viewer CSV qualification');
+  if (!pkg.scripts?.['release:rereview:qualification']?.includes('release:csv-viewer') || !pkg.scripts?.['release:rereview:qualification']?.includes('validate:final') || !pkg.scripts?.['release:rereview:qualification']?.includes('release:offline')) issues.push('v1.9.2 re-review qualification must chain final validation, real CSV viewer qualification and offline release verification');
+  if (pkg.version !== '1.9.2') issues.push(`v1.9.2 corrective artifact must declare package version 1.9.2, found ${pkg.version}`);
   if (!pkg.scripts?.['release:static']?.includes('github-action-pin-check.mjs')) issues.push('release:static must enforce full-SHA GitHub Action pinning');
+  const readmeV192 = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const statusV192 = fs.readFileSync(path.join(root, 'docs/41-CURRENT-RELEASE-STATUS.md'), 'utf8');
+  const handoffV192 = fs.readFileSync(path.join(root, 'REVIEW-HANDOFF-v1.9.2.md'), 'utf8');
+  const metadataV192 = fs.readFileSync(path.join(root, 'REVIEW-METADATA.txt'), 'utf8');
+  const verificationV192 = fs.readFileSync(path.join(root, 'release/VERIFICATION-REPORT.md'), 'utf8');
+  if (!readmeV192.includes('Current certified release: `v1.9.1`') || !readmeV192.includes('Current corrective re-review candidate: `v1.9.2`')) issues.push('v1.9.2 artifact README must distinguish certified v1.9.1 from candidate v1.9.2');
+  if (!statusV192.includes('Current certified release: v1.9.1') || !statusV192.includes('Corrective re-review candidate: v1.9.2') || !statusV192.includes('not a certified v1.9.2 release')) issues.push('v1.9.2 current-release status must fail closed against certification ambiguity');
+  if (!handoffV192.includes('not a certified release') || !handoffV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')) issues.push('v1.9.2 review handoff must identify candidate status and immutable v1.9.1 baseline');
+  if (!metadataV192.includes(`Candidate version:\n1.9.2`) || !metadataV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')) issues.push('v1.9.2 review metadata must identify version and certified baseline');
+  if (!verificationV192.includes('does **not** claim') || !verificationV192.includes('outbound registry/DNS access was unavailable')) issues.push('v1.9.2 verification report must preserve packaging-environment limitations');
 
   const showcasePolicy = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/showcase-policy.ts'), 'utf8');
   const showcaseDataset = JSON.parse(fs.readFileSync(path.join(root, 'showcase/customer-demo.json'), 'utf8'));
@@ -346,6 +370,26 @@ try {
   const mcpRegistryV19 = fs.readFileSync(path.join(root, 'src/framework/mcp/tool-registry.ts'), 'utf8');
   const bulkAudit = fs.readFileSync(path.join(root, 'src/framework/security/npm-bulk-audit.ts'), 'utf8');
   const securityCheckV19 = fs.readFileSync(path.join(root, 'scripts/security-check.ts'), 'utf8');
+  const pathPolicyV192 = fs.readFileSync(path.join(root, 'src/framework/agentic/policy/path-policy.ts'), 'utf8');
+  const mcpSecurityV192 = fs.readFileSync(path.join(root, 'src/framework/mcp/security-policy.ts'), 'utf8');
+  const schemaValidatorV192 = fs.readFileSync(path.join(root, 'src/framework/api-contract/schema-validator.ts'), 'utf8');
+  const openApiLoaderV192 = fs.readFileSync(path.join(root, 'src/framework/api-contract/openapi-loader.ts'), 'utf8');
+  const sqlPlaceholderV192 = fs.readFileSync(path.join(root, 'src/framework/database/sql-placeholder.ts'), 'utf8');
+  const tlsPolicyV192 = fs.readFileSync(path.join(root, 'src/framework/database/database-tls.ts'), 'utf8');
+  const failureAdapterV192 = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/report-adapter.ts'), 'utf8');
+  const mcpServerV192 = fs.readFileSync(path.join(root, 'src/framework/mcp/server.ts'), 'utf8');
+  const rereviewClosureV192 = fs.readFileSync(path.join(root, 'tests/framework/v1.9.2-rereview-closure-contract.spec.ts'), 'utf8');
+  const responseContract = fs.readFileSync(path.join(root, 'src/framework/api-contract/response-contract-validator.ts'), 'utf8');
+  const breakingDetector = fs.readFileSync(path.join(root, 'src/framework/api-contract/breaking-change-detector.ts'), 'utf8');
+  if (!pathPolicyV192.includes('resolveProjectScopedPath') || !pathPolicyV192.includes('resolveProjectMutationPath') || !mcpSecurityV192.includes('resolveProjectScopedPath')) issues.push('v1.9.2 path security must anchor reads and mutations to canonical selected-project boundaries');
+  if (!schemaValidatorV192.includes("typeof schema === 'boolean'") || !openApiLoaderV192.includes("allOf: [resolved, siblings]") || !responseContract.includes('schema === undefined')) issues.push('v1.9.2 OpenAPI validation must retain boolean-schema and conjunctive $ref sibling semantics');
+  if (!breakingDetector.includes("item.in === 'header'") || !breakingDetector.includes('toLowerCase()') || !breakingDetector.includes('INCOMPLETE_COMPARISON') || !breakingDetector.includes('REQUEST_CONSTRAINT_TIGHTENED')) issues.push('v1.9.2 compatibility detection must retain location-aware parameter case and directional/incomplete verdicts');
+  if (!businessDashboardWriter.includes('stableEvidencePath') || !businessDashboardWriter.includes('linkSync(temp, target)') || businessDashboardWriter.includes('uniquePath(')) issues.push('v1.9.2 report regeneration must use stable non-overwriting evidence identities');
+  if (!failureAdapterV192.includes('legacyCategoryHint') || failureAdapterV192.includes("failureCategory === 'DATA_DEFECT' ? result.error")) issues.push('v1.9.2 legacy failure categories must remain heuristic provenance and never become structured evidence');
+  if (!sqlPlaceholderV192.includes('preparePostgresSql') || !sqlPlaceholderV192.includes('preserveSqlServerBracketIdentifiers') || !sqlPlaceholderV192.includes('SQL_PARAMETER_STYLE')) issues.push('v1.9.2 SQL parameter handling must retain dialect-aware/native parameter contracts');
+  if (!tlsPolicyV192.includes('encryptionRequired') || !tlsPolicyV192.includes('unsupported DB_SSL mode')) issues.push('v1.9.2 strict database TLS policy must fail closed on disabled/malformed modes');
+  if (!mcpServerV192.includes("'INITIALIZE_RESPONDED'") || !mcpServerV192.includes('AbortController') || !mcpServerV192.includes('discardingOversizedFrame')) issues.push('v1.9.2 MCP transport must retain explicit lifecycle, active cancellation and pre-newline byte caps');
+  for (const marker of ['R01 public response contract', 'R02 query names remain case-sensitive', 'R04 selected-project boundary', 'R09 complete dashboard regeneration', 'R07 legacy classifier hints', 'R10 SQL lexical handling', 'R03 strict TLS', 'R12 real child-process stdio', 'R11 CSV output']) if (!rereviewClosureV192.includes(marker)) issues.push(`v1.9.2 expanded re-review closure missing production-boundary contract: ${marker}`);
   if (!showcasePolicy.includes("mode !== 'SHOWCASE'") || !showcasePolicy.includes('claimEligible !== false') || !showcasePolicy.includes('value.scale.measured !== false')) issues.push('v1.9.0 showcase policy must fail closed on synthetic/claim/scale truth boundaries');
   if (showcaseDataset.mode !== 'SHOWCASE' || showcaseDataset.synthetic !== true || showcaseDataset.claimEligible !== false || !Array.isArray(showcaseDataset.scenarios) || showcaseDataset.scenarios.length < 5 || showcaseDataset.scenarios.length > 10) issues.push('v1.9.0 customer showcase must contain 5-10 explicitly synthetic non-claimable scenarios');
   if (showcaseDataset.scenarios?.some?.(scenario => scenario.evidenceMode !== 'SHOWCASE' || scenario.synthetic !== true || scenario.claimEligible !== false)) issues.push('every v1.9.0 showcase scenario must be SHOWCASE-scoped, synthetic and non-claimable');
@@ -373,10 +417,8 @@ try {
   if (!benchmarkStore.includes('appendFalseHeal') || !benchmarkAnalyzer.includes('falseHealPasses') || !pkg.scripts?.['benchmark:false-heal']) issues.push('v1.8.0 false-heal benchmark must persist immutable provenance-backed evidence and render it with benchmark intelligence');
   if (!benchmarkContract.includes('BENCHMARK_EVIDENCE_CONFLICT') || !benchmarkContract.includes('incomplete provenance is visible but never qualifies') || !benchmarkContract.includes('keeps unrelated dataset versions')) issues.push('v1.8.0 benchmark contracts must protect immutability, dataset isolation and incomplete-provenance claim boundaries');
 
-  const responseContract = fs.readFileSync(path.join(root, 'src/framework/api-contract/response-contract-validator.ts'), 'utf8');
-  const breakingDetector = fs.readFileSync(path.join(root, 'src/framework/api-contract/breaking-change-detector.ts'), 'utf8');
   const apiContractTests = fs.readFileSync(path.join(root, 'tests/framework/api-contract-intelligence-contract.spec.ts'), 'utf8');
-  if (!responseContract.includes("rule: 'contentType'") || !responseContract.includes('!input.contentType ? fallbackJsonSchema')) issues.push('v1.8.0 response-contract validation must fail closed for explicitly undeclared media types');
+  if (!responseContract.includes("'$response.contentType', 'contentType'") || !responseContract.includes('input.contentType && !findContent') || !responseContract.includes('fallbackJsonSchema')) issues.push('v1.8.0 response-contract validation must fail closed for explicitly undeclared media types');
   if (!breakingDetector.includes('REQUEST_REQUIRED_ADDED') || !breakingDetector.includes('RESPONSE_REQUIRED_REMOVED') || !breakingDetector.includes('RESPONSE_ENUM_VALUE_ADDED')) issues.push('v1.8.0 OpenAPI breaking-change detection must retain request/response compatibility boundaries');
   if (!apiContractTests.includes('removed response media types and newly introduced response enum values')) issues.push('v1.8.0 OpenAPI regression coverage must include media-type removal and response enum expansion');
   if (pkg.engines?.node !== '>=22 <23' || fs.readFileSync(path.join(root, '.nvmrc'), 'utf8').trim() !== '22') issues.push('release runtime must be consistently pinned to Node 22 in package engines and .nvmrc');

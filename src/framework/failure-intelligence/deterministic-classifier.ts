@@ -18,7 +18,11 @@ export function classifyFailureDeterministically(input: FailureSignal): FailureC
   const symptom = buildFailureFingerprint(signal);
   const fingerprint = buildIncidentFingerprint(signal, decision.category, decision.reasonCodes, symptom.fingerprint);
   const trustedLive = evidenceMode === 'LIVE' && synthetic === false && signal.claimEligible === true;
+
+  // Heuristic interpretation may improve triage routing, but it is not
+  // structured producer evidence and must never become claim-eligible.
   const heuristicOnly = decision.reasonCodes.some(code => code.startsWith('HEURISTIC_'));
+
   const claimEligible =
     trustedLive &&
     !heuristicOnly &&
@@ -32,14 +36,25 @@ export function classifyFailureDeterministically(input: FailureSignal): FailureC
     aiEscalationAllowed: decision.category === 'UNKNOWN' && !synthetic,
     humanConfirmationRecommended: decision.category === 'UNKNOWN' || decision.confidence !== 'HIGH' || !claimEligible,
   };
-  // Final public-boundary redaction protects MCP, reporting and persistence even if an upstream adapter missed a field.
+  // Final public-boundary redaction protects MCP, reporting and persistence
+  // even if an upstream adapter missed a field.
   const redacted = redact(result, { redactPii: true }) as FailureClassification;
 
-  // normalizedSignature is a canonical machine correlation key.
-  // Keep sanitizer placeholders stable/idempotent after the final structured redaction pass.
-  redacted.normalizedSignature = canonicalizeSignaturePlaceholders(redacted.normalizedSignature);
+  // The final structured redactor intentionally emits uppercase security
+  // placeholders. normalizedSignature is a canonical fingerprint surface,
+  // so normalize those placeholders after the final redaction pass.
+  return {
+    ...redacted,
+    normalizedSignature: canonicalizeNormalizedSignature(redacted.normalizedSignature),
+  };
+}
 
-  return redacted;
+function canonicalizeNormalizedSignature(value: string): string {
+  return value
+    .replace(/\[REDACTED\]/g, '[redacted]')
+    .replace(/\[TOKEN_REDACTED\]/g, '[token_redacted]')
+    .replace(/\[EMAIL_REDACTED\]/g, '[email_redacted]')
+    .replace(/\[NUMBER_REDACTED\]/g, '[number_redacted]');
 }
 
 function decide(signal: FailureSignal): DeterministicDecision {
@@ -62,19 +77,21 @@ function decide(signal: FailureSignal): DeterministicDecision {
   }
   if (signal.flaky === true || ((signal.retriesUsed ?? 0) > 0 && /timeout|intermittent|transient/.test(error))) return result('FLAKY_BEHAVIOR', 'MEDIUM', ['RETRY_VARIANCE'], 'Outcome varies across attempts and does not yet prove a stable product defect.', 'Correlate attempt evidence and timing; fix the instability source instead of adding blind retries.');
 
-  // Text can indicate an upstream/dependency symptom, but without structured
-  // dependency evidence it must remain tentative and non-claimable.
+  // A 5xx mentioning an upstream/downstream/gateway/dependency is useful
+  // deterministic triage evidence, but text alone is still heuristic.
+  // Route it as a dependency suspicion at LOW confidence and keep it
+  // non-claimable until structured dependency/trace evidence confirms it.
   if (
     (signal.httpStatus ?? 0) >= 500 &&
-    /\b(?:upstream|gateway|downstream|dependency)\b/.test(error) &&
+    /\b(?:upstream|downstream|gateway|dependency)\b/.test(error) &&
     /\b(?:service unavailable|bad gateway|gateway timeout|connection refused|connection reset|upstream)\b/.test(error)
   ) {
     return result(
       'DEPENDENCY_FAILURE',
       'LOW',
       ['HEURISTIC_UPSTREAM_DEPENDENCY'],
-      'Failure text indicates an upstream dependency symptom, but structured dependency provenance is not present.',
-      'Confirm dependency ownership using trace or network evidence before treating this as a confirmed dependency incident.',
+      'Failure text indicates a likely upstream dependency or gateway failure, but structured dependency ownership evidence is not present.',
+      'Correlate trace/network evidence and confirm the dependency owner before treating this triage classification as authoritative.',
     );
   }
 
@@ -82,18 +99,11 @@ function decide(signal: FailureSignal): DeterministicDecision {
   if (signal.businessStep?.trim() && hasBusinessAssertionEvidence(error)) return result('PRODUCT_DEFECT', 'MEDIUM', ['BUSINESS_ASSERTION_FAILED'], 'Business assertion failed after an identified business step reached application verification.', 'Validate the requirement and application behavior, then raise a product defect if the requirement remains authoritative.');
 
   const heuristicCodes: string[] = [];
+  if (signal.legacyCategoryHint) heuristicCodes.push(`LEGACY_HEURISTIC_${signal.legacyCategoryHint}`);
   if (/strict mode|locator|element not found|waiting for selector|no element/.test(error)) heuristicCodes.push('HEURISTIC_LOCATOR_SYMPTOM');
   if (/openapi|contract|schema/.test(error)) heuristicCodes.push('HEURISTIC_CONTRACT_TEXT');
   if ((signal.httpStatus ?? 0) >= 500) heuristicCodes.push('HTTP_5XX_WITHOUT_PROVENANCE');
   return result('UNKNOWN', 'INSUFFICIENT_EVIDENCE', ['INSUFFICIENT_EVIDENCE', ...heuristicCodes], 'Available evidence is insufficient for a trustworthy root-cause classification.', 'Collect structured trace, network, authentication, contract and business-step evidence; keep the incident UNKNOWN until provenance improves.');
-}
-
-function canonicalizeSignaturePlaceholders(value: string): string {
-  return value
-    .replace(/\[REDACTED\]/g, '[redacted]')
-    .replace(/\[EMAIL_REDACTED\]/g, '[email_redacted]')
-    .replace(/\[TOKEN_REDACTED\]/g, '[token_redacted]')
-    .replace(/\[NUMBER_REDACTED\]/g, '[number_redacted]');
 }
 
 function hasBusinessAssertionEvidence(error: string): boolean { return /\b(?:assert|assertion)\b/.test(error) || (/\bexpected\b/.test(error) && /\breceived\b/.test(error)) || /\b(?:business rule|incorrect total|wrong state|validation failed)\b/.test(error); }

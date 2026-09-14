@@ -1,22 +1,27 @@
-TestigentAI v1.9.1 — Corrective Hardening Review Candidate
+TestigentAI v1.9.2 — Independent Re-review Corrective Full Candidate
 
-Purpose:
-Close the 14 findings (R01-R14) from the independent TestigentAI v1.9.0 architecture/product review.
-
-Reviewed v1.9.0 archive SHA-256:
-228fe5a7544a116621a3e679a8b411d1a35e3761c780b5765798a6d62865ccac
+Candidate version:
+1.9.2
 
 Certified immutable baseline:
+v1.9.1
+38e2406c73608cabcf42a8ff0ea8e35e745dea23
+
+Historical immutable release:
 v1.9.0
 6a32718353022da4e5ce51dace59e29692340913
 
-Post-release documentation main used as upgrade ancestry boundary:
-cc4350319b2f37c0f645744478f715504ecc1264
+Reviewed v1.9.1 input ZIP SHA-256 (as recorded by reviewer):
+5488d96db20a841aaa4eae6f4a5754498c0260886464965ed9268d40bc53bbcf
 
-Candidate version:
-1.9.1
+Bundled independent re-review document SHA-256:
+2918abb5f587f806bf29653c0fe3048d8966dd2d6749892f3e6e36272c354a79
+
+Purpose:
+Address every remaining reproduced code-level issue from the independent v1.9.1 re-review with production-boundary fixes and broader regression coverage.
 
 Important:
-- This ZIP is a review candidate, not a certified v1.9.1 release.
-- Do not move or recreate the v1.9.0 tag.
-- Run the connected Node 22 certification commands in docs/66-v1.9.1-REVIEW-VALIDATION.md before release.
+- This ZIP is a review candidate, not a certified v1.9.2 release.
+- Do not move or recreate v1.9.1 or v1.9.0 tags.
+- Packaging validation and limitations are recorded in docs/68-v1.9.2-VALIDATION-HANDOFF.md.
+- Connected Node 22 dependency/typecheck/full-regression/security/compatibility gates remain mandatory before certification.

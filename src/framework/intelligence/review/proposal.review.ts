@@ -16,7 +16,7 @@ import {
 } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { GenerationManifest } from '../core/models.js';
-import { resolveWorkspacePath } from '../../agentic/policy/path-policy.js';
+import { resolveProjectMutationPath } from '../../agentic/policy/path-policy.js';
 
 export type ProposalReviewStatus = 'REVIEW_REQUIRED' | 'APPROVED' | 'REJECTED' | 'PROMOTED';
 
@@ -96,7 +96,7 @@ function requirementDir(root: string, requirementId: string): string {
 }
 
 function safeProjectPath(root: string, projectRelativePath: string): string {
-  return resolveWorkspacePath(root, projectRelativePath);
+  return resolveProjectMutationPath(root, projectRelativePath);
 }
 
 async function exists(path: string): Promise<boolean> {

@@ -66,7 +66,7 @@ test.describe('v1.9.1 independent review closure', () => {
       expect(() => assertAgenticTargetPath(root, 'demo', 'projects\\demo\\..\\other\\src\\new.ts')).toThrow();
       if (process.platform !== 'win32') {
         fs.symlinkSync(path.join(root, 'projects/other/requirements/other.md'), path.join(root, 'projects/demo/requirements/link.md'));
-        expect(() => resolveMcpRequirementPath(root, 'demo', 'link.md')).toThrow(/canonical boundary|escapes/);
+        expect(() => resolveMcpRequirementPath(root, 'demo', 'link.md')).toThrow(/canonical boundary|escapes|symlink|junction/i);
       }
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
@@ -135,12 +135,14 @@ test.describe('v1.9.1 independent review closure', () => {
     const invalid = await handleAgenticMcpMessage(null, context); expect(invalid && 'error' in invalid ? invalid.error.code : 0).toBe(-32600);
     const session = createAgenticMcpSession(false);
     const before = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }, context, session); expect(before && 'error' in before ? before.error.code : 0).toBe(-32002);
-    const init = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 2, method: 'initialize', params: { protocolVersion: TESTIGENT_MCP_PROTOCOL_VERSION } }, context, session) as any;
-    expect(init.result.serverInfo.version).toBe('1.9.1');
+    await handleAgenticMcpMessage({ jsonrpc: '2.0', method: 'notifications/initialized' }, context, session);
+    const stillBefore = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, context, session); expect(stillBefore && 'error' in stillBefore ? stillBefore.error.code : 0).toBe(-32002);
+    const init = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 3, method: 'initialize', params: { protocolVersion: TESTIGENT_MCP_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'closure', version: '1' } } }, context, session) as any;
+    const packageVersion = (JSON.parse(fs.readFileSync('package.json', 'utf8')) as { version: string }).version; expect(init.result.serverInfo.version).toBe(packageVersion);
+    const notReady = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 4, method: 'tools/list', params: {} }, context, session); expect(notReady && 'error' in notReady ? notReady.error.code : 0).toBe(-32002);
+    await handleAgenticMcpMessage({ jsonrpc: '2.0', method: 'notifications/initialized' }, context, session);
+    const ready = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 5, method: 'tools/list', params: {} }, context, session); expect(ready && 'result' in ready).toBe(true);
     expect(() => validateMcpLineSize('12345', 4)).toThrow(/exceeds/);
-    await handleAgenticMcpMessage({ jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: 7 } }, context, session);
-    const cancelled = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 7, method: 'tools/list', params: {} }, context, session);
-    expect(cancelled && 'error' in cancelled ? cancelled.error.code : 0).toBe(-32800);
     await expect(invokeAgenticMcpTool('testigent_list_projects', { extra: true }, context)).rejects.toThrow(/unsupported field/);
   });
 

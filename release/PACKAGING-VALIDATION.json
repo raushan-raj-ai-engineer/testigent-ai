@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "candidate": {
+    "version": "1.9.2",
+    "status": "REVIEW_CANDIDATE_NOT_CERTIFIED",
+    "certifiedBaseline": {
+      "version": "1.9.1",
+      "commit": "38e2406c73608cabcf42a8ff0ea8e35e745dea23"
+    }
+  },
+  "review": {
+    "file": "docs/reviews/TestigentAI-v1.9.1-Independent-Re-review.md",
+    "documentSha256": "2918abb5f587f806bf29653c0fe3048d8966dd2d6749892f3e6e36272c354a79",
+    "reviewedInputZipSha256": "5488d96db20a841aaa4eae6f4a5754498c0260886464965ed9268d40bc53bbcf"
+  },
+  "packagingEnvironment": {
+    "node": "22.16.0",
+    "registryDnsAvailable": false,
+    "dependencyInstallCompleted": false
+  },
+  "executed": {
+    "typescriptSyntaxTransform": {
+      "status": "PASS",
+      "files": 333,
+      "syntaxErrors": 0
+    },
+    "githubActionFullShaPolicy": {
+      "status": "PASS"
+    },
+    "releaseStatic": {
+      "status": "PASS",
+      "filesChecked": 514
+    },
+    "releasePortabilityLfCrlf": {
+      "status": "PASS"
+    },
+    "offlineInventory": {
+      "status": "PASS",
+      "files": 514,
+      "json": 37,
+      "text": 506,
+      "required": 26
+    },
+    "expandedProductionModuleProbes": {
+      "status": "PASS",
+      "passed": 13,
+      "failed": 0
+    },
+    "reportRegeneration": {
+      "status": "PASS",
+      "stableEvidenceRefs": true,
+      "historyOccurrences": 1,
+      "completeIndex": true
+    },
+    "mcpChildProcessStdio": {
+      "status": "PASS",
+      "oversizedFrameCode": -32001,
+      "saturationCode": -32000,
+      "activeCancellationCode": -32800
+    },
+    "databaseAdapterProbe": {
+      "status": "PASS",
+      "postgresOrdinaryParameter": true,
+      "postgresNativeParameter": true,
+      "mssqlBracketIdentifier": true,
+      "tlsVerified": true
+    },
+    "csvSpreadsheetViewer": {
+      "status": "PASS",
+      "viewer": "LibreOffice",
+      "dangerousCases": 7,
+      "formulaNodes": 0,
+      "roundTrip": "PASS"
+    },
+    "showcaseTrustBoundary": {
+      "status": "PASS",
+      "scenarios": 10,
+      "claimEligible": false
+    }
+  },
+  "notClaimedInPackagingEnvironment": [
+    "fresh npm ci completion",
+    "package-local TypeScript 6.x typecheck",
+    "full Playwright regression",
+    "live database certificate matrix",
+    "live registry-backed security audit",
+    "GitHub/Windows/macOS browser compatibility matrix"
+  ],
+  "certificationRule": "Run connected Node 22 release:rereview:qualification and full CI/5-of-5 compatibility chain before creating any v1.9.2 tag."
+}

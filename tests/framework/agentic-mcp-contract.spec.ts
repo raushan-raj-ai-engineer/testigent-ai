@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { handleAgenticMcpMessage, TESTIGENT_MCP_PROTOCOL_VERSION } from '../../src/framework/mcp/server.js';
+import { createAgenticMcpSession, handleAgenticMcpMessage, TESTIGENT_MCP_PROTOCOL_VERSION } from '../../src/framework/mcp/server.js';
 import { invokeAgenticMcpTool, listAgenticMcpTools } from '../../src/framework/mcp/tool-registry.js';
 import { resolveMcpRequirementPath } from '../../src/framework/mcp/security-policy.js';
 
@@ -15,9 +15,13 @@ test.describe('Agentic MCP security and protocol contract', () => {
   });
   test('implements MCP initialize and tools/list with current protocol', async () => {
     const context = { root: process.cwd(), runId: 'contract-1', environment: 'qa' };
-    const initialize = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: TESTIGENT_MCP_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'contract', version: '1' } } }, context);
+    const session = createAgenticMcpSession(false);
+    const initialize = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: TESTIGENT_MCP_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'contract', version: '1' } } }, context, session);
     expect(initialize && 'result' in initialize ? initialize.result.protocolVersion : undefined).toBe(TESTIGENT_MCP_PROTOCOL_VERSION);
-    const list = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, context);
+    const beforeReady = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, context, session);
+    expect(beforeReady && 'error' in beforeReady ? beforeReady.error.code : 0).toBe(-32002);
+    await handleAgenticMcpMessage({ jsonrpc: '2.0', method: 'notifications/initialized' }, context, session);
+    const list = await handleAgenticMcpMessage({ jsonrpc: '2.0', id: 3, method: 'tools/list', params: {} }, context, session);
     expect(list && 'result' in list && Array.isArray(list.result.tools)).toBe(true);
   });
   test('requirement path traversal is denied', () => {

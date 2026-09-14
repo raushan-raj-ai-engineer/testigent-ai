@@ -1,11 +1,12 @@
 export type OpenApiSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
+export type OpenApiSchemaLike = OpenApiSchema | boolean;
 
 export interface OpenApiDocument {
   openapi: string;
   info?: { title?: string; version?: string };
   paths: Record<string, OpenApiPathItem>;
   components?: {
-    schemas?: Record<string, OpenApiSchema>;
+    schemas?: Record<string, OpenApiSchemaLike>;
     parameters?: Record<string, OpenApiParameter>;
   };
 }
@@ -17,8 +18,8 @@ export interface OpenApiPathItem {
 
 export interface OpenApiOperation {
   parameters?: OpenApiParameter[];
-  requestBody?: { required?: boolean; content?: Record<string, { schema?: OpenApiSchema }> };
-  responses?: Record<string, { description?: string; content?: Record<string, { schema?: OpenApiSchema }> }>;
+  requestBody?: { required?: boolean; content?: Record<string, { schema?: OpenApiSchemaLike }> };
+  responses?: Record<string, { description?: string; content?: Record<string, { schema?: OpenApiSchemaLike }> }>;
 }
 
 export interface OpenApiParameter {
@@ -26,7 +27,7 @@ export interface OpenApiParameter {
   name?: string;
   in?: 'path' | 'query' | 'header' | 'cookie';
   required?: boolean;
-  schema?: OpenApiSchema;
+  schema?: OpenApiSchemaLike;
 }
 
 export interface OpenApiSchema {
@@ -34,12 +35,12 @@ export interface OpenApiSchema {
   type?: OpenApiSchemaType | OpenApiSchemaType[];
   nullable?: boolean;
   required?: string[];
-  properties?: Record<string, OpenApiSchema>;
-  items?: OpenApiSchema;
+  properties?: Record<string, OpenApiSchemaLike>;
+  items?: OpenApiSchemaLike;
   enum?: unknown[];
-  oneOf?: OpenApiSchema[];
-  allOf?: OpenApiSchema[];
-  anyOf?: OpenApiSchema[];
+  oneOf?: OpenApiSchemaLike[];
+  allOf?: OpenApiSchemaLike[];
+  anyOf?: OpenApiSchemaLike[];
   additionalProperties?: boolean | OpenApiSchema;
   minimum?: number;
   maximum?: number;
@@ -84,6 +85,7 @@ export type BreakingChangeKind =
   | 'METHOD_REMOVED'
   | 'RESPONSE_REMOVED'
   | 'RESPONSE_CONTENT_TYPE_REMOVED'
+  | 'RESPONSE_SCHEMA_REMOVED'
   | 'REQUEST_CONTENT_TYPE_REMOVED'
   | 'REQUEST_BODY_REQUIRED'
   | 'REQUEST_REQUIRED_ADDED'
@@ -91,8 +93,11 @@ export type BreakingChangeKind =
   | 'SCHEMA_TYPE_CHANGED'
   | 'ENUM_VALUE_REMOVED'
   | 'RESPONSE_ENUM_VALUE_ADDED'
+  | 'REQUEST_CONSTRAINT_TIGHTENED'
+  | 'RESPONSE_GUARANTEE_WEAKENED'
   | 'REQUIRED_PARAMETER_ADDED'
-  | 'PARAMETER_REMOVED';
+  | 'PARAMETER_REMOVED'
+  | 'INCOMPLETE_COMPARISON';
 
 export interface BreakingChange {
   kind: BreakingChangeKind;
