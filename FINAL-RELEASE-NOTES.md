@@ -1,8 +1,8 @@
-# TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase Candidate
+# TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase
 
-## Certified baseline
+## Certification
 
-`v1.8.0` is the immutable certified baseline at commit `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`. PR/main full reruns plus main and tag-triggered Release Compatibility passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Post-release documentation main `6090b702a56078a546cfe6dd0d2bc2cbaba92dd6` also passed CI without moving the v1.8.0 tag.
+`v1.9.0` is the current immutable certified release at commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI run `34808556321` and its full rerun passed on the same SHA. Fresh main Release Compatibility run `34809207686` passed 5/5, and tag-triggered Release Compatibility run `34809446255` also passed 5/5.
 
 ## Consolidated v1.9.0 scope
 
@@ -17,7 +17,7 @@
 - npm Bulk Advisory security fallback carried forward for legacy quick-audit endpoint retirement;
 - reporting-surface freeze contract after v1.9 certification.
 
-This package is a **development candidate**, not a certified v1.9.0 release. The showcase exists to explain the product before a customer has accumulated real evidence; its values can never become customer/adoption/differentiation/scale/release claims.
+This release is **certified v1.9.0**. The Customer Showcase remains synthetic and non-claimable; its values must never become customer/adoption/differentiation/scale/release claims.
 
 See `docs/60-v1.9.0-FAILURE-INTELLIGENCE.md` through `docs/64-v1.9.0-CANDIDATE-HANDOFF.md`.
 

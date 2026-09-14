@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Certified baseline: `v1.8.0` — Evidence-Backed Product Intelligence.** Immutable tag `v1.8.0` points to certified commit `1ad48d67661df02f51e5b6268a3f0d74bf2a182d`; PR/main reruns and both main and tag-triggered 5/5 Release Compatibility matrices passed. **Development candidate: `v1.9.0` — Failure Intelligence & Customer Showcase.** It adds deterministic root-cause triage, stable incident fingerprinting, an isolated 10-scenario synthetic showcase, read-only MCP triage and the final reporting-surface freeze. Showcase data is always synthetic and non-claimable.
+**Current certified release: `v1.9.0` — Failure Intelligence & Customer Showcase.** Immutable annotated tag `v1.9.0` resolves to certified commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI and rerun passed on the same SHA; fresh main Release Compatibility `34809207686` and tag-triggered Release Compatibility `34809446255` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Showcase data remains explicitly synthetic and non-claimable.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
@@ -1297,7 +1297,7 @@ and verify `projects/<project>/project.json`, `config/<env>.json` and required D
 | v1.9 Customer Showcase | [`docs/61-v1.9.0-CUSTOMER-SHOWCASE.md`](docs/61-v1.9.0-CUSTOMER-SHOWCASE.md) |
 | v1.9 review/release plan | [`docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md`](docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md) |
 | Reporting freeze | [`docs/63-REPORTING-FREEZE.md`](docs/63-REPORTING-FREEZE.md) |
-| v1.9 candidate handoff | [`docs/64-v1.9.0-CANDIDATE-HANDOFF.md`](docs/64-v1.9.0-CANDIDATE-HANDOFF.md) |
+| v1.9 historical candidate handoff | [`docs/64-v1.9.0-CANDIDATE-HANDOFF.md`](docs/64-v1.9.0-CANDIDATE-HANDOFF.md) |
 | Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
 | Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |

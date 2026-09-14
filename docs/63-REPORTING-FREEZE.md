@@ -1,5 +1,7 @@
 # REPORTING SURFACE FREEZE — v1.9.0
 
+**Status: ACTIVE.** v1.9.0 certified at `6a32718353022da4e5ce51dace59e29692340913` after main and tag-triggered Release Compatibility passed 5/5. The reporting surface is now feature-frozen.
+
 ## Decision
 
 After v1.9.0 certification, the TestigentAI business reporting surface is feature-frozen. Failure Intelligence and the isolated Customer Showcase complete the planned reporting capability set.

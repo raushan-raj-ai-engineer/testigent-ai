@@ -1,6 +1,6 @@
-# TestigentAI v1.9.0 Candidate Verification Report
+# TestigentAI v1.9.0 Certified Verification Report
 
-## Certified baseline and target
+## Certification result
 
 `v1.8.0 — Evidence-Backed Product Intelligence` is the immutable certified source baseline at:
 
@@ -16,7 +16,7 @@ The current post-release documentation main used as the upgrade ancestry boundar
 
 v1.8 certification evidence already completed PR/main reruns plus main and tag-triggered Release Compatibility 5/5. The v1.8.0 tag must not be moved or recreated.
 
-## v1.9.0 consolidated candidate scope
+## v1.9.0 certified scope
 
 1. deterministic evidence-first Failure Intelligence taxonomy;
 2. stable normalized SHA-256-derived failure fingerprints and common-cause clustering;
@@ -82,4 +82,4 @@ Then require PR CI + full rerun, merge to main, main CI + full rerun, fresh Rele
 
 ## Candidate rule
 
-This ZIP is a **v1.9.0 development candidate**, not a certified v1.9.0 release. It must be applied and connected-certified without weakening existing gates. The reporting surface becomes feature-frozen only after v1.9 certification; later reporting changes are limited to approved bug/security/accessibility/compatibility/performance corrections unless a new architecture review explicitly reopens the surface.
+v1.9.0 is **certified** at `6a32718353022da4e5ce51dace59e29692340913`. Main CI `34808556321` and its rerun passed, main Release Compatibility `34809207686` passed 5/5, and tag-triggered Release Compatibility `34809446255` passed 5/5. The reporting surface is now feature-frozen; later reporting changes are limited to approved bug/security/accessibility/compatibility/performance corrections unless a new architecture review explicitly reopens the surface.

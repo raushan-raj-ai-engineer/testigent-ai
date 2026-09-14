@@ -1,8 +1,8 @@
 # Current Certified Release Status
 
-## Certified baseline: v1.8.0
+## Current certified release: v1.9.0
 
-**TestigentAI v1.8.0 — Evidence-Backed Product Intelligence is the current immutable certified release baseline for this v1.9.0 candidate.**
+**TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase is the current immutable certified release at `6a32718353022da4e5ce51dace59e29692340913`.**
 
 | Item | Certified state |
 | --- | --- |
@@ -19,7 +19,7 @@
 
 The `v1.8.0` tag is immutable and must not be moved or recreated. Post-release documentation commits on `main` do not change the certified v1.8.0 source snapshot.
 
-## Development candidate: v1.9.0
+## v1.9.0 certification evidence
 
 v1.9.0 is the final planned reporting-focused feature release before the reporting surface is frozen. It consolidates:
 
@@ -33,7 +33,7 @@ v1.9.0 is the final planned reporting-focused feature release before the reporti
 - npm Bulk Advisory security fallback when `npm audit` cannot produce vulnerability evidence;
 - executable reporting-freeze policy.
 
-The v1.9.0 candidate is **not certified** until connected Node 22 validation, PR/main/rerun CI and both main/tag Release Compatibility 5/5 complete on the applied repository.
+v1.9.0 certification is complete. Main CI run `34808556321` and its rerun passed; fresh main Release Compatibility `34809207686` passed 5/5; annotated tag `v1.9.0` resolves to `6a32718353022da4e5ce51dace59e29692340913`; and tag-triggered Release Compatibility `34809446255` passed 5/5.
 
 Showcase metrics are never adoption, differentiation, scale, release or customer claims. Real evidence paths remain unchanged and fail closed when provenance is insufficient.
 
