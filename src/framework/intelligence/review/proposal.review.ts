@@ -16,6 +16,7 @@ import {
 } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { GenerationManifest } from '../core/models.js';
+import { resolveWorkspacePath } from '../../agentic/policy/path-policy.js';
 
 export type ProposalReviewStatus = 'REVIEW_REQUIRED' | 'APPROVED' | 'REJECTED' | 'PROMOTED';
 
@@ -95,11 +96,7 @@ function requirementDir(root: string, requirementId: string): string {
 }
 
 function safeProjectPath(root: string, projectRelativePath: string): string {
-  const projectRoot = resolve(root);
-  const absolute = resolve(projectRoot, projectRelativePath);
-  const rel = relative(projectRoot, absolute);
-  if (rel.startsWith('..') || isAbsolute(rel)) throw new Error(`Unsafe proposal path outside project root: ${projectRelativePath}`);
-  return absolute;
+  return resolveWorkspacePath(root, projectRelativePath);
 }
 
 async function exists(path: string): Promise<boolean> {

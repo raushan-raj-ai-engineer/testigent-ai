@@ -70,11 +70,11 @@ export class AdoptionObservationStore {
       if (fs.existsSync(target)) {
         const existing = fs.readFileSync(target, 'utf8');
         if (sha(existing) !== sha(serialized)) throw new Error(`ADOPTION_OBSERVATION_CONFLICT: '${observation.id}' already exists with different content.`);
+        this.ensureJsonlObservation(observation);
         return observation;
       }
-      const fd = fs.openSync(target, 'wx', 0o600);
-      try { fs.writeFileSync(fd, serialized, 'utf8'); } finally { fs.closeSync(fd); }
-      this.exportJsonlUnlocked();
+      atomicWrite(target, serialized);
+      this.appendJsonlObservation(observation);
       return observation;
     });
   }
@@ -83,16 +83,40 @@ export class AdoptionObservationStore {
     if (!fs.existsSync(this.observationsDir)) return [];
     const result: AdoptionObservation[] = [];
     for (const file of fs.readdirSync(this.observationsDir).filter((name: string) => name.endsWith('.json')).sort()) {
+      const fullPath = path.join(this.observationsDir, file);
       try {
-        const parsed = JSON.parse(fs.readFileSync(path.join(this.observationsDir, file), 'utf8')) as AdoptionObservation;
+        const parsed = JSON.parse(fs.readFileSync(fullPath, 'utf8')) as AdoptionObservation;
         validateObservation(parsed);
         result.push(parsed);
-      } catch { /* malformed evidence is never promoted into pilot metrics */ }
+      } catch (cause) {
+        throw new Error(`ADOPTION_OBSERVATION_CORRUPT: ${fullPath}: ${cause instanceof Error ? cause.message : String(cause)}`);
+      }
     }
     return result.sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id));
   }
 
+  /** Rebuilds the JSONL export on demand; append() performs one bounded line append. */
   exportJsonl(): string { return this.withLock(() => this.exportJsonlUnlocked()); }
+
+  private appendJsonlObservation(observation: AdoptionObservation): void {
+    fs.mkdirSync(this.root, { recursive: true });
+    fs.appendFileSync(path.join(this.root, 'adoption-observations.jsonl'), `${JSON.stringify(observation)}
+`, { encoding: 'utf8', mode: 0o600 });
+  }
+
+  private ensureJsonlObservation(observation: AdoptionObservation): void {
+    fs.mkdirSync(this.root, { recursive: true });
+    const target = path.join(this.root, 'adoption-observations.jsonl');
+    if (!fs.existsSync(target)) { this.appendJsonlObservation(observation); return; }
+    const lines = fs.readFileSync(target, 'utf8').split(/\r?\n/).filter(Boolean);
+    for (const line of lines) {
+      let parsed: AdoptionObservation;
+      try { parsed = JSON.parse(line) as AdoptionObservation; validateObservation(parsed); }
+      catch (cause) { throw new Error(`ADOPTION_OBSERVATION_CORRUPT: ${target}: ${cause instanceof Error ? cause.message : String(cause)}`); }
+      if (parsed.id === observation.id) return;
+    }
+    this.appendJsonlObservation(observation);
+  }
 
   private exportJsonlUnlocked(): string {
     fs.mkdirSync(this.root, { recursive: true });
@@ -133,7 +157,7 @@ export class AdoptionObservationStore {
   }
 }
 
-/** Returns the canonical unit required for a supported adoption metric. */
+/** Returns the canonical unit required by one adoption metric. */
 export function expectedUnit(metric: AdoptionObservation['metric']): AdoptionObservation['unit'] { return METRIC_UNITS[metric]; }
 
 function sanitizeObservation(value: AdoptionObservation): AdoptionObservation {

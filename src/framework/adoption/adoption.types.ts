@@ -1,4 +1,4 @@
-/** Supported pilot/adoption metrics that may be persisted and aggregated as evidence. */
+/** Canonical evidence-backed adoption and operational metrics. */
 export const ADOPTION_METRICS = [
   'authoring-session-minutes',
   'time-to-first-pass-minutes',

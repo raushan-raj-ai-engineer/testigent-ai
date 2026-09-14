@@ -23,7 +23,11 @@ function finding(ruleId: string, severity: ReviewFindingSeverity, message: strin
 export function reviewGenerationProposal(proposal: GenerationProposal): AgenticReviewResult {
   const findings: ReviewFinding[] = [];
   if (proposal.duplicateDetected) findings.push(finding('duplicate-proposal', 'error', 'Proposal duplicates an existing target or equivalent project artifact.', proposal));
-  if (!proposal.targetPath.replaceAll('\\', '/').startsWith(`projects/${proposal.project}/`)) findings.push(finding('project-boundary', 'critical', 'Target path escapes the selected project boundary.', proposal));
+  const normalizedTarget = proposal.targetPath.replaceAll('\\', '/');
+  const segments = normalizedTarget.split('/');
+  if (segments.some(segment => !segment || segment === '.' || segment === '..') || !normalizedTarget.startsWith(`projects/${proposal.project}/`)) {
+    findings.push(finding('project-boundary', 'critical', 'Target path escapes or ambiguously traverses the selected project boundary.', proposal));
+  }
   const referencedProjects = [...proposal.content.matchAll(/projects\/([A-Za-z0-9._-]+)\//g)].map(match => match[1]);
   if (referencedProjects.some(project => project !== proposal.project)) findings.push(finding('cross-project-reference', 'error', 'Generated content references another project boundary.', proposal));
   for (const rule of RULES) if (rule.pattern.test(proposal.content)) findings.push(finding(rule.id, rule.severity, rule.message, proposal));

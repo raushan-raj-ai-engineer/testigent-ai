@@ -1,8 +1,18 @@
-# TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase
+# TestigentAI v1.9.1 — Corrective Hardening Review Candidate
+
+## Purpose
+
+v1.9.1 is a corrective hardening candidate responding to the independent v1.9.0 architecture/product review. It closes R01–R14 across OpenAPI correctness, project containment, evidence provenance/redaction, database TLS/SQL handling, failure triage/history, MCP transport, CSV export, evidence-store behavior and GitHub Actions supply-chain pinning.
+
+`v1.9.0` remains the current immutable certified release; this candidate does not move or recreate that tag. See `docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md`.
+
+---
+
+# TestigentAI v1.9.0 — Failure Intelligence & Customer Showcase (Certified Historical Release)
 
 ## Certification
 
-`v1.9.0` is the current immutable certified release at commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI run `34808556321` and its full rerun passed on the same SHA. Fresh main Release Compatibility run `34809207686` passed 5/5, and tag-triggered Release Compatibility run `34809446255` also passed 5/5.
+`v1.9.0` is the immutable certified release at commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI run `34808556321` and its full rerun passed on the same SHA. Fresh main Release Compatibility `34809207686` passed 5/5, and tag-triggered Release Compatibility `34809446255` also passed 5/5. Post-release documentation main `cc4350319b2f37c0f645744478f715504ecc1264` passed CI `34810348016` without moving the tag.
 
 ## Consolidated v1.9.0 scope
 
@@ -17,7 +27,7 @@
 - npm Bulk Advisory security fallback carried forward for legacy quick-audit endpoint retirement;
 - reporting-surface freeze contract after v1.9 certification.
 
-This release is **certified v1.9.0**. The Customer Showcase remains synthetic and non-claimable; its values must never become customer/adoption/differentiation/scale/release claims.
+This historical release is **certified v1.9.0**. The Customer Showcase remains synthetic and non-claimable; its values must never become customer/adoption/differentiation/scale/release claims.
 
 See `docs/60-v1.9.0-FAILURE-INTELLIGENCE.md` through `docs/64-v1.9.0-CANDIDATE-HANDOFF.md`.
 

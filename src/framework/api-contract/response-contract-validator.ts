@@ -3,7 +3,7 @@ import type { OpenApiDocument, OpenApiOperation, OpenApiSchema, ResponseContract
 
 const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']);
 
-/** Validates an observed API response against the matching OpenAPI operation, status, media type, and schema. */
+/** Validates one HTTP response against the declared OpenAPI status, media type and schema. */
 export function validateResponseContract(input: {
   document: OpenApiDocument;
   method: string;
