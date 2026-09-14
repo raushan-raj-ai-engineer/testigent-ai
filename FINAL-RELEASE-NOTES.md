@@ -1,4 +1,22 @@
-# TestigentAI v1.9.1 — Corrective Hardening Review Candidate
+# TestigentAI v1.9.1 — Corrective Hardening
+
+## v1.9.1 certification
+
+`v1.9.1` is the current immutable certified release at commit `38e2406c73608cabcf42a8ff0ea8e35e745dea23`.
+
+Certification evidence:
+
+- Main CI `34818484552` — PASS
+- Main Release Compatibility `34818923701` — 5/5 PASS
+- Tag-triggered Release Compatibility `34819277626` — 5/5 PASS
+- Full framework regression — 201/201 PASS
+- Independent review closure — 14/14 PASS
+- Security — 0 high/critical advisories
+- Showcase validation — PASS
+- GitHub Release — published
+
+`v1.9.0` remains an immutable historical certified release at `6a32718353022da4e5ce51dace59e29692340913`.
+
 
 ## Purpose
 

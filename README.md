@@ -26,7 +26,7 @@
 
 ## Current Release State
 
-**Current certified release: `v1.9.0` — Failure Intelligence & Customer Showcase.** Immutable annotated tag `v1.9.0` resolves to certified commit `6a32718353022da4e5ce51dace59e29692340913`. Main CI and rerun passed on the same SHA; fresh main Release Compatibility `34809207686` and tag-triggered Release Compatibility `34809446255` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. Post-release documentation sync is at `cc4350319b2f37c0f645744478f715504ecc1264` with CI `34810348016` green. **Corrective review candidate: `v1.9.1`** closes the independent architecture/product review findings R01–R14 without moving the v1.9.0 tag or reopening the reporting feature surface.
+**Current certified release: `v1.9.1` — Corrective Hardening.** Immutable annotated tag `v1.9.1` resolves to certified commit `38e2406c73608cabcf42a8ff0ea8e35e745dea23`. Main CI `34818484552` passed on the same SHA; fresh main Release Compatibility `34818923701` and tag-triggered Release Compatibility `34819277626` both passed the full 5/5 Ubuntu/macOS/Windows browser matrix. All 14 independent architecture-review findings have dedicated regression closure. `v1.9.0` remains immutable at `6a32718353022da4e5ce51dace59e29692340913`.
 
 For the exact certified run IDs, release commit, current CI topology and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For daily Git/PR/CI/release commands, see [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
 
