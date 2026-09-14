@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { hasInformationalBusinessSummaryContract, normalizeContractText } from './lib/release-text-contracts.mjs';
+import {
+  hasInformationalBusinessSummaryContract,
+  hasReviewMetadataContract,
+  normalizeContractText
+} from './lib/release-text-contracts.mjs';
 
 const root = process.cwd();
 const issues = [];
@@ -356,7 +360,7 @@ try {
   if (!readmeV192.includes('Current certified release: `v1.9.1`') || !readmeV192.includes('Current corrective re-review candidate: `v1.9.2`')) issues.push('v1.9.2 artifact README must distinguish certified v1.9.1 from candidate v1.9.2');
   if (!statusV192.includes('Current certified release: v1.9.1') || !statusV192.includes('Corrective re-review candidate: v1.9.2') || !statusV192.includes('not a certified v1.9.2 release')) issues.push('v1.9.2 current-release status must fail closed against certification ambiguity');
   if (!handoffV192.includes('not a certified release') || !handoffV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')) issues.push('v1.9.2 review handoff must identify candidate status and immutable v1.9.1 baseline');
-  if (!metadataV192.includes(`Candidate version:\n1.9.2`) || !metadataV192.includes('38e2406c73608cabcf42a8ff0ea8e35e745dea23')) issues.push('v1.9.2 review metadata must identify version and certified baseline');
+  if (!hasReviewMetadataContract(metadataV192)) issues.push('v1.9.2 review metadata must identify version and certified baseline');
   if (!verificationV192.includes('does **not** claim') || !verificationV192.includes('outbound registry/DNS access was unavailable')) issues.push('v1.9.2 verification report must preserve packaging-environment limitations');
 
   const showcasePolicy = fs.readFileSync(path.join(root, 'src/framework/failure-intelligence/showcase-policy.ts'), 'utf8');

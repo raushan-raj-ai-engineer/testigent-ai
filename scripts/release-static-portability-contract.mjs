@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   hasInformationalBusinessSummaryContract,
+  hasReviewMetadataContract,
   normalizeContractText
 } from './lib/release-text-contracts.mjs';
 
@@ -10,6 +11,10 @@ const root = process.cwd();
 const workflowPath = path.join(root, '.github', 'workflows', 'playwright-sharded.yml');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 const crlfWorkflow = normalizeContractText(workflow).replace(/\n/g, '\r\n');
+
+const metadataPath = path.join(root, 'REVIEW-METADATA.txt');
+const metadata = fs.readFileSync(metadataPath, 'utf8');
+const crlfMetadata = normalizeContractText(metadata).replace(/\n/g, '\r\n');
 
 assert.equal(
   hasInformationalBusinessSummaryContract(workflow),
@@ -27,8 +32,23 @@ assert.equal(
   'contract normalization must produce identical text for LF and CRLF inputs'
 );
 
+assert.equal(
+  hasReviewMetadataContract(metadata),
+  true,
+  'LF review metadata must identify the v1.9.2 candidate and certified baseline'
+);
+
+assert.equal(
+  hasReviewMetadataContract(crlfMetadata),
+  true,
+  'CRLF review metadata must identify the v1.9.2 candidate and certified baseline'
+);
+
 console.log(JSON.stringify({
   ok: true,
-  contract: 'merged-report-summary',
+  contracts: [
+    'merged-report-summary',
+    'v1.9.2-review-metadata'
+  ],
   variants: ['LF', 'CRLF']
 }, null, 2));
