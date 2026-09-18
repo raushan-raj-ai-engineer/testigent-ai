@@ -1,6 +1,6 @@
 {
   "name": "testigent-ai",
-  "version": "1.9.3",
+  "version": "1.10.3",
   "private": true,
   "description": "TestigentAI - Intelligent Quality Engineering Platform",
   "author": "Raushan Raj",
@@ -148,7 +148,7 @@
     "reporting:contract": "tsx scripts/reporting-contract.ts && tsx scripts/ci-rerun-artifact-contract.ts && tsx scripts/reporting-merge-contract.ts",
     "reporting:merge-contract": "tsx scripts/reporting-merge-contract.ts",
     "framework:health:release": "cross-env APP=demo ENV=qa tsx scripts/framework-health.ts",
-    "validate:final:steps": "npm run release:static && npm run architecture:check && npm run framework:health && npm run scale:audit && npm run scenario:doctor && npm run docs:comment-audit && npm run reporting:contract && npm run typecheck && npm run test:review:hardening && npm run test:review:closure && npm run test:agentic:deterministic && npm run test:product-intelligence && npm run test:failure-intelligence && npm run test:framework:critical && npm run security:check",
+    "validate:final:steps": "npm run release:static && npm run architecture:check && npm run authoring:unified-contract && npm run framework:health && npm run scale:audit && npm run scenario:doctor && npm run docs:comment-audit && npm run reporting:contract && npm run typecheck && npm run test:review:hardening && npm run test:review:closure && npm run test:agentic:deterministic && npm run test:product-intelligence && npm run test:failure-intelligence && npm run test:framework:critical && npm run security:check",
     "ci:business:summary": "tsx scripts/ci-business-step-summary.ts",
     "ci:report:bundle": "tsx scripts/ci-report-bundle.ts",
     "test:projects": "tsx scripts/test-projects.ts",
@@ -205,7 +205,15 @@
     "qa:showcase:validate": "npm run showcase:validate",
     "test:review:closure": "cross-env APP=demo ENV=qa playwright test tests/framework/v1.9.1-review-closure-contract.spec.ts tests/framework/v1.9.2-rereview-closure-contract.spec.ts --project=chromium",
     "release:csv-viewer": "tsx scripts/csv-viewer-qualification.ts",
-    "release:rereview:qualification": "npm run validate:final && npm run release:csv-viewer && npm run release:offline"
+    "release:rereview:qualification": "npm run validate:final && npm run release:csv-viewer && npm run release:offline",
+    "exploration:proposal": "tsx scripts/exploration-proposal.ts",
+    "qa:explore": "tsx scripts/qa.ts explore",
+    "qa:learn": "tsx scripts/qa.ts learn",
+    "qa:generate": "tsx scripts/qa.ts generate",
+    "qa:proposal": "tsx scripts/qa.ts proposal",
+    "qa:create": "tsx scripts/qa.ts create",
+    "qa:create:workflow": "tsx scripts/qa-create.ts",
+    "authoring:unified-contract": "node scripts/unified-authoring-contract.mjs"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

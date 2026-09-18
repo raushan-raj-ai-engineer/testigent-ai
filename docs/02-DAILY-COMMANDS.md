@@ -27,13 +27,20 @@ npm run qa:auth
 
 Auth is verified in a fresh browser context before promotion. A project with auto-refresh can refresh missing/near-expiry auth before workers start and recover at a safe navigation boundary during execution. Mutating actions are not blindly retried.
 
-Create a test from a requirement:
+Create or generate automation with one command:
 
 ```bash
-npm run qa:new -- checkout
-# or
-npm run qa:new -- projects/<project>/requirements/checkout.md
+# Requirement file or Jira
+npm run qa -- create checkout
+npm run qa -- create projects/<project>/requirements/checkout.md
+npm run qa -- create JIRA:PAY-142
+
+# Optional application learning in the same command
+npm run qa -- create JIRA:PAY-142 --auto-explore
+npm run qa -- create JIRA:PAY-142 --learn="Checkout Journey"
 ```
+
+The same workflow handles normal and complex UI automatically. There is no separate complex-user command.
 
 Run and validate:
 

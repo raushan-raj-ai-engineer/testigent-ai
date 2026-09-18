@@ -1,144 +1,43 @@
-/** Safe automated explorer + human-guided functional learner. Author: Raushan Raj */
+/** Safe automated explorer + complex human-guided functional learner. */
 import { chromium, type BrowserContext, type Frame, type Page, type Response } from '@playwright/test';
 import { ApplicationKnowledgeStore, type KnowledgeRecord } from '../knowledge/store.js';
 import { normalizeRoutePath, redactKnowledgeText, safeVisibleText, sanitizeKnowledgeValue } from '../knowledge/knowledge.redactor.js';
 import { resolveApplicationForUrl } from '../knowledge/application.resolver.js';
 import { contextOptionsWithAuth } from './auth.state.js';
 import { WorkspaceContext } from '../../core/config/workspace.context.js';
+import { guidedCaptureScript, type FrameContext, type GuidedEvent } from './complex.capture.js';
 
 const DESTRUCTIVE=/\b(delete|remove|refund|cancel(?:\s+order)?|terminate|deactivate|purchase|pay(?:\s+now)?|place\s+order|submit|confirm(?:\s+payment)?|logout|sign\s*out|close\s+account|disable)\b/i;
 const API_TYPES=new Set(['xhr','fetch']);
-
 interface SafeLink { href:string;text:string;aria:string; }
-interface GuidedEvent { type:'click'|'change'|'submit'|'navigation'; at:string; urlPattern:string; tag?:string; role?:string; name?:string; inputType?:string; }
 interface NetworkFact { method:string;path:string;status:number;contentType:string;resourceType:string;count:number; }
+interface TimedNetworkFact extends NetworkFact { at:string; urlPattern:string; }
 
-function allowedEnvironment():void{
-  const env=(process.env.ENV?.trim() || process.env.TEST_ENV?.trim() || WorkspaceContext.resolve().environment).toLowerCase();
-  const allowed=(process.env.EXPLORATION_ALLOWED_ENVIRONMENTS??'dev,qa,test,staging').split(',').map((value:string)=>value.trim().toLowerCase()).filter(Boolean);
-  if(!allowed.includes(env))throw new Error(`Exploration blocked for '${env}'. Allowed: ${allowed.join(', ')}`);
-}
-
-function parsedBase(base:string):URL{
-  let url:URL; try{url=new URL(base);}catch{throw new Error(`APP_BASE_URL must be a valid absolute URL. Received: '${base}'.`);}
-  if(!['http:','https:'].includes(url.protocol))throw new Error(`APP_BASE_URL must use http/https. Received protocol '${url.protocol}'.`);
-  url.hash=''; return url;
-}
-
-function allowedOrigins(base:URL):Set<string>{
-  const origins=new Set([base.origin]);
-  for(const raw of (process.env.EXPLORATION_ALLOWED_ORIGINS??'').split(',').map((value:string)=>value.trim()).filter(Boolean)){
-    try{origins.add(new URL(raw).origin);}catch{throw new Error(`Invalid EXPLORATION_ALLOWED_ORIGINS entry: '${raw}'.`);}
-  }
-  return origins;
-}
-
-function canonical(url:URL):string{const copy=new URL(url);copy.hash='';copy.search='';copy.pathname=copy.pathname.replace(/\/{2,}/g,'/');return copy.toString();}
+function allowedEnvironment():void{const env=(process.env.ENV?.trim()||process.env.TEST_ENV?.trim()||WorkspaceContext.resolve().environment).toLowerCase();const allowed=(process.env.EXPLORATION_ALLOWED_ENVIRONMENTS??'dev,qa,test,staging').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean);if(!allowed.includes(env))throw new Error(`Exploration blocked for '${env}'. Allowed: ${allowed.join(', ')}`);}
+function parsedBase(base:string):URL{let url:URL;try{url=new URL(base)}catch{throw new Error(`APP_BASE_URL must be a valid absolute URL. Received: '${base}'.`)}if(!['http:','https:'].includes(url.protocol))throw new Error(`APP_BASE_URL must use http/https. Received protocol '${url.protocol}'.`);url.hash='';return url;}
+function allowedOrigins(base:URL):Set<string>{const origins=new Set([base.origin]);for(const raw of (process.env.EXPLORATION_ALLOWED_ORIGINS??'').split(',').map(v=>v.trim()).filter(Boolean)){try{origins.add(new URL(raw).origin)}catch{throw new Error(`Invalid EXPLORATION_ALLOWED_ORIGINS entry: '${raw}'.`)}}return origins;}
+function canonical(url:URL):string{const c=new URL(url);c.hash='';c.search='';c.pathname=c.pathname.replace(/\/{2,}/g,'/');return c.toString();}
 function knowledgeId(app:string,url:URL):string{const route=normalizeRoutePath(url.pathname)==='/'?'home':normalizeRoutePath(url.pathname);return `${app}-${url.host}-${route}`;}
 function boundedNumber(name:string,fallback:number,min:number,max:number):number{const raw=Number(process.env[name]??fallback);return Number.isFinite(raw)?Math.max(min,Math.min(max,Math.floor(raw))):fallback;}
-function maxPages():number{return boundedNumber('EXPLORATION_MAX_PAGES',20,1,100);}
-function maxDepth():number{return boundedNumber('EXPLORATION_MAX_DEPTH',4,0,12);}
-function timeoutMs():number{return boundedNumber('EXPLORATION_NAVIGATION_TIMEOUT_MS',15000,1000,60000);}
-function captureText():boolean{return !['0','false','no','off'].includes((process.env.EXPLORATION_CAPTURE_VISIBLE_TEXT??'true').toLowerCase());}
-
-function networkFact(response:Response,baseOrigins:Set<string>):NetworkFact|undefined{
-  try{
-    const request=response.request(); const resourceType=request.resourceType(); if(!API_TYPES.has(resourceType))return undefined;
-    const url=new URL(response.url()); if(!baseOrigins.has(url.origin))return undefined;
-    return {method:request.method(),path:normalizeRoutePath(url.pathname),status:response.status(),contentType:response.headers()['content-type']??'',resourceType,count:1};
-  }catch{return undefined;}
-}
-
-async function observePage(page:Page,store:ApplicationKnowledgeStore,source:string,app:string,baseOrigins:Set<string>):Promise<string>{
-  const current=parsedBase(page.url()); if(!baseOrigins.has(current.origin))throw new Error(`Exploration redirected outside allowed origins: '${current.origin}'.`);
-  const title=redactKnowledgeText(await page.title().catch(()=>''));
-  const headings=captureText()?safeVisibleText(await page.getByRole('heading').allTextContents().catch(()=>[])):[];
-  const buttons=captureText()?safeVisibleText(await page.getByRole('button').allTextContents().catch(()=>[])):[];
-  const fields=await page.locator('input,textarea,select').evaluateAll((elements:Element[])=>elements.slice(0,80).map(element=>({
-    tag:element.tagName.toLowerCase(),name:element.getAttribute('name')??'',type:element.getAttribute('type')??'',placeholder:element.getAttribute('placeholder')??'',ariaLabel:element.getAttribute('aria-label')??'',required:element.hasAttribute('required')
-  }))).catch(()=>[] as Array<Record<string,unknown>>);
-  const links=await page.locator('a[href]').evaluateAll((elements:Element[])=>elements.slice(0,120).map(element=>({text:(element.textContent??'').trim(),aria:element.getAttribute('aria-label')??'',href:(element as HTMLAnchorElement).href}))).catch(()=>[] as SafeLink[]);
-  const safeLinks=(links as SafeLink[]).flatMap((link:SafeLink)=>{try{const url=new URL(link.href);if(!baseOrigins.has(url.origin))return[];return[{name:redactKnowledgeText(link.aria||link.text).slice(0,160),path:normalizeRoutePath(url.pathname),destructive:DESTRUCTIVE.test(`${link.text} ${link.aria} ${url.pathname}`)}];}catch{return[];}});
-  const route=normalizeRoutePath(current.pathname);
-  const record:KnowledgeRecord={id:knowledgeId(app,current),kind:'page',title:title||headings[0]||route,data:{application:app,origin:current.origin,urlPattern:`${current.origin}${route}`,route,title,headings,buttons,fields:sanitizeKnowledgeValue(fields),links:safeLinks},learnedAt:new Date().toISOString(),source,reviewRequired:true,application:app,origin:current.origin};
-  return store.save(record);
-}
-
-function attachNetwork(context:BrowserContext,baseOrigins:Set<string>,facts:Map<string,NetworkFact>):void{
-  context.on('response',(response:Response)=>{const fact=networkFact(response,baseOrigins);if(!fact)return;const key=`${fact.method}|${fact.path}|${fact.status}`;const previous=facts.get(key);facts.set(key,{...fact,count:(previous?.count??0)+1});});
-}
-
-async function installGuidedActionCapture(context:BrowserContext,events:GuidedEvent[],baseOrigins:Set<string>):Promise<void>{
-  await context.exposeBinding('__knowledgeEvent',(_source:unknown,payload:unknown)=>{
-    const event=sanitizeKnowledgeValue(payload) as Partial<GuidedEvent>;
-    if(!event.type||!event.at||!event.urlPattern)return;
-    try{const url=new URL(event.urlPattern);if(!baseOrigins.has(url.origin))return;event.urlPattern=`${url.origin}${normalizeRoutePath(url.pathname)}`;}catch{return;}
-    events.push(event as GuidedEvent);
-  });
-  await context.addInitScript(()=>{
-    type Emitter=(payload:Record<string,string>)=>Promise<void>;
-    const w=window as typeof window & {__knowledgeEvent?:Emitter};
-    const describe=(target:EventTarget|null):Record<string,string>=>{
-      const element=target instanceof Element?target:undefined; if(!element)return{};
-      const label=element.getAttribute('aria-label')||element.getAttribute('title')||element.textContent?.trim().slice(0,140)||element.getAttribute('name')||'';
-      return {tag:element.tagName.toLowerCase(),role:element.getAttribute('role')||'',name:label,inputType:element.getAttribute('type')||''};
-    };
-    const emit=(type:string,target:EventTarget|null):void=>{void w.__knowledgeEvent?.({type,at:new Date().toISOString(),urlPattern:location.origin+location.pathname,...describe(target)});};
-    document.addEventListener('click',event=>emit('click',event.target),true);
-    document.addEventListener('change',event=>emit('change',event.target),true);
-    document.addEventListener('submit',event=>emit('submit',event.target),true);
-  });
-}
+function maxPages():number{return boundedNumber('EXPLORATION_MAX_PAGES',20,1,100)}function maxDepth():number{return boundedNumber('EXPLORATION_MAX_DEPTH',4,0,12)}function timeoutMs():number{return boundedNumber('EXPLORATION_NAVIGATION_TIMEOUT_MS',15000,1000,60000)}function captureText():boolean{return !['0','false','no','off'].includes((process.env.EXPLORATION_CAPTURE_VISIBLE_TEXT??'true').toLowerCase())}
+function networkFact(response:Response,origins:Set<string>):TimedNetworkFact|undefined{try{const request=response.request(),resourceType=request.resourceType();if(!API_TYPES.has(resourceType))return;const u=new URL(response.url());if(!origins.has(u.origin))return;return{method:request.method(),path:normalizeRoutePath(u.pathname),status:response.status(),contentType:response.headers()['content-type']??'',resourceType,count:1,at:new Date().toISOString(),urlPattern:`${u.origin}${normalizeRoutePath(u.pathname)}`};}catch{return;}}
+async function componentInventory(page:Page):Promise<unknown>{return page.locator('table,[role="grid"],[role="treegrid"],iframe,[role="dialog"],canvas,[role="tablist"]').evaluateAll((els:Element[])=>els.slice(0,80).map(el=>({tag:el.tagName.toLowerCase(),role:el.getAttribute('role')||'',name:el.getAttribute('aria-label')||el.getAttribute('title')||el.getAttribute('data-testid')||'',className:String(el.className||'').slice(0,180),rowCount:Number(el.getAttribute('aria-rowcount')||0)||undefined}))).catch(()=>[]);}
+async function observePage(page:Page,store:ApplicationKnowledgeStore,source:string,app:string,origins:Set<string>):Promise<string>{const current=parsedBase(page.url());if(!origins.has(current.origin))throw new Error(`Exploration redirected outside allowed origins: '${current.origin}'.`);const title=redactKnowledgeText(await page.title().catch(()=>''));const headings=captureText()?safeVisibleText(await page.getByRole('heading').allTextContents().catch(()=>[])):[];const buttons=captureText()?safeVisibleText(await page.getByRole('button').allTextContents().catch(()=>[])):[];const fields=await page.locator('input,textarea,select').evaluateAll((els:Element[])=>els.slice(0,80).map(el=>({tag:el.tagName.toLowerCase(),name:el.getAttribute('name')??'',type:el.getAttribute('type')??'',placeholder:el.getAttribute('placeholder')??'',ariaLabel:el.getAttribute('aria-label')??'',required:el.hasAttribute('required')}))).catch(()=>[]);const links=await page.locator('a[href]').evaluateAll((els:Element[])=>els.slice(0,120).map(el=>({text:(el.textContent??'').trim(),aria:el.getAttribute('aria-label')??'',href:(el as HTMLAnchorElement).href}))).catch(()=>[] as SafeLink[]);const safeLinks=(links as SafeLink[]).flatMap(link=>{try{const u=new URL(link.href);if(!origins.has(u.origin))return[];return[{name:redactKnowledgeText(link.aria||link.text).slice(0,160),path:normalizeRoutePath(u.pathname),destructive:DESTRUCTIVE.test(`${link.text} ${link.aria} ${u.pathname}`)}]}catch{return[]}});const route=normalizeRoutePath(current.pathname);const record:KnowledgeRecord={id:knowledgeId(app,current),kind:'page',title:title||headings[0]||route,data:{application:app,origin:current.origin,urlPattern:`${current.origin}${route}`,route,title,headings,buttons,fields:sanitizeKnowledgeValue(fields),links:safeLinks,components:sanitizeKnowledgeValue(await componentInventory(page))},learnedAt:new Date().toISOString(),source,reviewRequired:true,application:app,origin:current.origin};return store.save(record);}
+function attachNetwork(context:BrowserContext,origins:Set<string>,facts:Map<string,NetworkFact>,timeline:TimedNetworkFact[]=[]):void{context.on('response',r=>{const fact=networkFact(r,origins);if(!fact)return;timeline.push(fact);const key=`${fact.method}|${fact.path}|${fact.status}`;const p=facts.get(key);facts.set(key,{...fact,count:(p?.count??0)+1});});}
+async function frameChain(frame:Frame,origins:Set<string>):Promise<FrameContext[]>{const chain:FrameContext[]=[];let current:Frame|null=frame;while(current&&current.parentFrame()){let url:URL;try{url=new URL(current.url())}catch{break}if(!origins.has(url.origin))break;let selector:string|undefined,title:string|undefined,name=current.name();try{const handle=await current.frameElement();const meta=await handle.evaluate((el:Element)=>({id:el.getAttribute('id')||'',name:el.getAttribute('name')||'',title:el.getAttribute('title')||'',testid:el.getAttribute('data-testid')||''}));title=meta.title||undefined;selector=meta.testid?`iframe[data-testid="${meta.testid.replace(/"/g,'\\"')}"]`:meta.title?`iframe[title="${meta.title.replace(/"/g,'\\"')}"]`:meta.name?`iframe[name="${meta.name.replace(/"/g,'\\"')}"]`:meta.id?`iframe#${meta.id}`:undefined;}catch{/* detached */}chain.unshift({name,urlPattern:`${url.origin}${normalizeRoutePath(url.pathname)}`,selector,title,depth:chain.length+1});current=current.parentFrame();}return chain.map((x,i)=>({...x,depth:i+1}));}
+function correlate(events:GuidedEvent[],timeline:TimedNetworkFact[]):GuidedEvent[]{return events.map((event,index)=>{const start=Date.parse(event.at),next=index+1<events.length?Date.parse(events[index+1]!.at):start+2000;const end=Math.max(start+250,Math.min(next+500,start+3000));return{...event,correlatedNetwork:timeline.filter(n=>{const t=Date.parse(n.at);return t>=start-200&&t<=end}).slice(0,20).map(({at,...n})=>n)};});}
+async function installGuidedActionCapture(context:BrowserContext,events:GuidedEvent[],origins:Set<string>,pageIds:WeakMap<Page,string>):Promise<void>{let seq=0;await context.exposeBinding('__knowledgeEvent',async(source,payload:unknown)=>{const raw=sanitizeKnowledgeValue(payload) as Partial<GuidedEvent>;if(!raw.type||!raw.at||!raw.urlPattern)return;let u:URL;try{u=new URL(raw.urlPattern)}catch{return}if(!origins.has(u.origin))return;const page=source.page;let pageId=pageIds.get(page);if(!pageId){pageId=`page-${++seq}`;pageIds.set(page,pageId)}events.push({type:raw.type,at:raw.at,pageId,urlPattern:`${u.origin}${normalizeRoutePath(u.pathname)}`,frames:await frameChain(source.frame,origins),target:(raw.target??{}) as Record<string,unknown>,component:(raw.component??{type:'element'}) as any,detail:(raw.detail??{}) as Record<string,unknown>});});await context.addInitScript({content:guidedCaptureScript()});}
 
 /**
  * Reusable framework function `safeExplore`.
- * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
- * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ * Business Use: Safely auto-discovers selected application pages, components and API traffic.
+ * Benefit: Builds reviewable application knowledge without executing destructive actions.
  */
-export async function safeExplore(root:string,base=process.env.APP_BASE_URL??''){
-  allowedEnvironment(); if(!base)throw new Error('APP_BASE_URL is required.'); const baseUrl=parsedBase(base); const resolution=await resolveApplicationForUrl(root,baseUrl.toString());
-  if(!resolution.app)throw new Error(resolution.reason); const app=resolution.app, origins=allowedOrigins(baseUrl), store=new ApplicationKnowledgeStore(root);
-  const browser=await chromium.launch({headless:true}); const context=await browser.newContext(await contextOptionsWithAuth(root,app)); const page=await context.newPage();
-  const network=new Map<string,NetworkFact>(); attachNetwork(context,origins,network);
-  const seen=new Set<string>(),queued=new Set<string>(),queue:Array<{url:string;depth:number}>=[{url:canonical(baseUrl),depth:0}],edges:Array<{from:string;to:string}>=[]; queued.add(canonical(baseUrl));
-  try{
-    while(queue.length&&seen.size<maxPages()){
-      const item=queue.shift()!; if(seen.has(item.url))continue; seen.add(item.url);
-      await page.goto(item.url,{waitUntil:'domcontentloaded',timeout:timeoutMs()}); await page.waitForLoadState('networkidle',{timeout:Math.min(timeoutMs(),3000)}).catch(()=>undefined);
-      const current=parsedBase(page.url()); if(!origins.has(current.origin))throw new Error(`Exploration redirected outside allowed origins to '${current.origin}'.`);
-      await observePage(page,store,'safe-explorer',app,origins);
-      if(item.depth>=maxDepth())continue;
-      const links=await page.locator('a[href]').evaluateAll((elements:Element[])=>elements.slice(0,160).map(element=>({href:(element as HTMLAnchorElement).href,text:(element.textContent??'').trim(),aria:element.getAttribute('aria-label')??''}))).catch(()=>[] as SafeLink[]);
-      for(const link of links){try{const nextUrl=new URL(link.href);const label=`${link.text} ${link.aria} ${nextUrl.pathname}`;if(!origins.has(nextUrl.origin)||DESTRUCTIVE.test(label))continue;const next=canonical(nextUrl);edges.push({from:normalizeRoutePath(current.pathname),to:normalizeRoutePath(nextUrl.pathname)});if(!seen.has(next)&&!queued.has(next)){queue.push({url:next,depth:item.depth+1});queued.add(next);}}catch{/* ignore invalid href */}}
-    }
-    await store.save({id:`${app}-${baseUrl.host}-network`,kind:'api',title:`Observed API traffic (${app})`,data:{application:app,origins:[...origins],requests:[...network.values()]},learnedAt:new Date().toISOString(),source:'safe-explorer',reviewRequired:true,application:app,origin:baseUrl.origin});
-    await store.save({id:`${app}-${baseUrl.host}-navigation-map`,kind:'journey',title:`Safe navigation map (${app})`,data:{application:app,entry:`${baseUrl.origin}${normalizeRoutePath(baseUrl.pathname)}`,edges:[...new Map(edges.map(edge=>[`${edge.from}|${edge.to}`,edge])).values()]},learnedAt:new Date().toISOString(),source:'safe-explorer',reviewRequired:true,application:app,origin:baseUrl.origin});
-    return {application:app,pages:seen.size,origin:baseUrl.origin,networkFacts:network.size,knowledgeSummary:await store.summary(app)};
-  }finally{await browser.close();}
-}
+export async function safeExplore(root:string,base=process.env.APP_BASE_URL??''){allowedEnvironment();if(!base)throw new Error('APP_BASE_URL is required.');const baseUrl=parsedBase(base),resolution=await resolveApplicationForUrl(root,baseUrl.toString());if(!resolution.app)throw new Error(resolution.reason);const app=resolution.app,origins=allowedOrigins(baseUrl),store=new ApplicationKnowledgeStore(root);const browser=await chromium.launch({headless:true}),context=await browser.newContext(await contextOptionsWithAuth(root,app)),page=await context.newPage();const network=new Map<string,NetworkFact>();attachNetwork(context,origins,network);const seen=new Set<string>(),queued=new Set<string>(),queue:Array<{url:string;depth:number}>=[{url:canonical(baseUrl),depth:0}],edges:Array<{from:string;to:string}>=[];queued.add(canonical(baseUrl));try{while(queue.length&&seen.size<maxPages()){const item=queue.shift()!;if(seen.has(item.url))continue;seen.add(item.url);await page.goto(item.url,{waitUntil:'domcontentloaded',timeout:timeoutMs()});await page.waitForLoadState('networkidle',{timeout:Math.min(timeoutMs(),3000)}).catch(()=>undefined);const current=parsedBase(page.url());if(!origins.has(current.origin))throw new Error(`Exploration redirected outside allowed origins to '${current.origin}'.`);await observePage(page,store,'safe-explorer-v2',app,origins);if(item.depth>=maxDepth())continue;const links=await page.locator('a[href]').evaluateAll((els:Element[])=>els.slice(0,160).map(el=>({href:(el as HTMLAnchorElement).href,text:(el.textContent??'').trim(),aria:el.getAttribute('aria-label')??''}))).catch(()=>[] as SafeLink[]);for(const link of links){try{const nextUrl=new URL(link.href),label=`${link.text} ${link.aria} ${nextUrl.pathname}`;if(!origins.has(nextUrl.origin)||DESTRUCTIVE.test(label))continue;const next=canonical(nextUrl);edges.push({from:normalizeRoutePath(current.pathname),to:normalizeRoutePath(nextUrl.pathname)});if(!seen.has(next)&&!queued.has(next)){queue.push({url:next,depth:item.depth+1});queued.add(next)}}catch{}}}await store.save({id:`${app}-${baseUrl.host}-network`,kind:'api',title:`Observed API traffic (${app})`,data:{application:app,origins:[...origins],requests:[...network.values()]},learnedAt:new Date().toISOString(),source:'safe-explorer-v2',reviewRequired:true,application:app,origin:baseUrl.origin});await store.save({id:`${app}-${baseUrl.host}-navigation-map`,kind:'journey',title:`Safe navigation map (${app})`,data:{application:app,entry:`${baseUrl.origin}${normalizeRoutePath(baseUrl.pathname)}`,edges:[...new Map(edges.map(e=>[`${e.from}|${e.to}`,e])).values()]},learnedAt:new Date().toISOString(),source:'safe-explorer-v2',reviewRequired:true,application:app,origin:baseUrl.origin});return{application:app,pages:seen.size,origin:baseUrl.origin,networkFacts:network.size,knowledgeSummary:await store.summary(app)};}finally{await browser.close();}}
 
 /**
  * Reusable framework function `guidedLearn`.
- * Business Use: Centralizes shared TestigentAI behavior so project teams do not duplicate framework logic.
- * Benefit: Keeps behavior consistent, reviewable and reusable across organizations and applications.
+ * Business Use: Records a human-performed business journey with complex UI and network context.
+ * Benefit: Converts real tester exploration into reviewable automation evidence.
  */
-export async function guidedLearn(root:string,base=process.env.APP_BASE_URL??'',journeyName=process.env.EXPLORATION_JOURNEY_NAME??'Guided business journey'){
-  allowedEnvironment(); if(!base)throw new Error('APP_BASE_URL is required.'); if(!process.stdin.isTTY)throw new Error('app:learn requires an interactive terminal.');
-  const baseUrl=parsedBase(base),resolution=await resolveApplicationForUrl(root,baseUrl.toString()); if(!resolution.app)throw new Error(resolution.reason); const app=resolution.app,origins=allowedOrigins(baseUrl),store=new ApplicationKnowledgeStore(root);
-  const browser=await chromium.launch({headless:false}); const context=await browser.newContext(await contextOptionsWithAuth(root,app)); const network=new Map<string,NetworkFact>(),events:GuidedEvent[]=[]; attachNetwork(context,origins,network); await installGuidedActionCapture(context,events,origins);
-  const observedPages=new Set<Page>();
-  const attachPage=(page:Page):void=>{
-    if(observedPages.has(page))return; observedPages.add(page);
-    page.on('framenavigated',(frame:Frame)=>{if(frame!==page.mainFrame())return;try{const url=new URL(page.url());if(!origins.has(url.origin))return;events.push({type:'navigation',at:new Date().toISOString(),urlPattern:`${url.origin}${normalizeRoutePath(url.pathname)}`});void observePage(page,store,'guided-learn',app,origins);}catch{/* ignore */}});
-  };
-  context.on('page',attachPage); const page=await context.newPage(); attachPage(page);
-  try{
-    await page.goto(baseUrl.toString(),{waitUntil:'domcontentloaded',timeout:timeoutMs()}); await observePage(page,store,'guided-learn',app,origins);
-    const {createInterface}=await import('node:readline/promises'); const rl=createInterface({input:process.stdin,output:process.stdout});
-    try{await rl.question(`Guided learning for '${app}'. Perform '${journeyName}' in the browser, then press ENTER here to save the journey.\n`);}finally{rl.close();}
-    for(const openPage of context.pages()){try{const url=new URL(openPage.url());if(origins.has(url.origin))await observePage(openPage,store,'guided-learn',app,origins);}catch{/* ignore */}}
-    await store.save({id:`${app}-${baseUrl.host}-journey-${journeyName}`,kind:'journey',title:journeyName,data:{application:app,entry:`${baseUrl.origin}${normalizeRoutePath(baseUrl.pathname)}`,events,network:[...network.values()]},learnedAt:new Date().toISOString(),source:'guided-learn',reviewRequired:true,application:app,origin:baseUrl.origin});
-    await store.save({id:`${app}-${baseUrl.host}-guided-network`,kind:'api',title:`Guided journey API traffic (${app})`,data:{application:app,requests:[...network.values()]},learnedAt:new Date().toISOString(),source:'guided-learn',reviewRequired:true,application:app,origin:baseUrl.origin});
-    return {application:app,journey:journeyName,events:events.length,networkFacts:network.size,knowledgeSummary:await store.summary(app)};
-  }finally{await browser.close();}
-}
+export async function guidedLearn(root:string,base=process.env.APP_BASE_URL??'',journeyName=process.env.EXPLORATION_JOURNEY_NAME??'Guided business journey'){allowedEnvironment();if(!base)throw new Error('APP_BASE_URL is required.');if(!process.stdin.isTTY)throw new Error('app:learn requires an interactive terminal.');const baseUrl=parsedBase(base),resolution=await resolveApplicationForUrl(root,baseUrl.toString());if(!resolution.app)throw new Error(resolution.reason);const app=resolution.app,origins=allowedOrigins(baseUrl),store=new ApplicationKnowledgeStore(root);const browser=await chromium.launch({headless:false}),context=await browser.newContext(await contextOptionsWithAuth(root,app));const network=new Map<string,NetworkFact>(),timeline:TimedNetworkFact[]=[],events:GuidedEvent[]=[],pageIds=new WeakMap<Page,string>();attachNetwork(context,origins,network,timeline);await installGuidedActionCapture(context,events,origins,pageIds);let pageSeq=0;const attachPage=(page:Page,opener?:Page):void=>{if(pageIds.has(page))return;const id=`page-${++pageSeq}`;pageIds.set(page,id);if(opener){events.push({type:'page_opened',at:new Date().toISOString(),pageId:id,urlPattern:baseUrl.origin,frames:[],target:{},component:{type:'page'},detail:{openerPageId:pageIds.get(opener)}})}page.on('framenavigated',(frame:Frame)=>{if(frame!==page.mainFrame())return;try{const u=new URL(page.url());if(!origins.has(u.origin))return;events.push({type:'navigation',at:new Date().toISOString(),pageId:id,urlPattern:`${u.origin}${normalizeRoutePath(u.pathname)}`,frames:[],target:{},component:{type:'page'},detail:{}});void observePage(page,store,'guided-learn-v2',app,origins);}catch{}});page.on('dialog',async dialog=>{events.push({type:'dialog',at:new Date().toISOString(),pageId:id,urlPattern:safePageUrl(page),frames:[],target:{},component:{type:'browser-dialog'},detail:{dialogType:dialog.type(),message:redactKnowledgeText(dialog.message())}});const policy=(process.env.EXPLORATION_DIALOG_POLICY??'dismiss').toLowerCase();try{policy==='accept'?await dialog.accept():await dialog.dismiss()}catch{}});page.on('download',d=>events.push({type:'download',at:new Date().toISOString(),pageId:id,urlPattern:safePageUrl(page),frames:[],target:{},component:{type:'download'},detail:{suggestedFilename:redactKnowledgeText(d.suggestedFilename())}}));};const safePageUrl=(p:Page):string=>{try{const u=new URL(p.url());return `${u.origin}${normalizeRoutePath(u.pathname)}`}catch{return baseUrl.origin}};context.on('page',p=>{void p.opener().then(opener=>attachPage(p,opener??undefined));});const page=await context.newPage();attachPage(page);try{await page.goto(baseUrl.toString(),{waitUntil:'domcontentloaded',timeout:timeoutMs()});await observePage(page,store,'guided-learn-v2',app,origins);const {createInterface}=await import('node:readline/promises');const rl=createInterface({input:process.stdin,output:process.stdout});try{await rl.question(`Guided learning for '${app}'. Perform '${journeyName}' in the browser, then press ENTER here to save the journey.\n`)}finally{rl.close()}for(const openPage of context.pages()){try{const u=new URL(openPage.url());if(origins.has(u.origin))await observePage(openPage,store,'guided-learn-v2',app,origins)}catch{}}const correlated=correlate(events,timeline);await store.save({id:`${app}-${baseUrl.host}-journey-${journeyName}`,kind:'journey',title:journeyName,data:{application:app,entry:`${baseUrl.origin}${normalizeRoutePath(baseUrl.pathname)}`,events:correlated,network:[...network.values()]},learnedAt:new Date().toISOString(),source:'guided-learn-v2',reviewRequired:true,application:app,origin:baseUrl.origin});await store.save({id:`${app}-${baseUrl.host}-guided-network`,kind:'api',title:`Guided journey API traffic (${app})`,data:{application:app,requests:[...network.values()]},learnedAt:new Date().toISOString(),source:'guided-learn-v2',reviewRequired:true,application:app,origin:baseUrl.origin});return{application:app,journey:journeyName,events:correlated.length,networkFacts:network.size,knowledgeSummary:await store.summary(app)};}finally{await browser.close();}}

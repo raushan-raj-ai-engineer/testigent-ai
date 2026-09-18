@@ -1,5 +1,6 @@
 /** Requirement source resolver for files, prefixes and direct ticket URLs. Author: Raushan Raj */
 import { stat } from 'node:fs/promises';
+import { extname, resolve } from 'node:path';
 import { readLocalRequirement } from './file.adapters.js';
 import { AzureBoardsRequirementAdapter, GitHubIssueRequirementAdapter, JiraRequirementAdapter } from './remote.adapters.js';
 
@@ -54,7 +55,12 @@ export async function loadRequirement(source: string) {
 
   try {
     if ((await stat(source)).isFile()) return readLocalRequirement(source);
-  } catch { /* not a local file */ }
+  } catch {
+    const extension = extname(source).toLowerCase();
+    if (['.md', '.json', '.csv', '.xlsx'].includes(extension)) {
+      throw new Error(`Requirement file not found: '${source}'. Resolved path: '${resolve(source)}'. Create the file first or pass an existing Markdown/JSON/CSV/XLSX requirement.`);
+    }
+  }
 
-  throw new Error(`Unsupported source '${source}'. Use file.md/json/csv/xlsx, JIRA:<id>, AZURE:<id>, GITHUB:<id>, GITHUB:owner/repo#<id>, or a supported Jira/Azure/GitHub issue URL.`);
+  throw new Error(`Unsupported source '${source}'. Use an existing file.md/json/csv/xlsx, JIRA:<id>, AZURE:<id>, GITHUB:<id>, GITHUB:owner/repo#<id>, or a supported Jira/Azure/GitHub issue URL.`);
 }

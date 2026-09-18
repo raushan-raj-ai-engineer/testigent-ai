@@ -8,7 +8,22 @@ import {
 
 const root = process.cwd();
 const issues = [];
-const ignored = new Set(['node_modules', '.git', 'reports', 'test-results']);
+const ignored = new Set([
+  'node_modules',
+  '.git',
+  '.testigent',
+  '.runtime',
+  '.report-history',
+  '.auth',
+  '.healing',
+  'reports',
+  'test-results',
+  'playwright-report',
+  'blob-report',
+  'coverage',
+  'allure-results',
+  'allure-report'
+]);
 
 function walk(dir) {
   const out = [];
@@ -350,7 +365,7 @@ try {
   if (!finalValidationContract.includes('test:review:closure')) issues.push('validate:final must enforce independent-review closure');
   if (!pkg.scripts?.['release:csv-viewer']?.includes('csv-viewer-qualification.ts')) issues.push('v1.9.2 must expose real spreadsheet-viewer CSV qualification');
   if (!pkg.scripts?.['release:rereview:qualification']?.includes('release:csv-viewer') || !pkg.scripts?.['release:rereview:qualification']?.includes('validate:final') || !pkg.scripts?.['release:rereview:qualification']?.includes('release:offline')) issues.push('v1.9.2 re-review qualification must chain final validation, real CSV viewer qualification and offline release verification');
-  if (pkg.version !== '1.9.3') issues.push(`v1.9.3 release artifact must declare package version 1.9.3, found ${pkg.version}`);
+  if (!/^1\.(?:9\.(?:[3-9]|\d{2,})|(?:[1-9]\d+)\.\d+)$/.test(String(pkg.version))) issues.push(`release artifact version must be v1.9.3 or newer, found ${pkg.version}`);
   if (!pkg.scripts?.['release:static']?.includes('github-action-pin-check.mjs')) issues.push('release:static must enforce full-SHA GitHub Action pinning');
   const readmeV192 = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
   const statusV192 = fs.readFileSync(path.join(root, 'docs/41-CURRENT-RELEASE-STATUS.md'), 'utf8');

@@ -32,3 +32,6 @@ opencode.json
 all-blob-reports/
 all-business-reports/
 coverage/
+
+# Local TestigentAI authoring/proposal staging
+.testigent/

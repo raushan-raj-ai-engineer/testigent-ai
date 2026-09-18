@@ -26,7 +26,10 @@ export async function runDeclarativeScenario(
 
 async function runStep(page: Page, step: DeclarativeStep, uiBaseUrl: string): Promise<void> {
   if (step.action === 'goto') {
-    await page.goto(resolveDeclarativeNavigationUrl(uiBaseUrl, step.url));
+    await page.goto(
+      resolveDeclarativeNavigationUrl(uiBaseUrl, step.url),
+      { waitUntil: 'domcontentloaded' },
+    );
     return;
   }
 
