@@ -1,5 +1,10 @@
 import { test } from '../../fixtures/test.fixture';
 
+test.skip(
+  process.env.RUN_EXTERNAL_TESTS !== 'true',
+  'External public demo dependency; run with npm run test:external.',
+);
+
 test.describe('Todo business journey', () => {
   test('user can create a work item @smoke @ui', async ({ app, logger }, testInfo) => {
     const todo = `Enterprise item ${testInfo.parallelIndex}-${Date.now()}`;

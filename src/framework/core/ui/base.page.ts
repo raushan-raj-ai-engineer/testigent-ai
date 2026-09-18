@@ -30,7 +30,7 @@ export abstract class BasePage {
   constructor(protected readonly page: Page, protected readonly healer: HealingOrchestrator) {}
 
   async navigate(url: string, options: { verifyAuth?: boolean } = {}): Promise<void> {
-    await this.page.goto(url);
+    await this.page.goto(url, { waitUntil: 'domcontentloaded' });
     if (options.verifyAuth === false) return;
     await authManagerFor(this.page)?.ensureAuthenticatedNavigation(this.page, url);
   }

@@ -1,6 +1,8 @@
 <div align="center">
 
-# TestigentAI
+#
+
+> Current release: **v1.10.3** — unified authoring with fail-fast requirement source validation.
 
 ### Intelligent Quality Engineering Platform
 
@@ -1358,3 +1360,27 @@ Maintained as an intelligent quality-engineering platform for scalable multi-pro
 | v1.9.2 validation handoff | [`docs/68-v1.9.2-VALIDATION-HANDOFF.md`](docs/68-v1.9.2-VALIDATION-HANDOFF.md) |
 | v1.9.2 post-cert corrective closure | [`docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`](docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md) |
 | v1.9.3 certification | [`docs/70-v1.9.3-CERTIFICATION.md`](docs/70-v1.9.3-CERTIFICATION.md) |
+
+## v1.10.2 — Unified Test Creation Workflow
+
+Normal and complex UI authoring now use the **same user command**. Dynamic tables/grids, iframes, open Shadow DOM metadata, dialogs, popups, downloads, file uploads, keyboard, drag/drop, hover, scroll/infinite-scroll, canvas coordinates and correlated XHR/fetch evidence are detected internally; there is no separate complex mode.
+
+```bash
+# Use existing approved application knowledge
+npm run qa -- create projects/<app>/requirements/create-order.md
+npm run qa -- create JIRA:PAY-142
+
+# Safe auto-explore first, then generate from the same command
+npm run qa -- create JIRA:PAY-142 --auto-explore
+
+# Manually perform the business journey; complex UI is captured automatically
+npm run qa -- create JIRA:PAY-142 --learn="Create Order Journey"
+
+# Optional one-command interactive review/approval/promotion workflow
+npm run qa -- create JIRA:PAY-142 \
+  --learn="Create Order Journey" \
+  --reviewer="QA Lead" \
+  --review-and-promote
+```
+
+Legacy `qa:new`, `qa -- explore`, `qa -- learn`, and `qa -- generate` commands remain compatibility aliases but route to the same unified authoring workflow. Generated automation remains human review-gated. See `docs/73-v1.10.2-UNIFIED-TEST-CREATION.md`.

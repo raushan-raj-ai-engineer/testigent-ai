@@ -17,7 +17,12 @@ function main(): void {
     case 'status': printStatus(); return;
     case 'doctor': doctor(); return;
     case 'auth': runNpm(['run', 'app:auth'], { ...selectedEnv(), APPLICATION_EXPLORATION_ENABLED: 'true' }); return;
-    case 'new': createNewTest(args); return;
+    case 'create': runUnifiedCreate(args); return;
+    case 'new': runUnifiedCreate(args); return;
+    case 'explore': runUnifiedCreate(['--auto-explore', ...args]); return;
+    case 'learn': runUnifiedCreate([`--learn=${args.join(' ').trim() || 'Guided business journey'}`]); return;
+    case 'generate': runUnifiedCreate(args); return;
+    case 'proposal': runNpm(['run', 'exploration:proposal', '--', ...args], selectedEnv()); return;
     case 'test': runNpm(['run', 'test:project', '--', ...args], selectedEnv()); return;
     case 'validate': validate(args); return;
     case 'report': runNpm(['run', 'report:open'], selectedEnv()); return;
@@ -111,16 +116,11 @@ function doctor(): void {
   if (!ok) process.exitCode = 1;
 }
 
-function createNewTest(args: string[]): void {
-  const runtime = RuntimeConfig.resolve();
-  const modeArg = args.find(arg => arg.startsWith('--mode='));
-  const mode = modeArg ?? '--mode=agents';
-  const candidate = args.find(arg => !arg.startsWith('--'));
-  if (!candidate) {
-    throw new Error('Usage: npm run qa:new -- <requirement-id|requirement-file> [--mode=agents|cli|mcp]');
-  }
-  const requirement = resolveRequirement(runtime.applicationName, candidate);
-  runNpm(['run', 'test:new', '--', requirement, mode], selectedEnv());
+function runUnifiedCreate(args: string[]): void {
+  runNpm(
+    ['run', 'qa:create:workflow', '--', ...args],
+    { ...selectedEnv(), APPLICATION_EXPLORATION_ENABLED: 'true', TEST_GENERATION_ENABLED: 'true' },
+  );
 }
 
 function validate(args: string[]): void {
@@ -147,16 +147,6 @@ function initializeAgents(args: string[]): void {
   console.log('Agent flow: planner -> reviewed plan -> generator/evidence -> Testigent architecture mapping -> validation.');
 }
 
-function resolveRequirement(application: string, value: string): string {
-  const explicit = path.resolve(value);
-  if (fs.existsSync(explicit)) return path.relative(process.cwd(), explicit);
-  const direct = path.resolve('projects', application, 'requirements', value);
-  if (fs.existsSync(direct)) return path.relative(process.cwd(), direct);
-  const markdown = path.resolve('projects', application, 'requirements', `${value}.md`);
-  if (fs.existsSync(markdown)) return path.relative(process.cwd(), markdown);
-  throw new Error(`Requirement '${value}' not found under projects/${application}/requirements.`);
-}
-
 function selectedEnv(): NodeJS.ProcessEnv {
   const target = WorkspaceContext.resolve();
   return { ...process.env, APP: target.application, ENV: target.environment };
@@ -171,28 +161,36 @@ function runNpm(args: string[], env: NodeJS.ProcessEnv): void {
 
 function printHelp(): void {
   console.log(`TestigentAI daily workflow\n\n` +
-    `  npm run qa:use -- <project> <environment>   Select local project once\n` +
-    `  npm run qa:status                            Show resolved configuration\n` +
-    `  npm run qa:doctor                            Check project readiness\n` +
-    `  npm run qa:auth                              Interactively capture/refresh local auth state\n` +
-    `  npm run auth:prepare                         Verify/auto-refresh reusable project auth\n` +
-    `  npm run auth:check                           Check auth freshness without refreshing\n` +
-    `  npm run qa:new -- <requirement>              Prepare agent-assisted test authoring\n` +
-    `  npm run qa:test -- [Playwright args]          Run selected project\n` +
-    `  npm run test:projects -- --all ...           Run all/selected/customer project portfolios\n` +
-    `  npm run qa:validate                           Run static/type/config quality gates\n` +
-    `  npm run qa:validate -- --with-tests           Include Chromium project tests\n` +
-    `  npm run qa:report                            Open the selected project's report\n` +
+    `  npm run qa:use -- <project> <environment>     Select local project once\n` +
+    `  npm run qa:status                              Show resolved configuration\n` +
+    `  npm run qa:doctor                              Check project readiness\n` +
+    `  npm run qa:auth                                Interactively capture/refresh local auth state\n` +
+    `  npm run auth:prepare                           Verify/auto-refresh reusable project auth\n` +
+    `  npm run auth:check                             Check auth freshness without refreshing\n` +
+    `\nONE AUTHORING COMMAND\n` +
+    `  npm run qa -- create <md|JIRA:KEY>            Generate using existing approved knowledge\n` +
+    `  npm run qa -- create <src> --auto-explore     Safe auto-explore + generate\n` +
+    `  npm run qa -- create <src> --learn="Journey"  Manual learn + auto complex-UI capture + generate\n` +
+    `  npm run qa -- create <src> --learn="Journey" --reviewer=NAME --review-and-promote\n` +
+    `                                                  One interactive workflow through approval/promotion\n` +
+    `\nComplex UI is auto-detected inside the same create workflow; there is no user-facing complex mode.\n` +
+    `Compatibility aliases qa:new / explore / learn / generate route to the same create workflow.\n` +
+    `\nEXECUTION / OPERATIONS\n` +
+    `  npm run qa:test -- [Playwright args]            Run selected project\n` +
+    `  npm run test:projects -- --all ...             Run project portfolios\n` +
+    `  npm run qa:validate                             Run static/type/config quality gates\n` +
+    `  npm run qa:validate -- --with-tests             Include Chromium project tests\n` +
+    `  npm run qa:report                              Open the selected project's report\n` +
     `  npm run qa:agents -- [vscode|codex|claude|opencode]\n` +
-    `  npm run qa:heal                              Build source-healing maintenance proposal\n` +
-    `  npm run qa:migrate -- [path]                  Assess an existing suite for incremental adoption\n` +
+    `  npm run qa:heal                                Build source-healing maintenance proposal\n` +
+    `  npm run qa:migrate -- [path]                    Assess an existing suite for incremental adoption\n` +
     `  npm run qa:impact -- [--base REF --head REF]   Explain changed-code test impact (advisory)\n` +
-    `  npm run qa:adoption -- report                 Summarize measured pilot/adoption evidence\n` +
-    `  npm run qa:benchmark -- --input <file>         Compare versioned TestigentAI/plain-Playwright evidence\n` +
-    `  npm run qa:false-heal -- --input <file>        Persist/evaluate seeded false-heal evidence\n` +
+    `  npm run qa:adoption -- report                  Summarize measured pilot/adoption evidence\n` +
+    `  npm run qa:benchmark -- --input <file>         Compare versioned benchmark evidence\n` +
+    `  npm run qa:false-heal -- --input <file>        Persist/evaluate false-heal evidence\n` +
     `  npm run qa:scale -- plan --cases=2000          Exercise deterministic scale planning\n` +
     `  npm run qa:api-contract -- summary --spec <f>  Inspect OpenAPI contract evidence\n` +
-    `  npm run qa:showcase                           Generate isolated synthetic customer showcase\n`);
+    `  npm run qa:showcase                            Generate isolated synthetic customer showcase\n`);
 }
 
 try { main(); }
