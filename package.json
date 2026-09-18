@@ -213,7 +213,8 @@
     "qa:proposal": "tsx scripts/qa.ts proposal",
     "qa:create": "tsx scripts/qa.ts create",
     "qa:create:workflow": "tsx scripts/qa-create.ts",
-    "authoring:unified-contract": "node scripts/unified-authoring-contract.mjs"
+    "authoring:unified-contract": "node scripts/unified-authoring-contract.mjs",
+    "test:external": "cross-env RUN_EXTERNAL_TESTS=true APP=demo ENV=qa playwright test projects/demo/tests/_agent/seed.spec.ts projects/demo/tests/quality/accessibility.smoke.spec.ts projects/demo/tests/quality/declarative.scenario.spec.ts projects/demo/tests/quality/performance.budget.spec.ts projects/demo/tests/ui/todo.spec.ts projects/demo/tests/api/user.api.spec.ts --project=chromium --workers=1"
   },
   "devDependencies": {
     "@playwright/cli": "0.1.19",

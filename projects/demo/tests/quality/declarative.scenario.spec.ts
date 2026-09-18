@@ -8,6 +8,11 @@ import { WorkspaceContext } from '../../../../src/framework/core/config/workspac
 const application = WorkspaceContext.resolve().application;
 const scenarios = discoverDeclarativeScenarios(application);
 
+test.skip(
+  process.env.RUN_EXTERNAL_TESTS !== 'true',
+  'External public demo dependency; run with npm run test:external.',
+);
+
 test.describe('Governed declarative UI scenarios', () => {
   for (const { filePath, scenario } of scenarios) {
     const tags = uniqueTags(['@declarative', '@ui', '@lane:ui', ...scenario.tags]);
