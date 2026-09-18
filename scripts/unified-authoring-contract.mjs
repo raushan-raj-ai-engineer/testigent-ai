@@ -8,7 +8,7 @@ const guide = fs.readFileSync('docs/73-v1.10.2-UNIFIED-TEST-CREATION.md', 'utf8'
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
-check(pkg.version === '1.10.2', 'package version must be 1.10.2');
+check(pkg.version === '1.10.3', 'package version must be 1.10.3');
 check(pkg.scripts?.['qa:create'] === 'tsx scripts/qa.ts create', 'qa:create must route through qa.ts create');
 check(pkg.scripts?.['qa:create:workflow'] === 'tsx scripts/qa-create.ts', 'unified workflow script missing');
 check(!pkg.scripts?.['test:complex-exploration'], 'separate test:complex-exploration command must not exist');
