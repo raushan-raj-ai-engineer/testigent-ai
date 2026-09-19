@@ -1,165 +1,158 @@
-# Daily Commands
+# Daily Commands — TestigentAI v1.10.3
 
-Current certified baseline: **v1.6.0**. For Git/GitHub CLI branch, PR, CI, rerun, tag and cleanup commands, use `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+This guide keeps the normal engineer surface small. Advanced scripts exist, but daily work should prefer the governed `qa:*` and unified `qa create` entry points.
 
-## Recommended new-joiner surface
+## Select workspace
 
 ```bash
-npm ci
-npx playwright install chromium
+npm run project:list
 npm run qa:use -- <project> <environment>
-npm run qa:doctor
 npm run qa:status
+npm run qa:doctor
 ```
 
-For auth-required projects with lifecycle auto-refresh:
+## Create automation from a requirement
+
+Recommended workflow:
+
+```bash
+npm run qa -- create <requirement-source>
+```
+
+Examples:
+
+```bash
+npm run qa -- create projects/<project>/requirements/create-order.md
+npm run qa -- create JIRA:PAY-142
+npm run qa -- create JIRA:PAY-142 --auto-explore
+npm run qa -- create JIRA:PAY-142 --learn="Create Order Journey"
+```
+
+Optional guided review/promotion:
+
+```bash
+npm run qa -- create JIRA:PAY-142 \
+  --learn="Create Order Journey" \
+  --reviewer="QA Lead" \
+  --review-and-promote
+```
+
+Legacy `qa:new`, `qa -- explore`, `qa -- learn` and `qa -- generate` entry points may remain for compatibility; new documentation and onboarding should prefer the unified create workflow.
+
+## Run tests
+
+```bash
+npm run qa:test -- --project=chromium
+```
+
+Layer-specific:
+
+```bash
+npm run test:ui
+npm run test:api
+npm run test:db
+npm run test:e2e
+npm run test:visual
+npm run test:accessibility
+npm run test:performance
+```
+
+Profiles:
+
+```bash
+npm run test:profile:pr
+npm run test:profile:regression
+```
+
+## Authentication
 
 ```bash
 npm run auth:check
-npm run auth:prepare       # optional warm-up/diagnostic; qa:test prepares automatically
+npm run auth:prepare
 ```
 
-For MFA/manual-only projects:
+MFA/manual-only flows:
 
 ```bash
 npm run qa:auth
 ```
 
-Auth is verified in a fresh browser context before promotion. A project with auto-refresh can refresh missing/near-expiry auth before workers start and recover at a safe navigation boundary during execution. Mutating actions are not blindly retried.
-
-Create or generate automation with one command:
+## Reporting
 
 ```bash
-# Requirement file or Jira
-npm run qa -- create checkout
-npm run qa -- create projects/<project>/requirements/checkout.md
-npm run qa -- create JIRA:PAY-142
-
-# Optional application learning in the same command
-npm run qa -- create JIRA:PAY-142 --auto-explore
-npm run qa -- create JIRA:PAY-142 --learn="Checkout Journey"
-```
-
-The same workflow handles normal and complex UI automatically. There is no separate complex-user command.
-
-Run and validate:
-
-```bash
-npm run qa:test -- --project=chromium
-npm run qa:validate
-npm run qa:validate -- --with-tests
 npm run qa:report
+npm run report:open
+npm run report:dashboard
+npm run report:business
+npm run report:mail:preview
 ```
 
-Build source-healing maintenance candidates from repeated runtime recovery evidence:
+## Impact / migration
+
+```bash
+npm run qa:impact -- --base main --head HEAD
+npm run qa:migrate -- projects/<project>/tests
+```
+
+## Healing maintenance
 
 ```bash
 npm run qa:heal
 ```
 
-Initialize the selected Playwright coding-agent loop when needed:
-
-```bash
-npm run qa:agents -- vscode
-# codex | claude | opencode are also supported when installed/approved
-```
-
-## One-off / CI overrides
-
-Local developers normally use `qa:use`. CI is explicit:
-
-```bash
-APP=project2 ENV=qa npm run auth:check
-APP=project2 ENV=qa npm run test:project -- --project=chromium
-npm run validate:final
-```
-
-There is intentionally no default project/environment in reusable runtime code.
-
-## Advanced commands
-
-The repository still exposes specialized commands (`test:ui`, `test:api`, `test:db`, requirement/proposal tools, scenario authoring, reporting and AI checks). These are implementation building blocks and advanced workflows; a new joiner should begin with `qa:*` rather than learning the entire command catalog.
-
-## Database capability policy
-
-Database use is project/environment configurable and enforced by the reusable framework. Optional unavailable DB capability skips `@db` tests with a clear reason; required unavailable DB fails readiness before execution. The selected project's config owns the DB type; machine-level `DB_TYPE` values cannot activate DB tests in another project.
-
-## Multi-project / customer portfolio execution
-
-Run a selected set of projects:
-
-```bash
-npm run test:projects -- --apps=portal,payments --env=qa --profile=regression --project=chromium
-```
-
-Run project-specific environments:
-
-```bash
-npm run test:projects -- --apps=portal,payments --env-map=portal:qa,payments:uat --project=chromium
-```
-
-Run a configured customer group:
-
-```bash
-npm run test:projects -- --group=customer-a --profile=regression --project=chromium
-```
-
-Run every registered project:
+## Multi-project execution
 
 ```bash
 npm run test:projects -- --all --env=qa --profile=regression --project=chromium
 ```
 
-Preview without execution:
+Named portfolio:
 
 ```bash
-npm run test:projects -- --all --env=qa --dry-run --project=chromium
+npm run test:projects -- --group=<name> --profile=regression --project=chromium
 ```
 
-The default portfolio behavior continues after a project failure and returns a non-zero final status when any project failed. Use `--fail-fast` only when early termination is required.
+## Framework validation
 
-
-## Frequent Git / GitHub CLI flow
-
-For normal contribution work, the shortest safe sequence is:
+Fast focused checks:
 
 ```bash
-git checkout main
-git pull origin main
-git checkout -b feature/<work>
-# make changes
+npm run architecture:check
+npm run authoring:unified-contract
+npm run typecheck
+npm run test:framework:critical
+npm run security:check
+```
+
+Full merge/release-quality validation:
+
+```bash
 npm run validate:final
-git diff --check
-git add .
-git commit -m "<type>: <message>"
-git push -u origin feature/<work>
-gh pr create --base main --head feature/<work> --title "<title>"
-gh pr checks --watch
 ```
 
-After merge, synchronize `main`, watch the main CI, and only then create a release tag when the change is a release. The full install/login/PR/CI/rerun/tag/cleanup/troubleshooting command reference is `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`.
+## External/public integration checks
 
-## v1.6.0 evidence / impact commands
-
-Explain changed-code impact without silently narrowing CI:
+External endpoints are isolated from deterministic framework certification:
 
 ```bash
-npm run qa:impact -- --base main --head HEAD
-# or
-npm run qa:impact -- --files projects/demo/src/pages/todo.page.ts
+npm run test:external
 ```
 
-Assess an existing Playwright suite in incremental migration slices:
+Optional strict performance enforcement:
 
 ```bash
-npm run qa:migrate -- projects/<project>/tests
+RUN_EXTERNAL_TESTS=true \
+PERFORMANCE_BUDGET_ENFORCED=true \
+npm run test:external
 ```
 
-Run the seeded false-heal safety benchmark:
+## Typical daily sequence
 
 ```bash
-npm run test:healing:safety
+npm run qa:status
+npm run qa:doctor
+npm run qa -- create <requirement-source>
+npm run qa:test -- --project=chromium
+npm run qa:validate
+npm run qa:report
 ```
-
-After a normal business execution, open the business report and use **Verify dashboard claims** for one-click access to the Evidence Ledger.
-
