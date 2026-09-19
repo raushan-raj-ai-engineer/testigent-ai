@@ -1,65 +1,138 @@
-# Start Here
+# Start Here — TestigentAI v1.10.3
 
-TestigentAI is a reusable Playwright + TypeScript quality platform. Reusable engines live in `src/framework/`; application behavior lives only in `projects/<project>/`.
+TestigentAI is a multi-project Playwright + TypeScript Quality Engineering platform covering UI, API, database, AI-assisted authoring, governed healing, CI/CD and business reporting.
 
-Current certified baseline: **v1.6.0** on Node.js 22.x. The main CI and 5/5 tag-triggered release-compatibility matrix are green; see `41-CURRENT-RELEASE-STATUS.md`.
+This document is the fastest route for a new engineer, reviewer, recruiter or client who wants to understand the repository without reading the full historical documentation set.
 
-## First-time setup
+## 1. Understand the architecture
 
-Contributor prerequisite: install Git and GitHub CLI (`gh`) when you need branch/PR/Actions/release operations. See `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md` for macOS/Windows/Linux setup and `gh auth login`.
+The repository has one core rule:
+
+> Reusable capability belongs in `src/framework/`. Product behavior belongs in `projects/<project>/`.
+
+A business test should normally flow through:
+
+```text
+Business Spec
+  -> Project Fixture / Facade
+  -> Workflow / Domain Service
+  -> Page / API Service / Repository
+  -> Reusable TestigentAI Core
+```
+
+This keeps UI selectors, API routes, SQL and business expectations inside the product while shared infrastructure remains reusable.
+
+## 2. Install
 
 ```bash
 npm ci
 npx playwright install chromium
+```
+
+## 3. Select a project
+
+```bash
 npm run project:list
-npm run qa:use -- <project> <environment>
+npm run qa:use -- demo qa
 npm run qa:doctor
 ```
 
-`qa:use` stores the local selection in `.runtime/workspace.json` (gitignored). CI must provide `APP` and `ENV` explicitly. The framework has no silent `demo/qa` runtime fallback.
-
-## Daily flow — small command surface
+## 4. Run the deterministic product tests
 
 ```bash
-npm run qa:status
-npm run qa:new -- <requirement-id-or-file>
 npm run qa:test -- --project=chromium
-npm run qa:validate
+```
+
+## 5. Create new automation
+
+The recommended v1.10.x authoring surface is:
+
+```bash
+npm run qa -- create <requirement-source>
+```
+
+Examples:
+
+```bash
+npm run qa -- create projects/demo/requirements/todo-create.md
+npm run qa -- create JIRA:PAY-142 --auto-explore
+npm run qa -- create JIRA:PAY-142 --learn="Create Order Journey"
+```
+
+Generated automation remains review-gated before promotion.
+
+## 6. Run by layer
+
+```bash
+npm run test:ui
+npm run test:api
+npm run test:db
+npm run test:e2e
+```
+
+Database capability is project/environment owned and supports `postgres`, `mysql` and `mssql` modes when configured.
+
+## 7. Open reports
+
+```bash
 npm run qa:report
 ```
 
-For auth-required products, use `npm run qa:auth` when an interactive capture/refresh is required. Auth capture is verified in a fresh browser context before promotion. The framework can also restore a gitignored sessionStorage companion when required and raises `AUTH_SESSION_INVALID` before locator healing if the selected session is no longer authenticated.
+Business reporting is separate from the raw Playwright report and preserves known-defect, retry, healing and CI-blocking semantics.
 
-Use `qa:validate -- --with-tests` when you also want the selected project's Chromium suite. Use `npm run qa:heal` for governed source-healing review when a maintained test needs a proposed code change.
-
-For customers with multiple products, use the portfolio runner rather than scripting project loops yourself:
+## 8. Validate before merge/release
 
 ```bash
-npm run test:projects -- --all --env=qa --dry-run --project=chromium
-npm run test:projects -- --group=<customer-group> --profile=regression --project=chromium
+npm run validate:final
 ```
 
-## New test rule
+The validation chain covers static/release integrity, architecture, authoring contracts, framework health, scale/profile checks, reporting, type checks, framework regressions and security.
 
-Normal business tests use project fixtures/facades (`app`, `api`, `repositories`, `data`). They do not instantiate framework infrastructure and do not contain raw `page.goto/locator/click/fill` actions.
+## 9. External/demo integrations
 
-```text
-Test -> project fixture/facade -> workflow/domain service -> page/repository -> reusable framework
+Public endpoints are intentionally isolated from the deterministic product certification path.
+
+```bash
+npm run test:external
 ```
 
-For authenticated projects, `qa:doctor` fails until the configured storage-state file exists. Create/refresh it through the governed auth flow; never commit `.auth/`.
+Strict public performance enforcement can be enabled explicitly when needed.
 
-Never commit `.auth`, `.env`, reports, test results, healing/cache/runtime files, or captured application evidence.
+## 10. Where to read next
 
-Read next: `01-ARCHITECTURE.md`, `02-DAILY-COMMANDS.md`, `40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`, `41-CURRENT-RELEASE-STATUS.md`, `15-NEW-PROJECT-HANDOFF.md`, `18-MULTI-PROJECT-EXECUTION.md`, `29-AGENT-AUTHORING-UI-API-DB-E2E.md`, and `30-RECOVERY-ARCHITECTURE.md`.
+- `README.md` — public/product overview
+- `docs/01-ARCHITECTURE.md` — architecture rules
+- `docs/02-DAILY-COMMANDS.md` — normal engineer commands
+- `docs/05-UI-API-DB-DATA.md` — cross-layer testing
+- `docs/07-HEALING-AI-MCP.md` — recovery, AI and MCP
+- `docs/18-MULTI-PROJECT-EXECUTION.md` — portfolio execution
+- `docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md` — governed agent authoring
+- `docs/41-CURRENT-RELEASE-STATUS.md` — current release evidence
+- `docs/76-v1.10.3-FINAL-CERTIFICATION.md` — v1.10.3 final certification
 
+## 11. For a technical reviewer
 
-## Database capability policy
+The fastest review path is:
 
-Database use is project/environment configurable and is enforced by the reusable framework. `projects/<project>/project.json` declares whether database validation is required; `projects/<project>/config/<env>.json` exclusively selects the database type (`none`, `postgres`, `mysql`, or `mssql`). Repository or machine-level `DB_TYPE` values do not override another project's capability; only DB connection secrets such as `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` come from the environment.
+1. Read `README.md`.
+2. Inspect `src/framework/` versus `projects/` ownership.
+3. Inspect `.github/workflows/playwright-sharded.yml`.
+4. Run `npm run architecture:check`.
+5. Run `npm run authoring:unified-contract`.
+6. Run `npm run validate:final`.
+7. Inspect the generated business report and evidence.
 
-- optional + unavailable: tests tagged `@db` are skipped automatically with a clear reason; UI/API suites continue
-- configured and ready: `@db` tests execute normally
-- required + unavailable: `qa:doctor`, framework health and project preflight fail before Playwright execution
+## 12. For recruiter / freelance review
 
-Business specs must not read `DB_TYPE` or manually decide whether to skip. Tag any scenario that requires database access with `@db`; the framework owns capability gating.
+Focus on these capabilities:
+
+- Playwright + TypeScript automation architecture
+- UI + API + database validation
+- multi-project/product isolation
+- CI/CD and sharded execution
+- AI-assisted, human-governed test authoring
+- self-healing with semantic validation
+- reporting and failure intelligence
+- security and architecture gates
+
+The repository is intended to be reviewable as proof-of-work rather than a black-box demo.

@@ -1,97 +1,120 @@
 <div align="center">
 
-#
-
-> Current release: **v1.10.3** — unified authoring with fail-fast requirement source validation.
+# TestigentAI
 
 ### Intelligent Quality Engineering Platform
 
-**A multi-project Playwright + TypeScript platform for UI, API, database, data-driven, reporting, self-healing, AI-assisted and CI/CD quality engineering.**
+**Production-style Playwright + TypeScript automation for UI, API, Database, AI-assisted testing, multi-project execution, CI/CD and business-readable quality reporting.**
 
-<p>
-  <img alt="Playwright" src="https://img.shields.io/badge/Playwright-UI%20%7C%20API-2EAD33?logo=playwright&logoColor=white">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-Type--Safe-3178C6?logo=typescript&logoColor=white">
-  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white">
-  <img alt="Multi Project" src="https://img.shields.io/badge/Architecture-Multi--Project-6C63FF">
-  <img alt="GitHub Actions" src="https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white">
-  <img alt="Azure Pipelines" src="https://img.shields.io/badge/CI-Azure%20Pipelines-0078D7?logo=azurepipelines&logoColor=white">
-  <img alt="AI Optional" src="https://img.shields.io/badge/AI-Opt--In-8A2BE2">
-</p>
+[![TestigentAI Multi-Project CI](https://github.com/raushan-raj-ai-engineer/testigent-ai/actions/workflows/playwright-sharded.yml/badge.svg)](https://github.com/raushan-raj-ai-engineer/testigent-ai/actions/workflows/playwright-sharded.yml)
+![Playwright](https://img.shields.io/badge/Playwright-UI%20%7C%20API-2EAD33?logo=playwright&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-Type--Safe-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)
+![Database](https://img.shields.io/badge/Database-Postgres%20%7C%20MySQL%20%7C%20MSSQL-336791)
+![Architecture](https://img.shields.io/badge/Architecture-Multi--Project-6C63FF)
+![AI](https://img.shields.io/badge/AI-Opt--In-8A2BE2)
+![Release](https://img.shields.io/badge/Release-v1.10.3-blue)
 
-**One reusable core. Many products. Explicit project ownership. Business-readable quality reporting.**
+**One reusable core. Many products. Explicit project ownership. Human-governed automation. Business-readable quality reporting.**
 
-[Quick Start](#quick-start) · [Agent Development](#agent-driven-automation-development) · [Architecture](#architecture) · [Add a Product](#onboard-a-new-product) · [Reporting](#business-standard-reporting) · [CI/CD](#cicd) · [Documentation](#documentation-map) · [v1.7 Agentic](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) · [v1.8 Product Intelligence](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) · [v1.9 Failure Intelligence](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md) · [v1.9.1 Review Closure](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md) · [v1.9.2 Re-review Closure](docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md)
+[Quick Start](#quick-start) · [What It Solves](#what-testigentai-solves) · [Capabilities](#core-capabilities) · [Architecture](#architecture) · [Unified Authoring](#ai-assisted-human-governed-test-authoring) · [UI + API + DB](#cross-layer-ui--api--database-testing) · [CI/CD](#cicd-and-release-confidence) · [Reporting](#business-standard-reporting) · [Docs](#documentation)
 
 </div>
 
 ---
 
-## Current Release State
+## Current Release
 
-**Current certified release: `v1.9.3` — Post-Certification Corrective Closure.** The immutable annotated tag `v1.9.3` resolves to commit `b9e3fc1e09fbb39850cc8cc068758ed07d52f942`. Main CI passed on the same release line, and tag-triggered Release Compatibility run `34866842175` passed 5/5 across Windows Chromium, Ubuntu Chromium, Ubuntu Firefox, Ubuntu WebKit and macOS WebKit.
+**Current certified release: `v1.10.3`.**
 
-v1.9.3 closes the residual findings identified after the v1.9.2 certification: **R01 OpenAPI 3.1 schema semantics, R02 directional/property-removal compatibility detection, and R04 dangling-symlink filesystem containment**. The previous certified `v1.9.2` tag remains immutable at `f061e4ef1fd869888fdae721d4790ce2058070ae`; its historical certification and review evidence remain preserved.
+The unified authoring workflow was introduced on the v1.10.2 line and hardened/certified in `v1.10.3`, including fail-fast requirement-source validation, governed browser exploration, human-reviewed proposal promotion and stronger runtime/external-test isolation.
 
-For exact release evidence and operational status, see [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md). For v1.9.3 certification evidence, see [`docs/70-v1.9.3-CERTIFICATION.md`](docs/70-v1.9.3-CERTIFICATION.md). The originating post-certification corrective work remains documented in [`docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`](docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md).
+The release tag remains immutable. The tag-triggered Release Compatibility workflow passed across the supported release matrix, and the current `main` branch also passed the full **TestigentAI Multi-Project CI** after the post-release unified-authoring contract alignment.
 
-### v1.8 product-intelligence workflows
+Latest verified main CI used in this documentation update:
 
-```bash
-npm run qa:adoption -- report
-npm run qa:benchmark -- --input=benchmarks/my-pilot-comparison.json
-npm run qa:false-heal -- --input=benchmarks/my-false-heal-run.json
-npm run qa:scale -- evaluate --input=benchmarks/my-measured-scale-run.json
-npm run qa:api-contract -- breaking --previous=api/openapi.previous.yaml --current=api/openapi.current.yaml
+```text
+TestigentAI Multi-Project CI
+Run: 35394892371
+Result: SUCCESS
+
+✓ Execution Plan
+✓ Framework Validation
+✓ Project Tests - Shard 1
+✓ Project Tests - Shard 2
+✓ AI Deterministic Safety
+✓ Agentic Deterministic Safety
+✓ Product Intelligence Deterministic Safety
+✓ Failure Intelligence Deterministic Safety
+✓ AI Live Provider Canary (non-blocking)
+✓ Merge TestigentAI Reports
 ```
 
-These commands consume measured/versioned evidence. Example templates and synthetic scale planning are deliberately non-certifying; the dashboard reports `INSUFFICIENT_EVIDENCE` until the required provenance and pilot/measurement boundaries are satisfied.
+Release evidence and operational detail belong in [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md) and the release-specific certification documents.
 
-### v1.9 failure intelligence & customer showcase
+### Certification History
 
-```bash
-npm run showcase
-npm run showcase:validate
-npm run test:failure-intelligence
-```
+- `v1.10.3` is the current certified release.
+- `v1.9.3` remains a certified historical release with immutable certification evidence.
+- `v1.9.2` remains a historical release retained for release traceability.
 
-`npm run showcase` creates a populated customer-demo dashboard from 10 realistic synthetic scenarios. Every showcase record is explicitly `SHOWCASE`, `synthetic=true` and `claimEligible=false`; it never enters live adoption, benchmark, release or failure-history evidence. Normal business dashboards now link to both live Failure Intelligence and the isolated synthetic showcase.
+Historical certification evidence retained by the release governance contract:
 
-After v1.9 certification, the reporting surface is feature-frozen as documented in [`docs/63-REPORTING-FREEZE.md`](docs/63-REPORTING-FREEZE.md); post-freeze reporting work is limited to governed corrective changes unless a new architecture review explicitly approves a surface change.
+- Current certified release: `v1.9.3`
+- v1.9.3 release commit: `b9e3fc1e09fbb39850cc8cc068758ed07d52f942`
+- v1.9.3 release compatibility run: `34866842175`
+- Historical release: `v1.9.2`
 
 ---
 
-## Why TestigentAI?
+## What TestigentAI Solves
 
-TestigentAI is designed for teams that want more than a collection of Playwright tests. It provides a governed quality-engineering platform where reusable technical capability stays centralized while every application keeps its own business logic, selectors, APIs, repositories, data and authentication behavior.
+TestigentAI is designed for teams that need more than a collection of Playwright test scripts.
 
-> **Core design rule**
+It provides a reusable **Quality Engineering platform** where technical capabilities are centralized while each application keeps ownership of its own selectors, business workflows, APIs, database repositories, test data and authentication behavior.
+
+### Core design rule
+
 > Reusable capability belongs in `src/framework/`. Product/application behavior belongs in `projects/<project>/`.
 
-That rule makes the framework reusable across teams without turning it into a single-product automation repository.
+This keeps the framework reusable across products without turning the repository into a single-application automation suite.
 
-### What the platform covers
+### Why it is different
+
+- **UI + API + Database testing in one governed platform**
+- **Multi-project architecture** with product-owned business behavior
+- **AI-assisted test authoring** without silent production-code promotion
+- **Human review and approval** before generated automation becomes active
+- **Self-healing with semantic validation**, not “pass at any cost”
+- **Deterministic CI separated from unstable external demo dependencies**
+- **Sharded and portfolio execution** for multiple products/customers
+- **Business reporting** in addition to technical Playwright output
+- **Authentication lifecycle management** with verified storage state and bounded recovery
+- **Agent/MCP integration** with explicit safety boundaries
+- **Architecture, security, reporting and release quality gates**
+
+---
+
+## Core Capabilities
 
 | Capability | What TestigentAI provides |
 |---|---|
-| 🎭 **UI automation** | Playwright Page Objects, workflows, web-first assertions, governed locator plans |
-| 🔌 **API testing** | Reusable HTTP infrastructure with project-owned domain services and payloads |
-| 🗄️ **Database validation** | Capability-aware Postgres/MySQL/MSSQL support with project-owned repositories |
-| 📊 **Data-driven testing** | JSON, CSV, YAML and spreadsheet-oriented data flows with parallel-safe identities |
-| 🔐 **Authentication** | Verified storage state, project-owned auth providers, auto refresh and bounded runtime recovery |
-| 🩹 **Self-healing** | UI recovery: deterministic fallback, validated cache and lazy optional AI fallback with semantic post-conditions |
-| 🤖 **Agent-driven automation** | Requirement planning, impact analysis, proposal-only generation, deterministic review and explicit human approval/promotion |
-| ✨ **AI / agent quality** | Provider-neutral AI contracts, safe healing, governed TestigentAI MCP tools, decision provenance and operational/provider reporting |
-| 🧠 **Requirement intelligence** | Requirement analysis, test-plan generation, review-gated proposals and application knowledge |
-| 🧾 **Business reporting** | Executive KPIs, known-defect semantics, evidence, steps, merged shard reporting and email preview |
-| 🔎 **Quality evidence graph** | One-click claim verification with formulas, source fields, requirements, scenarios, defects, healing, AI audit and materialized evidence |
-| 🧭 **Change impact** | Explainable, advisory changed-code test selection with transitive project dependency reasons and fail-safe shared-core handling |
-| 🚦 **Execution governance** | Profiles, lanes, tags, workers, retries, sharding and zero-selection protection |
-| 🔄 **CI/CD** | GitHub Actions and Azure Pipelines with sequential, sharded and optional AI execution |
-| 📈 **Adoption & benchmark intelligence** | Pilot metrics, baseline-backed comparison, false-heal measurement and provenance-bound scale evidence |
-| 🧯 **Failure Intelligence** | Evidence-first root-cause taxonomy, stable incident fingerprints, blast-radius clustering and fail-honest UNKNOWN outcomes |
-| 🎬 **Customer showcase** | One-click synthetic demonstration of populated reporting with hard isolation from live/claim evidence |
-| 📜 **API contract intelligence** | OpenAPI 3 response validation and conservative breaking-change detection |
-| 🛡️ **Quality gates** | Architecture, scale, reporting, type, framework, documentation and security contracts |
+| **UI automation** | Playwright Page Objects, workflows, web-first assertions and governed locator plans |
+| **API testing** | Reusable HTTP infrastructure with project-owned domain services, payloads and contract-aware validation |
+| **Database validation** | Capability-aware PostgreSQL, MySQL and MSSQL support with project-owned repositories |
+| **Cross-layer E2E** | Business scenarios that can correlate UI, API and database state through one project facade |
+| **Data-driven testing** | JSON, CSV, YAML and spreadsheet-oriented data flows with parallel-safe identities |
+| **Authentication** | Verified storage state, product-owned auth providers, refresh and bounded runtime recovery |
+| **Self-healing** | Deterministic fallback, validated cache and optional lazy AI fallback with semantic post-conditions |
+| **AI-assisted authoring** | Requirement planning, exploration, proposal generation, validation and human promotion |
+| **MCP / agents** | Governed planner, generator and healer workflows with evidence boundaries |
+| **Requirement intelligence** | Requirement analysis, test-plan generation and review-gated proposals |
+| **Business reporting** | Executive KPIs, known-defect semantics, evidence, steps and merged shard reporting |
+| **Failure intelligence** | Evidence-first classification, fingerprints, blast-radius clustering and fail-honest UNKNOWN outcomes |
+| **Change impact** | Explainable changed-code test selection with fail-safe shared-core handling |
+| **Execution governance** | Profiles, lanes, tags, workers, retries, sharding and zero-selection protection |
+| **CI/CD** | GitHub Actions and Azure Pipelines with deterministic core lanes and optional AI execution |
+| **Quality gates** | Architecture, scale, reporting, type, framework, documentation and security contracts |
 
 ---
 
@@ -99,17 +122,15 @@ That rule makes the framework reusable across teams without turning it into a si
 
 ```mermaid
 flowchart LR
-    T[Business Test] --> F[Project Fixture]
-    F --> A[App / API / Repository Facades]
-    A --> W[Workflow / Domain Service]
-    W --> P[Page / API Service / Repository]
-    P --> C[Reusable TestigentAI Core]
+    T[Business Test] --> F[Project Fixture / Facade]
+    F --> W[Workflow / Domain Service]
+    W --> L[Page / API Service / Repository]
+    L --> C[Reusable TestigentAI Core]
 
     subgraph Product[projects/<project>]
       F
-      A
       W
-      P
+      L
     end
 
     subgraph Framework[src/framework]
@@ -121,8 +142,8 @@ flowchart LR
 
 - `src/framework/` never imports a product project.
 - A project never imports another project.
-- Product selectors, routes, SQL, domain payloads and workflows stay in that product.
-- Business specs consume typed project fixtures/facades rather than constructing framework infrastructure directly.
+- Product selectors, routes, SQL, payloads and workflows stay in that product.
+- Business specs consume typed project fixtures/facades instead of constructing framework infrastructure directly.
 - `npm run architecture:check` enforces the boundary.
 
 ### Repository shape
@@ -133,39 +154,39 @@ TestigentAI/
 │   ├── core/                      # Runtime config, fixtures, auth, UI foundations
 │   ├── api/                       # Generic API infrastructure
 │   ├── database/                  # Generic DB infrastructure
-│   ├── data/                      # Reusable data readers / execution support
+│   ├── data/                      # Reusable data/execution support
 │   ├── reporting/                 # Business + technical reporting
 │   ├── healing/                   # Governed locator recovery
 │   ├── ai/                        # Provider-neutral AI abstractions
 │   ├── agentic/                   # Planner/generator/reviewer/trust/evidence
-│   ├── mcp/                       # Governed TestigentAI MCP boundary
+│   ├── mcp/                       # Governed MCP boundary
 │   └── intelligence/              # Requirements, knowledge and generation
 │
 ├── projects/
-│   ├── demo/                      # Deterministic reference project
+│   ├── demo/                      # Deterministic reference product
 │   └── sdet-practice/             # Authenticated real-world example
-│       ├── auth/                   # Product-owned auth provider
-│       ├── config/                 # Environment config
-│       ├── fixtures/               # Product dependency boundary
-│       ├── src/pages/              # UI mechanics / locator plans
-│       ├── src/workflows/          # Business journeys
-│       ├── src/api/                # Domain API services
-│       ├── src/database/           # Domain repositories
-│       ├── data/                   # Product test data
-│       ├── requirements/           # Requirement inputs
-│       └── tests/                  # Business / capability specs
+│       ├── auth/
+│       ├── config/
+│       ├── fixtures/
+│       ├── src/pages/
+│       ├── src/workflows/
+│       ├── src/api/
+│       ├── src/database/
+│       ├── data/
+│       ├── requirements/
+│       └── tests/
 │
-├── tests/framework/               # Platform regression contracts only
+├── tests/framework/               # Platform regression contracts
 ├── templates/project/             # New-product skeleton
 ├── config/                        # Organization-wide policy
 ├── docs/                          # Detailed product documentation
 ├── scripts/                       # Governed CLI / CI / reporting operations
-├── agent-prompts/                 # Enterprise agent policy / authoring guardrails
-├── .github/agents/                # Planner / generator / healer agent definitions
-├── .mcp/ + .mcp.json              # Playwright MCP configuration examples
+├── agent-prompts/                 # Agent policy / authoring guardrails
+├── .github/agents/                # Planner / generator / healer definitions
+├── .mcp/ + .mcp.json              # MCP configuration examples
 ├── .github/workflows/             # GitHub Actions
 ├── azure-pipelines.yml            # Azure Pipelines
-└── playwright.config.ts           # Thin adapter over runtime configuration
+└── playwright.config.ts           # Thin runtime adapter
 ```
 
 ---
@@ -174,51 +195,39 @@ TestigentAI/
 
 ### Prerequisites
 
-- **Node.js 22.x**
+- Node.js 22.x
 - npm
 - Git
 - Chromium for the recommended first run
-- GitHub CLI (`gh`) for PR/CI/release operations (recommended for contributors)
 
-Git/`gh` installation, authentication and daily terminal operations are documented in [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md).
-
-### 1. Install
+### Install
 
 ```bash
 npm ci
 npx playwright install chromium
 ```
 
-### 2. Discover available products
+### Select a product and environment
 
 ```bash
 npm run project:list
-```
-
-### 3. Select a local workspace
-
-```bash
 npm run qa:use -- demo qa
 npm run qa:doctor
 ```
 
-Local selection is stored in gitignored `.runtime/workspace.json`. CI should always set `APP` and `ENV` explicitly.
-
-### 4. Run tests
+### Run tests
 
 ```bash
 npm run qa:test -- --project=chromium
 ```
 
-### 5. Open the report
+### Open the report
 
 ```bash
 npm run qa:report
-npm run qa:impact -- --base main --head HEAD
-npm run qa:migrate -- projects/<project>/tests
 ```
 
-### 6. Validate the framework/repository
+### Validate the repository
 
 ```bash
 npm run validate:final
@@ -226,374 +235,84 @@ npm run validate:final
 
 ---
 
-## Daily Developer Workflow
+## AI-Assisted, Human-Governed Test Authoring
 
-The recommended surface for most engineers is intentionally small:
+### ONE AUTHORING COMMAND
 
-```bash
-npm run qa:status
-npm run qa:doctor
-npm run qa:new -- <requirement-id-or-file>
-npm run qa:test -- --project=chromium
-npm run qa:validate
-npm run qa:report
-npm run qa:impact -- --base main --head HEAD
-npm run qa:migrate -- projects/<project>/tests
-```
-
-For auth-required products:
-
-```bash
-npm run auth:check
-npm run auth:prepare
-```
-
-For MFA/manual-only authentication:
-
-```bash
-npm run qa:auth
-```
-
-For source-healing maintenance proposals:
-
-```bash
-npm run qa:heal
-```
-
-For **new automation development with agents**, `qa:new` defaults to governed agent mode:
-
-```bash
-npm run qa:new -- checkout
-# equivalent to:
-npm run qa:new -- checkout --mode=agents
-```
-
-> New joiners should start with `qa:*`. Advanced scripts are available, but they are not required for normal daily execution.
-
----
-
-## Multi-Project / Customer Portfolio Execution
-
-A single TestigentAI installation can serve **one product, a selected set of products, a named customer portfolio, or every registered project**. The runner discovers projects from `projects/<project>/config`; new projects automatically participate in `--all` without editing a hard-coded list.
-
-### Run one project
-
-```bash
-APP=portal ENV=qa npm run test:project -- --project=chromium
-```
-
-### Run selected projects
-
-```bash
-npm run test:projects -- \
-  --apps=portal,payments,claims \
-  --env=qa \
-  --profile=regression \
-  --project=chromium
-```
-
-### Use different environments per project
-
-```bash
-npm run test:projects -- \
-  --apps=portal,payments,claims \
-  --env-map=portal:qa,payments:uat,claims:qa \
-  --profile=regression \
-  --project=chromium
-```
-
-### Run every registered project
-
-```bash
-npm run test:projects -- \
-  --all \
-  --env=qa \
-  --profile=regression \
-  --project=chromium
-```
-
-`--all` is dynamic. If a team later adds `projects/customer-search/config/qa.json`, that project is automatically discovered.
-
-### Customer / portfolio groups
-
-For customers that own several products, define a reusable group in `config/project-groups.json`:
-
-```json
-{
-  "groups": {
-    "customer-a": {
-      "description": "Customer A digital estate",
-      "projects": ["portal", "payments", "claims"],
-      "environments": {
-        "portal": "qa",
-        "payments": "uat",
-        "claims": "qa"
-      }
-    }
-  }
-}
-```
-
-Then run the customer portfolio with one command:
-
-```bash
-npm run test:projects -- \
-  --group=customer-a \
-  --profile=regression \
-  --project=chromium
-```
-
-Useful portfolio options:
-
-| Option | Purpose |
-|---|---|
-| `--all` | Run every registered project |
-| `--apps=a,b,c` | Run an ad-hoc subset |
-| `--group=name` | Run a reusable customer/product group |
-| `--env=qa` | Apply one environment to every selected project |
-| `--env-map=a:qa,b:uat` | Use project-specific environments |
-| `--profile=pr|smoke|regression|nightly|release` | Apply a common execution profile |
-| `--include-ai` | Explicitly permit `@ai` tests; provider configuration is still required |
-| `--fail-fast` | Stop after the first failed project |
-| `--dry-run` | Print the resolved project/environment plan without executing |
-
-By default, TestigentAI **continues through all selected projects** even if one project fails, then exits non-zero at the end. This gives customers a complete estate-level result instead of hiding later project outcomes.
-
-Each product keeps its own auth state, test data and business report under `reports/<APP>/<ENV>/<RUN_ID>/...`. Portfolio execution writes both a deterministic summary and a stakeholder-friendly estate view:
+The recommended authoring surface is the **Unified Test Creation Workflow** through the unified `qa create` command.
 
 ```text
-reports/multi-project/<RUN_ID>/summary.json   # run-scoped machine-readable source
-reports/multi-project/<RUN_ID>/index.html    # run-scoped business portfolio dashboard
+Requirement
+    ↓
+Approved Application Knowledge / Exploration / Guided Learning
+    ↓
+Generated Proposal
+    ↓
+Architecture + Type + Authoring Validation
+    ↓
+Human Review
+    ↓
+Approval
+    ↓
+Promotion
+    ↓
+Normal Business Test + CI
 ```
 
-The portfolio dashboard keeps business language at the top: project gate, selected/executed/not-applicable/blocked scenarios, quality failures, known defects, CI blockers, validated healing and AI-call counts. Technical evidence remains inside each product report.
-
-For all executable automated tests including AI-tagged tests, explicitly opt in and configure the AI provider:
+### Use existing approved application knowledge
 
 ```bash
-AI_ENABLED=true \
-AI_PROVIDER_MODE=single \
-AI_PROVIDER=<approved-provider> \
-HEALING_AI_ENABLED=true \
-npm run test:projects -- \
-  --group=customer-a \
-  --profile=nightly \
-  --include-ai \
-  --project=chromium
+npm run qa -- create projects/<app>/requirements/create-order.md
+npm run qa -- create JIRA:PAY-142
 ```
 
-Provider endpoint/model/key variables remain in local or CI secrets. Cloud providers also require the explicit cloud-egress policy switch documented in `.env.example`; never place provider secrets in source control.
+### Safe automatic exploration
 
-Manual tests and review-blocked generated proposals remain excluded by governance.
+```bash
+npm run qa -- create JIRA:PAY-142 --auto-explore
+```
+
+### Teach a real business journey
+
+```bash
+npm run qa -- create JIRA:PAY-142 --learn="Create Order Journey"
+```
+
+Complex UI behavior is detected internally during capture; engineers do not need a separate “complex mode”. Captured evidence can cover dynamic grids/tables, iframes, open Shadow DOM metadata, dialogs, popups, downloads, uploads, keyboard interaction, drag/drop, hover, scroll/infinite-scroll, canvas coordinates and correlated XHR/fetch activity.
+
+### Review and promote
+
+```bash
+npm run qa -- create JIRA:PAY-142 \
+  --learn="Create Order Journey" \
+  --reviewer="QA Lead" \
+  --review-and-promote
+```
+
+Generated automation remains review-gated. The framework validates proposal content and prevents silent destructive overwrite of human-owned active tests.
+
+Legacy authoring entry points remain compatibility aliases where required, but new documentation should lead with the unified `npm run qa -- create ...` workflow.
 
 ---
 
-## Bundled Product Examples
+## Cross-Layer UI + API + Database Testing
 
-### `demo`
-
-A deterministic reference product used for framework contracts, sample UI/API flows and clean onboarding examples.
-
-```bash
-npm run qa:use -- demo qa
-npm run qa:doctor
-npm run qa:test -- --project=chromium
-```
-
-### `sdet-practice`
-
-An authenticated product example that demonstrates:
-
-- project-owned API-based login provider
-- verified browser storage state
-- automatic auth refresh
-- PR/smoke execution
-- business-standard known-defect reporting
-- CI-safe non-AI and optional AI lanes
-
-Set `AUTH_USERNAME` and `AUTH_PASSWORD` through local secret configuration or protected CI variables before authenticated execution; the repository intentionally contains no credential fallback.
-
-```bash
-npm run qa:use -- sdet-practice qa
-npm run auth:check
-npm run auth:prepare
-
-TEST_PROFILE=pr \
-npm run test:project -- \
-  --project=chromium \
-  --grep-invert="@ai"
-
-npm run report:open
-```
-
-The example is intentionally product-owned. Its authentication endpoint, token key, locators and domain behavior do **not** live in reusable framework core.
-
----
-
-## Onboard a New Product
-
-Do not copy another product folder by hand. Generate a governed skeleton:
-
-```bash
-npm run project:new -- checkout
-```
-
-Then configure:
-
-```text
-projects/checkout/
-├── project.json
-├── config/qa.json
-├── auth/auth.provider.ts          # only when non-interactive auth is needed
-├── fixtures/test.fixture.ts
-├── src/app.facade.ts
-├── src/pages/
-├── src/workflows/
-├── src/api/
-├── src/database/
-├── data/
-├── requirements/
-└── tests/
-```
-
-### Product ownership guide
-
-| Put this in the product | Example |
-|---|---|
-| Page selectors and atomic actions | `src/pages/checkout.page.ts` |
-| Business journeys | `src/workflows/checkout.workflow.ts` |
-| Domain API routes/payloads | `src/api/order.service.ts` |
-| Domain SQL/repositories | `src/database/order.repository.ts` |
-| Test datasets | `data/checkout.yaml` |
-| Environment URLs / non-secrets | `config/qa.json` |
-| Authentication mechanics | `auth/auth.provider.ts` |
-| Executable business specs | `tests/.../*.spec.ts` |
-
-### Validate the new product
-
-```bash
-npm run architecture:check
-APP=checkout ENV=qa npm run project:check
-APP=checkout ENV=qa npm run test:project -- --project=chromium
-```
-
-A new product should not require changes in `src/framework/` unless the team is adding a capability that is truly reusable across products.
-
----
-
-## Configuration Model
-
-Runtime configuration is resolved in a predictable order:
+TestigentAI is not limited to browser automation.
 
 ```mermaid
-flowchart TD
-    A[Explicit APP / ENV] --> R[Runtime Target]
-    B[.runtime/workspace.json] --> R
-    C[Unambiguous single environment] --> R
-    R --> O[config/organization.json]
-    O --> P[projects/<project>/project.json]
-    P --> E[projects/<project>/config/<env>.json]
-    E --> V[Environment variable overrides]
-    V --> L[CLI overrides]
+flowchart LR
+    U[UI Action] --> A[API / Service State]
+    A --> D[Database State]
+    D --> V[Business Validation]
 ```
-
-The reusable runtime intentionally has **no silent `demo/qa` fallback**.
-
-Organization policy owns shared defaults such as workers, retries, browsers and artifacts. Product/environment layers override only what they need.
-
----
-
-## Execution Profiles and Quality Lanes
-
-### Profiles
-
-| Profile | Typical purpose | Default intent |
-|---|---|---|
-| `pr` | Pull-request confidence | fast `@smoke`, AI off |
-| `smoke` | Critical business confidence | fast `@smoke` |
-| `regression` | Broad functional coverage | excludes manual scenarios |
-| `nightly` | Wider / heavier execution | more workers, AI may be allowed |
-| `release` | Release gate | strict, minimal tolerance |
-| `custom` | Product/team override | explicit project policy |
-
-Examples:
-
-```bash
-APP=checkout ENV=qa TEST_PROFILE=pr npm run test:project -- --project=chromium
-APP=checkout ENV=qa npm run test:profile:regression -- --project=chromium
-```
-
-### Lanes
-
-```bash
-npm run test:ui
-npm run test:api
-npm run test:db
-npm run test:e2e
-npm run test:visual
-npm run test:accessibility
-npm run test:performance
-```
-
-Typical tags include `@smoke`, `@critical`, `@ui`, `@api`, `@db`, `@ai`, `@manual`, `@generated` and `@generated-review`.
-
-The scale audit protects profiles from silently selecting zero scenarios.
-
----
-
-## Authentication Lifecycle
-
-Authentication lifecycle policy is reusable; login mechanics remain product-owned.
-
-```mermaid
-flowchart TD
-    S[test:project] --> R[Resolve product + environment]
-    R --> Q{Browser auth required?}
-    Q -- No --> T[Start Playwright]
-    Q -- Yes --> P[AuthManager prepare]
-    P --> C{State missing / near expiry / invalid?}
-    C -- No --> T
-    C -- Yes --> L[Single-flight refresh lock]
-    L --> A[Project auth provider]
-    A --> V[Verify candidate in fresh browser context]
-    V --> M[Atomically promote verified state]
-    M --> T
-    T --> N{Session invalid at safe navigation boundary?}
-    N -- Yes --> B[Bounded refresh + hot apply + replay navigation only]
-    N -- No --> X[Continue test]
-```
-
-### Normal auth commands
-
-```bash
-APP=<project> ENV=qa npm run auth:check
-APP=<project> ENV=qa npm run auth:prepare
-APP=<project> ENV=qa npm run test:project -- --project=chromium
-```
-
-### Security properties
-
-- auth state is verified before promotion
-- refreshed state is written atomically
-- parallel refresh is single-flight per runner
-- session recovery is bounded
-- mutating actions are **not blindly replayed**
-- `.auth/` remains gitignored
-- project credentials never belong in committed project JSON/YAML
-
-For MFA/manual-only flows, use `npm run qa:auth`.
-
----
-
-## UI, API, Database and Data
 
 ### UI
 
-Use Page Objects/LocatorPlans for mechanics and workflows for business journeys. Prefer roles, labels and stable test IDs. Fixed sleeps are not a synchronization strategy.
+Use Page Objects/LocatorPlans for mechanics and workflows for business journeys. Prefer roles, labels and stable test IDs. Fixed sleeps are not the synchronization strategy.
 
 ### API
 
-Reusable HTTP/auth/validation infrastructure belongs in `src/framework/api`; endpoint routes, payloads and domain services belong in the product.
+Reusable HTTP/auth/validation infrastructure belongs in `src/framework/api`; endpoint routes, payloads and business-domain services remain project-owned.
 
 ### Database
 
@@ -603,32 +322,28 @@ Supported capability modes include:
 none | postgres | mysql | mssql
 ```
 
-Database behavior is capability-aware:
+Database behavior is project/environment owned:
 
-- the selected project's `config/<env>.json` exclusively owns the database type; machine/CI `DB_TYPE` values cannot activate DB tests in another project
-- connection credentials remain secret environment variables (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and adapter-specific settings)
-- optional + unavailable → `@db` scenarios are skipped with a clear reason
-- configured + available → DB scenarios run normally
-- required + unavailable → readiness fails before execution
+- project configuration controls whether DB capability is enabled;
+- credentials stay in secret environment variables;
+- optional + unavailable DB capability can skip clearly;
+- required + unavailable DB capability fails readiness before execution;
+- generated DB validation is read-only and parameterized by default.
 
-### Test data
+Typical lane commands:
 
-Product datasets remain under `projects/<project>/data`.
-
-Use:
-
-- JSON for hierarchical payloads
-- CSV for simple tabular cases
-- YAML for readable structured scenarios/configuration
-- XLSX only when spreadsheet input is a real stakeholder requirement
-
-Never store secrets in test data.
+```bash
+npm run test:ui
+npm run test:api
+npm run test:db
+npm run test:e2e
+```
 
 ---
 
 ## Governed Self-Healing
 
-Healing is designed to recover locator drift **without hiding product defects**.
+Self-healing is designed to recover locator drift **without hiding product defects**.
 
 ```text
 Primary locator
@@ -637,9 +352,7 @@ Reviewed deterministic fallback
     ↓
 Semantically validated healing cache
     ↓
-Lazy AI gateway creation (only if still unresolved)
-    ↓
-Optional configured AI provider
+Optional lazy AI proposal
     ↓
 Locator safety validation
     ↓
@@ -650,480 +363,139 @@ Semantic business post-condition
 Cache only validated dynamic recovery
 ```
 
-Modes:
+A recovered locator is not considered successful merely because Playwright clicked something. The business post-condition must still pass.
 
-| Mode | Behavior |
-|---|---|
-| `off` | Primary locator only |
-| `suggest` | Primary + reviewed deterministic fallback; runtime AI/cache not automatic |
-| `runtime` | Deterministic fallback + validated cache + explicitly configured AI recovery |
-
-```bash
-HEALING_MODE=suggest npm run qa:test -- --project=chromium
-HEALING_MODE=runtime npm run qa:test -- --project=chromium
-npm run qa:heal
-```
-
-A healed action is not counted as successful until its semantic business post-condition passes. Healthy deterministic tests do not initialize an AI provider, so optional AI configuration cannot break ordinary UI execution and no provider/network overhead is paid unless AI fallback is actually needed.
-
-### Recovery is broader than UI healing
-
-TestigentAI deliberately separates recovery by failure class:
-
-| Area | Automatic recovery boundary | AI role |
-|---|---|---|
-| **UI** | Locator/action drift through deterministic recovery, validated cache and optional lazy AI | Last-resort locator proposal only |
-| **Authentication** | Token/session freshness, verified refresh and bounded runtime recovery | None required |
-| **API** | Safe technical/transient resilience only when explicitly configured | Diagnose/propose source change; never rewrite status/business contract at runtime |
-| **Database** | Connection/transient resilience only when adapter/policy supports it | Diagnose/propose source change; never rewrite schema/business state at runtime |
-
-See [`docs/30-RECOVERY-ARCHITECTURE.md`](docs/30-RECOVERY-ARCHITECTURE.md).
+Runtime AI remains optional and lazy. Healthy deterministic tests do not initialize an AI provider.
 
 ---
 
+## Multi-Project / Customer Portfolio Execution
 
-## Agent-Driven Automation Development
+One TestigentAI installation can serve one product, selected products, a customer portfolio or every registered project.
 
-TestigentAI supports **new automation development with coding agents as a governed engineering workflow**. Agents are allowed to discover, plan and propose automation, but they do not bypass the project architecture or silently turn generated code into production tests.
-
-The default authoring path is:
-
-```mermaid
-flowchart LR
-    R[Requirement] --> A[Requirement Analysis]
-    A --> P[Reviewed Test Plan]
-    P --> S[Project Agent Seed]
-    S --> E[Approved Layer Evidence]
-    E --> M[Architecture Mapping]
-    M --> G[Generated Proposal]
-    G --> V[Architecture + Type + Authoring Validation]
-    V --> H[Human Review]
-    H --> X[Proposal Promotion]
-    X --> T[Normal Business Test]
-    T --> C[CI + Business Report]
-
-    subgraph Evidence
-      E1[UI: Playwright CLI / MCP]
-      E2[API: OpenAPI / contracts]
-      E3[DB: schema / repository evidence]
-      E4[Planner / Generator / Healer]
-    end
-
-    E1 --> E
-    E2 --> E
-    E3 --> E
-    E4 --> E
-```
-
-### 1. Select the product and prepare agent tooling
+### One product
 
 ```bash
-npm run qa:use -- <project> <environment>
-npm run qa:doctor
-
-# Bootstrap the coding-agent loop your team uses
-npm run qa:agents -- vscode
-# or: codex | claude | opencode
-
-npm run agents:check
+APP=portal ENV=qa npm run test:project -- --project=chromium
 ```
 
-Each product owns an agent seed at:
-
-```text
-projects/<project>/tests/_agent/seed.spec.ts
-```
-
-The seed is important: it gives planner/generator/healer tooling the **same project fixtures, authentication and setup context** as production tests, instead of allowing an agent to invent a parallel framework.
-
-### 2. Add or select a requirement
-
-Keep requirement inputs inside the product:
-
-```text
-projects/<project>/requirements/<feature>.md
-```
-
-Start agent-assisted automation development:
+### Selected products
 
 ```bash
-npm run qa:new -- <requirement-id-or-file>
+npm run test:projects -- \
+  --apps=portal,payments,claims \
+  --env=qa \
+  --profile=regression \
+  --project=chromium
 ```
 
-`qa:new` defaults to agent mode. You can select the browser-authoring interface explicitly:
+### All registered products
 
 ```bash
-npm run qa:new -- checkout --mode=agents
-npm run qa:new -- checkout --mode=cli
-npm run qa:new -- checkout --mode=mcp
+npm run test:projects -- \
+  --all \
+  --env=qa \
+  --profile=regression \
+  --project=chromium
 ```
 
-The workflow performs requirement analysis, detects required automation layers, creates a test plan, scaffolds a **review-blocked proposal**, validates generated architecture, and creates a layer-aware authoring prompt under:
-
-```text
-generated/requirements/<requirement-id>/PLAYWRIGHT_AUTHORING_PROMPT.md
-```
-
-The coding agent should read that prompt before changing automation code.
-
-### 3. Planner → generator → healer responsibilities
-
-| Agent role | Responsibility in TestigentAI | What it must not do |
-|---|---|---|
-| **Planner** | Convert the requirement into business scenarios using the selected project's seed/context | Invent application behavior or bypass product ownership |
-| **Generator** | Use approved layer evidence to propose Page / Workflow / API Service / Repository → Facade → business-spec changes | Invent selectors, endpoints, payloads, schema identifiers or business expectations |
-| **Healer** | Diagnose locator/scoping/synchronization drift and propose source maintenance | Weaken assertions, hide defects, or change API/DB/security expectations |
-
-### 4. Evidence is layer-specific
-
-TestigentAI deliberately separates **evidence collection** from **production automation design**.
-
-| Layer | Preferred evidence | Rule |
-|---|---|---|
-| **UI** | Playwright CLI first, MCP/Test Agents when persistent browser context helps | Selectors and actions live in Page Objects/LocatorPlans |
-| **API** | Approved OpenAPI/Swagger/Postman/contracts or observed domain-service behavior | Never invent routes, payload fields or expected statuses |
-| **Database** | Approved schema/data dictionary/migrations or existing repository patterns | Generated validation is read-only and parameterized by default |
-| **E2E** | Correlated business identity across participating layers | Business spec coordinates intent through project facades |
-
-Playwright CLI remains preferred for high-throughput UI coding-agent work; MCP is useful for persistent structured browser exploration; Test Agents support planner → generator → healer loops.
-
-Standalone MCP can be started with:
+### Named portfolio
 
 ```bash
-npm run mcp:start
+npm run test:projects -- \
+  --group=customer-a \
+  --profile=regression \
+  --project=chromium
 ```
 
-Raw generated browser/API/DB code is treated as **evidence/proposal material**, not automatically as production-ready framework code. Final business tests still follow:
-
-```text
-Business Spec
-  -> Project Fixture / Facade
-  -> Workflow / Domain Service
-  -> Page / API Service / Repository
-  -> Reusable TestigentAI Core
-```
-
-Normal business specs should not contain raw `page.goto`, `locator`, `getByRole`, `click`, `fill`, hard-coded URLs, credentials, or direct framework-infrastructure construction.
-
-### 5. Review the generated proposal
-
-Generated automation remains review-blocked until a human approves it:
-
-```bash
-npm run proposal:list
-npm run proposal:show -- <requirement-id>
-npm run proposal:validate -- <requirement-id>
-```
-
-Before approval, verify the live behavior and run the authoring contracts:
-
-```bash
-npm run architecture:check
-npm run typecheck
-npm run test:authoring:contract
-npm run proposal:validate -- <requirement-id>
-```
-
-Then use the governed lifecycle:
-
-```bash
-npm run proposal:approve -- <requirement-id>
-npm run proposal:promote -- <requirement-id>
-```
-
-If generated files change after approval, the approval hash becomes invalid and review is required again. Promotion is designed not to overwrite human-owned active tests silently.
-
-### 6. Run the promoted automation like any normal product test
-
-```bash
-npm run qa:test -- --project=chromium
-npm run qa:validate
-npm run qa:report
-npm run qa:impact -- --base main --head HEAD
-npm run qa:migrate -- projects/<project>/tests
-```
-
-Once promoted, the test is no longer treated as special "agent code". It must satisfy the same architecture, reporting, auth, execution-profile and CI quality gates as hand-written automation.
-
-### 7. Measure authoring productivity
-
-Agent-assisted authoring sessions can be completed and summarized with:
-
-```bash
-npm run authoring:complete -- <requirement-id>
-npm run authoring:report
-```
-
-Use team-owned manual baselines when comparing productivity. TestigentAI does not treat estimated time savings as measured engineering data.
-
-### Agent safety guardrails
-
-The enterprise agent overlay enforces these rules:
-
-- never change a functional assertion just to make a failing test green;
-- never heal API-status, database-state, money/quantity, authorization or security failures;
-- API generation is contract-driven; DB generation is read-only by default and mutating/destructive SQL is blocked from review-gated proposals;
-- generated UI/API/DB/E2E automation requires named human approval before promotion;
-- never send secrets or PII to cloud LLM providers;
-- prefer deterministic accessible locators and reviewed fallbacks before AI recovery;
-- runtime healing may recover locator mechanics only and must validate the business post-condition;
-- source repair remains review-only;
-- deterministic report facts remain the source of truth—AI cannot override quality outcomes.
-
-Apply/recheck the repository agent policy with:
-
-```bash
-npm run agents:policy
-npm run agents:check
-```
-
-Detailed guides: [`docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md`](docs/16-PLAYWRIGHT-AGENTS-PRODUCTIVITY.md) and [`docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md`](docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md).
+Each product keeps its own auth state, test data, business behavior and report while the portfolio view provides an estate-level summary.
 
 ---
 
-## AI, Agents and MCP
+## Authentication Lifecycle
 
-The agent-driven authoring workflow above works with deterministic tooling and does **not** require runtime AI. Runtime AI itself is **opt-in**. The framework does not force Ollama, Gemini, OpenAI, Azure OpenAI or another provider.
+Authentication policy is reusable; login mechanics remain product-owned.
 
-```env
-AI_ENABLED=false
-AI_PROVIDER_MODE=single
-HEALING_AI_ENABLED=false
-```
+Key properties:
 
-Useful commands:
+- verified storage state before promotion;
+- atomic state replacement;
+- single-flight parallel refresh per runner;
+- bounded runtime recovery;
+- mutating actions are not blindly replayed;
+- credentials remain outside source control.
+
+Typical commands:
 
 ```bash
-npm run ai:check
-npm run agents:check
-npm run qa:agents -- vscode
-npm run mcp:start
+npm run auth:check
+npm run auth:prepare
+npm run qa:auth   # MFA/manual-only capture when required
 ```
-
-Supported agent bootstrap targets include VS Code, Codex, Claude and OpenCode when installed and approved by your organization.
-
-AI-specific CI execution is kept separate from core business shards. Dedicated AI lanes explicitly set `ALLOW_AI_TESTS=true`; ordinary runs continue to deny `@ai` by default. Portfolio `--include-ai` performs provider configuration preflight before real execution, while dry-run planning remains secret-free. If an AI lane is planned and `@ai` tests exist, the merged report requires the AI business result. If no AI scenarios exist, the lane is treated as not applicable rather than failed.
 
 ---
-
-## Requirement Intelligence and Review-Gated Generation
-
-TestigentAI can turn requirement inputs into analysis, test plans and generated **proposals** while preserving human ownership.
-
-```bash
-npm run requirement:analyze -- <requirement>
-npm run requirement:test-plan -- <requirement>
-npm run requirement:generate -- <requirement>
-```
-
-Generated code is not automatically treated as production automation. Review workflow:
-
-```bash
-npm run proposal:list
-npm run proposal:show -- <proposal>
-npm run proposal:validate -- <proposal>
-npm run proposal:approve -- <proposal>
-npm run proposal:promote -- <proposal>
-```
-
-The generator refuses to overwrite human-owned active tests and requires initialized product fixtures.
-
----
-
-## Declarative Scenario Authoring
-
-For governed linear scenarios that do not require custom code:
-
-```bash
-npm run scenario:help
-npm run scenario:new -- --app <project> --name "Checkout smoke"
-npm run scenario:validate
-npm run scenario:run
-npm run scenario:doctor
-```
-
-Declarative actions are schema-controlled; arbitrary executable actions are rejected.
-
----
-
-### Migrate an existing Playwright suite incrementally
-
-TestigentAI does not require a bulk rewrite. Inventory an existing suite first:
-
-```bash
-APP=<project> ENV=<env> npm run qa:migrate -- path/to/existing/tests
-```
-
-The assessment is read-only and reports direct UI/API/DB/healing/AI hotspots under `reports/<APP>/<ENV>/migration/`. Move one slice at a time behind project facades/pages/workflows/repositories while preserving the existing assertions, then rerun architecture/type/project gates.
 
 ## Business-Standard Reporting
 
-TestigentAI separates **test-run mechanics**, **product quality** and **CI blocking**.
+TestigentAI separates test-run mechanics, product quality and CI-blocking state.
 
 | Business outcome | Quality | CI blocking |
 |---|---:|---:|
 | `PASSED` | Pass | No |
 | `PASSED_WITH_HEALING` | Pass | No |
 | `PASSED_AFTER_RETRY` | Pass | No |
-| `KNOWN_DEFECT` | **Fail** | No, when explicitly accepted |
-| `FAILED` | **Fail** | **Yes** |
+| `KNOWN_DEFECT` | Fail | No, when explicitly accepted |
+| `FAILED` | Fail | Yes |
 | `SKIPPED` / blocked capability | Neutral | No |
-| `UNEXPECTED_PASS` | Pass | **Yes** until stale defect expectation is reviewed |
+| `UNEXPECTED_PASS` | Pass | Yes until stale expectation is reviewed |
 
-```text
-Quality failed     = KNOWN_DEFECT + FAILED
-CI-blocking issues = FAILED + UNEXPECTED_PASS
-```
-
-This avoids the common problem where an expected Playwright failure appears as an ordinary stakeholder “pass”.
-
-### Report outputs
-
-```text
-reports/<APP>/<ENV>/<RUN_ID>/playwright-html/   technical Playwright report
-reports/<APP>/<ENV>/<RUN_ID>/business/          product business report
-reports/<APP>/<ENV>/<RUN_ID>/business-merged/   merged CI business report
-reports/multi-project/<RUN_ID>/index.html        run-scoped portfolio/customer business dashboard
-reports/multi-project/<RUN_ID>/summary.json     run-scoped portfolio deterministic summary
-test-results/<APP>/<ENV>/<RUN_ID>/              run-scoped browser/output evidence
-.report-history/<APP>/<ENV>/                     lock-merged trend/duration history
-```
-
-### Open locally
+Report surfaces include technical Playwright output, project business dashboards, merged CI reporting and multi-project/customer portfolio summaries.
 
 ```bash
 npm run report:open
-```
-
-### Business reporting tools
-
-```bash
 npm run report:dashboard
 npm run report:business
 npm run report:mail:preview
-npm run report:business:complete
 ```
 
-The interactive product dashboard supports KPI cards, filters, layer/status graphs, scenario drill-down, `test.step()` details and evidence links. v1.6.0 keeps this executive view compact and adds a **Verify dashboard claims** action that opens `evidence-ledger.html`; `evidence-graph.json` provides the same provenance in machine-readable form. Multi-project runs additionally produce a portfolio dashboard focused on estate health, quality risk, known defects, CI blockers, execution applicability, healing and AI usage; engineering evidence stays one click deeper in each product report.
-
-Run identity is immutable for a process and is established before Playwright resolves output paths. `.runtime/latest-run/<APP>/<ENV>.json` is only a convenience pointer for commands such as report opening; active workers never use it as their identity. Default visual evidence policy is `masked`: automatic trace/video/screenshots are disabled unless a project explicitly approves unmasked visual retention, while framework-managed failure screenshots can mask configured sensitive selectors.
+> Recommended public-repo improvement: add screenshots of the business dashboard, evidence view and one successful CI execution under `assets/readme/` and link them here.
 
 ---
 
-## CI/CD
+## CI/CD and Release Confidence
 
-TestigentAI ships with:
-
-- `.github/workflows/playwright-sharded.yml`
-- `azure-pipelines.yml`
-
-The same project can run sequentially, sharded, and with an optional dedicated AI lane.
+TestigentAI ships with GitHub Actions and Azure Pipelines support.
 
 ```mermaid
 flowchart LR
-    P[Plan execution] --> C1[Core worker 1]
-    P --> C2[Core worker N]
-    P --> AI{AI lane enabled?}
-    AI -- Yes --> A[AI worker]
-    C1 --> M[Merged quality report]
+    P[Execution Plan] --> V[Framework Validation]
+    V --> C1[Core Shard 1]
+    V --> C2[Core Shard N]
+    V --> DS[Deterministic Safety Lanes]
+    V --> AI[Optional AI Canary]
+    C1 --> M[Merged Report]
     C2 --> M
-    A --> M
-    M --> G[Quality / CI gate]
+    DS --> M
+    AI --> M
+    M --> G[Quality Gate]
 ```
 
-### Sequential
+The CI design separates deterministic product/framework certification from unstable public/demo integrations. External demo endpoints can still be checked explicitly without allowing temporary third-party availability to decide whether the framework itself is healthy.
 
-```text
-shards = 1
-AI = false
-→ one core execution
-→ one core business bundle
-→ merge / publish
-```
-
-### Sharded
-
-```text
-shards = N
-→ N worker topology markers
-→ only workers that actually select tests require business reports
-→ missing worker/report fails closed
-```
-
-This means over-sharding is safe: an intentionally empty shard is allowed, but a profile that selects **zero business scenarios across all workers** fails instead of producing a misleading empty report.
-
-### Core + AI
-
-```text
-core workers  ─┐
-               ├─> lane-aware merge ─> business quality gate
-AI worker     ─┘
-```
-
-An AI bundle cannot be used to hide a missing core shard.
-
-CI should set project selection explicitly:
+Useful commands:
 
 ```bash
-APP=<project> ENV=qa npm run test:project -- --project=chromium
+npm run validate:final
+npm run test:external
 ```
 
-Secrets belong in GitHub Actions Secrets, Azure protected variables/Key Vault or an equivalent secret manager.
-
----
-
-## Known Defects
-
-Product teams may register accepted defects without turning them into fake passes.
-
-Known defects:
-
-- remain **quality failures**
-- may remain non-blocking when explicitly accepted
-- appear separately in business reporting
-- become `UNEXPECTED_PASS` when the product starts passing and the stale marker needs review
-
-Product defect knowledge belongs in the product, for example:
-
-```text
-projects/<project>/known-defects.json
-```
-
----
-
-## Local Secrets and Runtime Files
-
-Start from:
+Example optional external enforcement:
 
 ```bash
-cp .env.example .env
+RUN_EXTERNAL_TESTS=true \
+PERFORMANCE_BUDGET_ENFORCED=true \
+npm run test:external
 ```
-
-Do **not** commit:
-
-```text
-.env
-.auth/
-.runtime/
-.healing/
-reports/
-test-results/
-playwright-report/
-blob-report/
-application evidence containing secrets
-```
-
-Common optional auth inputs:
-
-```text
-AUTH_USERNAME
-AUTH_PASSWORD
-AUTH_CLIENT_ID
-AUTH_CLIENT_SECRET
-AUTH_REFRESH_TOKEN
-```
-
-The framework never requires a specific identity provider.
 
 ---
 
@@ -1135,36 +507,13 @@ Before merging reusable framework changes:
 npm run validate:final
 ```
 
-The final validation chain covers:
+The validation chain covers release/static integrity, architecture boundaries, unified-authoring contracts, framework health, scale/profile auditing, scenario validation, documentation contracts, reporting contracts, TypeScript checks, review-hardening regressions, framework-critical tests and security checks.
 
-```text
-release/static integrity
-        ↓
-architecture boundaries
-        ↓
-framework health
-        ↓
-scale/profile audit
-        ↓
-declarative scenario doctor
-        ↓
-reusable export documentation audit
-        ↓
-reporting contracts
-        ↓
-TypeScript typecheck
-        ↓
-architect-review hardening regression suite
-        ↓
-framework regression suite
-        ↓
-security check
-```
-
-Useful individual checks:
+Useful individual checks include:
 
 ```bash
 npm run architecture:check
+npm run authoring:unified-contract
 npm run framework:health
 npm run scale:audit
 npm run scenario:doctor
@@ -1178,148 +527,109 @@ npm run security:check
 
 ---
 
-## Troubleshooting
+## Add a New Product
 
-### `No project selected`
-
-Select one locally:
+Generate a governed project skeleton rather than copying another product manually:
 
 ```bash
-npm run qa:use -- <project> <environment>
+npm run project:new -- checkout
 ```
 
-or pass it explicitly:
+Typical product-owned structure:
 
-```bash
-APP=<project> ENV=qa npm run test:project -- --project=chromium
+```text
+projects/checkout/
+├── project.json
+├── config/qa.json
+├── auth/auth.provider.ts
+├── fixtures/test.fixture.ts
+├── src/app.facade.ts
+├── src/pages/
+├── src/workflows/
+├── src/api/
+├── src/database/
+├── data/
+├── requirements/
+└── tests/
 ```
 
-### `NO_BUSINESS_TESTS_SELECTED`
+A new product should not require changes in `src/framework/` unless the team is adding capability that is truly reusable across products.
 
-The selected profile/tag/grep combination matched no business scenarios. Check:
+---
+
+## Daily Developer Workflow
+
+Keep normal usage intentionally small:
 
 ```bash
 npm run qa:status
-npm run scale:audit
-```
-
-Then review profile tags such as `@smoke`, `@manual`, `@ai`, `@generated` and `@generated-review`.
-
-### Authentication state missing/invalid
-
-```bash
-APP=<project> ENV=qa npm run auth:check
-APP=<project> ENV=qa npm run auth:prepare
-```
-
-For MFA/manual flows:
-
-```bash
-npm run qa:auth
-```
-
-### Report looks empty
-
-First verify that tests were actually selected and executed. `test:project` prints the resolved selection and final business scenario count. A successful local run with zero business scenarios is treated as an error rather than silently publishing an empty report.
-
-
-### `--include-ai` provider preflight fails
-
-A real portfolio AI run requires explicit runtime AI configuration. First validate the provider:
-
-```bash
-AI_ENABLED=true AI_PROVIDER_MODE=single AI_PROVIDER=<provider> npm run ai:check
-```
-
-Then run the portfolio with `--include-ai`. Normal/non-AI tests do not need provider initialization; UI AI fallback is lazy and is only created after deterministic healing is exhausted.
-
-### Database scenario skipped
-
-Run:
-
-```bash
 npm run qa:doctor
+npm run qa -- create <requirement-source>
+npm run qa:test -- --project=chromium
+npm run qa:validate
+npm run qa:report
+npm run qa:impact -- --base main --head HEAD
 ```
 
-and verify `projects/<project>/project.json`, `config/<env>.json` and required DB secret variables. Do not use a shared `DB_TYPE` override; database type is intentionally project/environment-owned so one customer's DB settings cannot leak into another project.
+For framework/release work:
+
+```bash
+npm run validate:final
+```
+
+For external/public demo integrations:
+
+```bash
+npm run test:external
+```
 
 ---
 
-## Command Cheat Sheet
+## Security and Governance
 
-| Goal | Command |
-|---|---|
-| List products | `npm run project:list` |
-| Select local product | `npm run qa:use -- <project> <env>` |
-| Health/readiness | `npm run qa:doctor` |
-| Current selection/status | `npm run qa:status` |
-| Create product | `npm run project:new -- <project>` |
-| Create test/proposal input | `npm run qa:new -- <requirement>` |
-| Run selected product | `npm run qa:test -- --project=chromium` |
-| Run all registered products | `npm run test:projects -- --all --env=qa --project=chromium` |
-| Dry-run customer portfolio | `npm run test:projects -- --group=<name> --dry-run --project=chromium` |
-| Project preflight | `APP=<project> ENV=qa npm run project:check` |
-| Auth status | `npm run auth:check` |
-| Prepare/refresh auth | `npm run auth:prepare` |
-| Manual auth capture | `npm run qa:auth` |
-| Open report | `npm run qa:report` |
-| Source-healing review | `npm run qa:heal` |
-| UI lane | `npm run test:ui` |
-| API lane | `npm run test:api` |
-| DB lane | `npm run test:db` |
-| PR profile | `npm run test:profile:pr` |
-| Regression profile | `npm run test:profile:regression` |
-| Architecture check | `npm run architecture:check` |
-| Full release-quality gate | `npm run validate:final` |
+- Secrets never belong in source control.
+- Generated automation is review-gated before promotion.
+- API generation is contract/evidence-driven; routes and payloads are not invented.
+- Database generation is read-only by default; destructive SQL is blocked from governed proposals.
+- AI cannot override deterministic quality facts.
+- Healing cannot weaken functional assertions or silently rewrite business contracts.
+- Auth state, runtime state, healing state, reports and test output remain excluded from source control where appropriate.
+
+Start local configuration from:
+
+```bash
+cp .env.example .env
+```
 
 ---
 
-## Documentation Map
+## Documentation
 
-| Start here | Document |
+The README is intentionally a **public landing page**. Deep operational and historical detail should remain in `docs/`.
+
+Recommended starting points:
+
+| Topic | Document |
 |---|---|
 | First-time onboarding | [`docs/00-START-HERE.md`](docs/00-START-HERE.md) |
-| Architecture and dependency rules | [`docs/01-ARCHITECTURE.md`](docs/01-ARCHITECTURE.md) |
+| Architecture | [`docs/01-ARCHITECTURE.md`](docs/01-ARCHITECTURE.md) |
 | Daily commands | [`docs/02-DAILY-COMMANDS.md`](docs/02-DAILY-COMMANDS.md) |
-| Git + GitHub CLI terminal guide | [`docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md`](docs/40-GIT-GITHUB-CLI-TERMINAL-GUIDE.md) |
-| Current certified release status | [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md) |
-| Quality evidence & release intelligence | [`docs/42-QUALITY-EVIDENCE-AND-RELEASE-INTELLIGENCE.md`](docs/42-QUALITY-EVIDENCE-AND-RELEASE-INTELLIGENCE.md) |
-| Change impact & incremental migration | [`docs/43-CHANGE-IMPACT-AND-MIGRATION.md`](docs/43-CHANGE-IMPACT-AND-MIGRATION.md) |
-| False-heal safety benchmark | [`docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md`](docs/44-FALSE-HEAL-SAFETY-BENCHMARK.md) |
-| v1.6 deep-review validation | [`docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md`](docs/45-v1.6.0-DEEP-REVIEW-VALIDATION.md) |
-| v1.6 pre-tag CI hotfix | [`docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md`](docs/46-v1.6.0-PRE-TAG-CI-HOTFIX.md) |
-| v1.6 rerun artifact acquisition closure | [`docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md`](docs/47-v1.6.0-RERUN-ARTIFACT-ACQUISITION.md) |
-| v1.6.1 AI operational reliability | [`docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md`](docs/48-v1.6.1-AI-OPERATIONAL-RELIABILITY.md) |
-| v1.7 Agentic Test Intelligence | [`docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md`](docs/50-v1.7.0-AGENTIC-TEST-INTELLIGENCE.md) |
-| v1.8 Adoption & benchmark intelligence | [`docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md`](docs/55-v1.8.0-ADOPTION-BENCHMARK-INTELLIGENCE.md) |
-| v1.8 API contract intelligence | [`docs/56-v1.8.0-API-CONTRACT-INTELLIGENCE.md`](docs/56-v1.8.0-API-CONTRACT-INTELLIGENCE.md) |
-| v1.8 scale certification | [`docs/57-v1.8.0-SCALE-CERTIFICATION.md`](docs/57-v1.8.0-SCALE-CERTIFICATION.md) |
-| v1.8 implementation/review closure | [`docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md`](docs/58-v1.8.0-IMPLEMENTATION-AND-REVIEW-PLAN.md) |
-| v1.8 candidate handoff | [`docs/59-v1.8.0-CANDIDATE-HANDOFF.md`](docs/59-v1.8.0-CANDIDATE-HANDOFF.md) |
-| v1.9 Failure Intelligence | [`docs/60-v1.9.0-FAILURE-INTELLIGENCE.md`](docs/60-v1.9.0-FAILURE-INTELLIGENCE.md) |
-| v1.9 Customer Showcase | [`docs/61-v1.9.0-CUSTOMER-SHOWCASE.md`](docs/61-v1.9.0-CUSTOMER-SHOWCASE.md) |
-| v1.9 review/release plan | [`docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md`](docs/62-v1.9.0-REVIEW-AND-RELEASE-PLAN.md) |
-| Reporting freeze | [`docs/63-REPORTING-FREEZE.md`](docs/63-REPORTING-FREEZE.md) |
-| v1.9 candidate handoff | [`docs/64-v1.9.0-CANDIDATE-HANDOFF.md`](docs/64-v1.9.0-CANDIDATE-HANDOFF.md) |
-| Add a new product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
-| Auth, secrets and environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
+| Add a product | [`docs/03-ADD-NEW-PROJECT.md`](docs/03-ADD-NEW-PROJECT.md) |
+| Auth / secrets / environments | [`docs/04-AUTH-SECRETS-ENVIRONMENTS.md`](docs/04-AUTH-SECRETS-ENVIRONMENTS.md) |
 | UI / API / DB / data | [`docs/05-UI-API-DB-DATA.md`](docs/05-UI-API-DB-DATA.md) |
-| Reporting and CI/CD | [`docs/06-REPORTING-CI-CD.md`](docs/06-REPORTING-CI-CD.md) |
-| Healing, AI and MCP | [`docs/07-HEALING-AI-MCP.md`](docs/07-HEALING-AI-MCP.md) |
+| Reporting / CI/CD | [`docs/06-REPORTING-CI-CD.md`](docs/06-REPORTING-CI-CD.md) |
+| Healing / AI / MCP | [`docs/07-HEALING-AI-MCP.md`](docs/07-HEALING-AI-MCP.md) |
 | Requirement intelligence | [`docs/08-REQUIREMENT-INTELLIGENCE.md`](docs/08-REQUIREMENT-INTELLIGENCE.md) |
-| Known defects / troubleshooting | [`docs/09-KNOWN-DEFECTS-TROUBLESHOOTING.md`](docs/09-KNOWN-DEFECTS-TROUBLESHOOTING.md) |
-| New-product handoff | [`docs/15-NEW-PROJECT-HANDOFF.md`](docs/15-NEW-PROJECT-HANDOFF.md) |
-| Multi-project/customer execution | [`docs/18-MULTI-PROJECT-EXECUTION.md`](docs/18-MULTI-PROJECT-EXECUTION.md) |
+| Multi-project execution | [`docs/18-MULTI-PROJECT-EXECUTION.md`](docs/18-MULTI-PROJECT-EXECUTION.md) |
 | Agent UI/API/DB/E2E authoring | [`docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md`](docs/29-AGENT-AUTHORING-UI-API-DB-E2E.md) |
 | Recovery architecture | [`docs/30-RECOVERY-ARCHITECTURE.md`](docs/30-RECOVERY-ARCHITECTURE.md) |
-| Data and parallel execution | [`docs/20-V6-DATA-PARALLEL-EXECUTION.md`](docs/20-V6-DATA-PARALLEL-EXECUTION.md) |
-| Quality lanes / declarative authoring | [`docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md`](docs/21-QUALITY-LANES-AND-DECLARATIVE-AUTHORING.md) |
-| Declarative automation | [`docs/24-DECLARATIVE-AUTOMATION-GUIDE.md`](docs/24-DECLARATIVE-AUTOMATION-GUIDE.md) |
-| Business reporting standard | [`docs/26-BUSINESS-REPORTING-STANDARD-2026.md`](docs/26-BUSINESS-REPORTING-STANDARD-2026.md) |
-| Merged CI reporting and evidence | [`docs/27-CI-MERGED-REPORTING-AND-EVIDENCE.md`](docs/27-CI-MERGED-REPORTING-AND-EVIDENCE.md) |
-| Automatic auth lifecycle | [`docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md`](docs/28-AUTH-LIFECYCLE-AUTO-REFRESH.md) |
+| Current release status | [`docs/41-CURRENT-RELEASE-STATUS.md`](docs/41-CURRENT-RELEASE-STATUS.md) |
+| v1.10.2 unified authoring design | [`docs/73-v1.10.2-UNIFIED-TEST-CREATION.md`](docs/73-v1.10.2-UNIFIED-TEST-CREATION.md) |
+| v1.10.3 source-validation hotfix | [`docs/75-v1.10.3-SOURCE-VALIDATION-HOTFIX.md`](docs/75-v1.10.3-SOURCE-VALIDATION-HOTFIX.md) |
+| v1.10.3 final certification | [`docs/76-v1.10.3-FINAL-CERTIFICATION.md`](docs/76-v1.10.3-FINAL-CERTIFICATION.md) |
+| Public project overview | [`docs/77-v1.10.3-PUBLIC-PROJECT-OVERVIEW.md`](docs/77-v1.10.3-PUBLIC-PROJECT-OVERVIEW.md) |
 
-Release-specific history belongs in [`FINAL-RELEASE-NOTES.md`](FINAL-RELEASE-NOTES.md), not in the main product README.
+Release-specific history should live in release notes / release-specific docs instead of growing the main README indefinitely.
 
 ---
 
@@ -1341,46 +651,24 @@ Release-specific history belongs in [`FINAL-RELEASE-NOTES.md`](FINAL-RELEASE-NOT
 
 ---
 
+## Portfolio / Recruiter Summary
+
+TestigentAI demonstrates automation architecture across:
+
+**Playwright · TypeScript · UI Automation · REST API Testing · Database Testing · PostgreSQL · MySQL · MSSQL · End-to-End Testing · Multi-Project Architecture · SDET · Quality Engineering · GitHub Actions · Azure Pipelines · CI/CD · AI-Assisted Testing · Agentic Testing · MCP · Self-Healing · Business Reporting · Test Governance**
+
+The implementation, architecture, validation contracts and documentation are available in this repository so technical reviewers can inspect the engineering decisions directly.
+
+---
+
 <div align="center">
 
 ### TestigentAI
 
 **Build reusable automation infrastructure once. Keep product knowledge where it belongs. Report quality in language stakeholders can trust.**
 
-Maintained as an intelligent quality-engineering platform for scalable multi-product automation.
+Maintained as an intelligent Quality Engineering platform for scalable multi-product automation.
 
 **Author: Raushan Raj**
 
 </div>
-
-
-| v1.9.1 independent review closure | [`docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md`](docs/65-v1.9.1-INDEPENDENT-REVIEW-CLOSURE.md) |
-| v1.9.1 review validation | [`docs/66-v1.9.1-REVIEW-VALIDATION.md`](docs/66-v1.9.1-REVIEW-VALIDATION.md) |
-| v1.9.2 independent re-review closure | [`docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md`](docs/67-v1.9.2-INDEPENDENT-REREVIEW-CLOSURE.md) |
-| v1.9.2 validation handoff | [`docs/68-v1.9.2-VALIDATION-HANDOFF.md`](docs/68-v1.9.2-VALIDATION-HANDOFF.md) |
-| v1.9.2 post-cert corrective closure | [`docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md`](docs/69-v1.9.2-POST-CERT-CORRECTIVE-CLOSURE.md) |
-| v1.9.3 certification | [`docs/70-v1.9.3-CERTIFICATION.md`](docs/70-v1.9.3-CERTIFICATION.md) |
-
-## v1.10.2 — Unified Test Creation Workflow
-
-Normal and complex UI authoring now use the **same user command**. Dynamic tables/grids, iframes, open Shadow DOM metadata, dialogs, popups, downloads, file uploads, keyboard, drag/drop, hover, scroll/infinite-scroll, canvas coordinates and correlated XHR/fetch evidence are detected internally; there is no separate complex mode.
-
-```bash
-# Use existing approved application knowledge
-npm run qa -- create projects/<app>/requirements/create-order.md
-npm run qa -- create JIRA:PAY-142
-
-# Safe auto-explore first, then generate from the same command
-npm run qa -- create JIRA:PAY-142 --auto-explore
-
-# Manually perform the business journey; complex UI is captured automatically
-npm run qa -- create JIRA:PAY-142 --learn="Create Order Journey"
-
-# Optional one-command interactive review/approval/promotion workflow
-npm run qa -- create JIRA:PAY-142 \
-  --learn="Create Order Journey" \
-  --reviewer="QA Lead" \
-  --review-and-promote
-```
-
-Legacy `qa:new`, `qa -- explore`, `qa -- learn`, and `qa -- generate` commands remain compatibility aliases but route to the same unified authoring workflow. Generated automation remains human review-gated. See `docs/73-v1.10.2-UNIFIED-TEST-CREATION.md`.
