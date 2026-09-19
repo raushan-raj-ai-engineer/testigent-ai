@@ -237,7 +237,9 @@ npm run validate:final
 
 ## AI-Assisted, Human-Governed Test Authoring
 
-The recommended authoring surface is the unified `qa create` workflow.
+### ONE AUTHORING COMMAND
+
+The recommended authoring surface is the **Unified Test Creation Workflow** through the unified `qa create` command.
 
 ```text
 Requirement
